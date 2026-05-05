@@ -6,6 +6,10 @@ import { isIsoTimestampOnDate, toLocalIsoDate } from "@/domain/dates";
 
 const today = "2026-05-04";
 
+function localIsoTimestamp(year: number, monthIndex: number, day: number, hour: number): string {
+  return new Date(year, monthIndex, day, hour).toISOString();
+}
+
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "task-1",
@@ -25,9 +29,8 @@ describe("dashboard date helpers", () => {
   });
 
   it("detects whether an ISO timestamp is on a date", () => {
-    expect(isIsoTimestampOnDate("2026-05-04T23:59:59.000Z", today)).toBe(true);
-    expect(isIsoTimestampOnDate("2026-05-05T00:00:00.000Z", today)).toBe(true);
-    expect(isIsoTimestampOnDate("2026-05-05T08:00:00.000Z", today)).toBe(false);
+    expect(isIsoTimestampOnDate(localIsoTimestamp(2026, 4, 4, 23), today)).toBe(true);
+    expect(isIsoTimestampOnDate(localIsoTimestamp(2026, 4, 5, 8), today)).toBe(false);
     expect(isIsoTimestampOnDate(undefined, today)).toBe(false);
   });
 });
@@ -42,12 +45,12 @@ describe("dashboard stats", () => {
         makeTask({
           id: "completed-today",
           status: "done",
-          completedAt: "2026-05-04T18:00:00.000Z"
+          completedAt: localIsoTimestamp(2026, 4, 4, 18)
         }),
         makeTask({
           id: "completed-yesterday",
           status: "done",
-          completedAt: "2026-05-03T18:00:00.000Z"
+          completedAt: localIsoTimestamp(2026, 4, 3, 18)
         }),
         makeTask({ id: "archived", status: "archived" })
       ],
