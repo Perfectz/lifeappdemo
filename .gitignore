@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+playwright-report
+test-results
+coverage
+.env
+.env*.local
+*.tsbuildinfo
+/tmp-*.png
+/continue-ui-*.png
+/review-*.png
+/ui-upgrade-*.png
+/portfolio-v16-*.png
+/nav-icons-sidebar-check.png
+/tmp-next-*.log

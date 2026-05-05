@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101319" />
+    <title>LifeQuest OS Offline</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d1117;
+        --surface: #121824;
+        --line: #2a3546;
+        --text: #f3f7fb;
+        --muted: #9ba9ba;
+        --accent: #6ee7b7;
+        --warning: #f6c768;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        align-items: center;
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        padding: 1rem;
+      }
+
+      main {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        margin: 0 auto;
+        max-width: 42rem;
+        padding: clamp(1rem, 5vw, 2rem);
+        width: 100%;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 8vw, 3.2rem);
+        line-height: 1;
+        margin: 0 0 1rem;
+      }
+
+      p {
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      a {
+        background: #202a3a;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--text);
+        display: inline-block;
+        font-weight: 800;
+        margin: 0.35rem 0.35rem 0 0;
+        padding: 0.7rem 0.85rem;
+        text-decoration: none;
+      }
+
+      strong {
+        color: var(--accent);
+        display: block;
+        font-size: 0.8rem;
+        letter-spacing: 0;
+        margin-bottom: 0.35rem;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <strong>Offline Shell</strong>
+      <h1>LifeQuest OS</h1>
+      <p>
+        The local offline shell is available when the network drops. App routes use fresh
+        server HTML when online to avoid stale screens, while AI coaching and fresh server
+        requests require network access.
+      </p>
+      <a href="dashboard">Dashboard</a>
+      <a href="tasks">Quest Log</a>
+      <a href="settings">Install Settings</a>
+    </main>
+  </body>
+</html>
