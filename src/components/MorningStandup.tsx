@@ -2,6 +2,11 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
+import {
+  confirmAIToolProposalLocally,
+  sendAIChatRequest,
+  type ConfirmToolResponsePayload
+} from "@/client/pwaAIClient";
 import { AiAdvisorPopup, type AdvisorMood } from "@/components/AiAdvisorPopup";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { CommandButton } from "@/components/CommandButton";
@@ -32,16 +37,6 @@ type AIChatResponse = {
   message?: string;
   error?: string;
   proposals?: AIToolProposal[];
-};
-
-type ConfirmToolResponse = {
-  ok?: boolean;
-  error?: string;
-  appliedChangeSummary?: string;
-  dailyPlans?: DailyPlan[];
-  journalEntries?: JournalEntry[];
-  metricEntries?: MetricEntry[];
-  tasks?: Task[];
 };
 
 function createMessageId(role: ChatMessage["role"]): string {
@@ -282,20 +277,13 @@ export function MorningStandup() {
     setIsSendingAiMessage(true);
 
     try {
-      const response = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: trimmedMessage,
-          mode: "morning",
-          appData: loadStoredAppData()
-        })
-      });
-      const payload = (await response.json()) as AIChatResponse;
+      const payload: AIChatResponse = await sendAIChatRequest({
+        message: trimmedMessage,
+        mode: "morning",
+        appData: loadStoredAppData()
+      }, window.localStorage);
 
-      if (!response.ok || !payload.message) {
+      if (!payload.message) {
         throw new Error(payload.error ?? "AI morning stand-up is unavailable right now.");
       }
 
@@ -320,22 +308,17 @@ export function MorningStandup() {
     setError(null);
 
     try {
-      const response = await fetch("/api/ai/tools/confirm", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          proposal,
-          dailyPlans: plans,
-          journalEntries,
-          metricEntries,
-          tasks
-        })
+      const payload: ConfirmToolResponsePayload = confirmAIToolProposalLocally({
+        proposal,
+        dailyPlans: plans,
+        dailyReports: [],
+        eveningPostmortems: [],
+        journalEntries,
+        metricEntries,
+        tasks
       });
-      const payload = (await response.json()) as ConfirmToolResponse;
 
-      if (!response.ok || !payload.ok || !payload.appliedChangeSummary) {
+      if (!payload.ok || !payload.appliedChangeSummary) {
         throw new Error(payload.error ?? "AI proposal could not be applied.");
       }
 
