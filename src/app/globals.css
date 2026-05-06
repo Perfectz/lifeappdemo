@@ -2237,59 +2237,6 @@ h1 {
   margin-top: 0.35rem;
 }
 
-.openai-settings-panel,
-.settings-token-form,
-.token-status {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.settings-token-form label {
-  color: var(--muted);
-  display: grid;
-  font-size: 0.76rem;
-  font-weight: 750;
-  gap: 0.35rem;
-}
-
-.settings-token-form input {
-  background: #0d1117;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  color: var(--text);
-  padding: 0.78rem 0.85rem;
-}
-
-.settings-token-form input:focus {
-  border-color: var(--line-strong);
-  box-shadow: 0 0 0 3px rgba(61, 139, 253, 0.22);
-  outline: none;
-}
-
-.token-status {
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-  margin: 0;
-}
-
-.token-status div {
-  background: var(--surface-raised);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 0.75rem;
-}
-
-.token-status dt {
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.token-status dd {
-  color: var(--accent);
-  font-weight: 850;
-  margin: 0.2rem 0 0;
-}
-
 .install-readiness {
   display: grid;
   gap: 0.65rem;

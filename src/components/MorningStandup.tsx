@@ -2,11 +2,6 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
-import {
-  confirmAIToolProposalLocally,
-  sendAIChatRequest,
-  type ConfirmToolResponsePayload
-} from "@/client/pwaAIClient";
 import { AiAdvisorPopup, type AdvisorMood } from "@/components/AiAdvisorPopup";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { CommandButton } from "@/components/CommandButton";
@@ -19,6 +14,7 @@ import { createLocalJournalRepository } from "@/data/journalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
 import type { AIStoredAppData, AIToolProposal, DailyPlan, JournalEntry, MetricEntry, Task } from "@/domain";
+import type { ConfirmTaskToolRequestInput } from "@/domain/aiTaskTools";
 import { getActiveDailyPlanForDate, upsertDailyPlanForDate, validateDailyPlanInput } from "@/domain/dailyPlans";
 import { toLocalIsoDate } from "@/domain/dates";
 import { createTask } from "@/domain/tasks";
@@ -37,6 +33,16 @@ type AIChatResponse = {
   message?: string;
   error?: string;
   proposals?: AIToolProposal[];
+};
+
+type ConfirmToolResponse = {
+  ok?: boolean;
+  error?: string;
+  appliedChangeSummary?: string;
+  dailyPlans?: ConfirmTaskToolRequestInput["dailyPlans"];
+  journalEntries?: ConfirmTaskToolRequestInput["journalEntries"];
+  metricEntries?: ConfirmTaskToolRequestInput["metricEntries"];
+  tasks?: ConfirmTaskToolRequestInput["tasks"];
 };
 
 function createMessageId(role: ChatMessage["role"]): string {
@@ -277,13 +283,20 @@ export function MorningStandup() {
     setIsSendingAiMessage(true);
 
     try {
-      const payload: AIChatResponse = await sendAIChatRequest({
-        message: trimmedMessage,
-        mode: "morning",
-        appData: loadStoredAppData()
-      }, window.localStorage);
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: trimmedMessage,
+          mode: "morning",
+          appData: loadStoredAppData()
+        })
+      });
+      const payload = (await response.json()) as AIChatResponse;
 
-      if (!payload.message) {
+      if (!response.ok || !payload.message) {
         throw new Error(payload.error ?? "AI morning stand-up is unavailable right now.");
       }
 
@@ -308,17 +321,24 @@ export function MorningStandup() {
     setError(null);
 
     try {
-      const payload: ConfirmToolResponsePayload = confirmAIToolProposalLocally({
-        proposal,
-        dailyPlans: plans,
-        dailyReports: [],
-        eveningPostmortems: [],
-        journalEntries,
-        metricEntries,
-        tasks
+      const response = await fetch("/api/ai/tools/confirm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          proposal,
+          dailyPlans: plans,
+          dailyReports: [],
+          eveningPostmortems: [],
+          journalEntries,
+          metricEntries,
+          tasks
+        })
       });
+      const payload = (await response.json()) as ConfirmToolResponse;
 
-      if (!payload.ok || !payload.appliedChangeSummary) {
+      if (!response.ok || !payload.ok || !payload.appliedChangeSummary) {
         throw new Error(payload.error ?? "AI proposal could not be applied.");
       }
 

@@ -1,14 +1,13 @@
 import { DemoModePanel } from "@/components/DemoModePanel";
 import { PlaceholderPage } from "@/components/PlaceholderPage";
 import { InstallReadinessPanel } from "@/components/InstallReadinessPanel";
-import { OpenAISettingsPanel } from "@/components/OpenAISettingsPanel";
 
 export default function SettingsPage() {
   return (
     <PlaceholderPage
       title="Settings"
       kicker="Configuration"
-      body="Install LifeQuest OS as a PWA, keep the local shell available when the network drops, and add your OpenAI token for on-device AI calls."
+      body="Install LifeQuest OS as a PWA and keep the local shell available when the network drops. AI still requires network access."
       icon="settings"
       pose="thinking"
       statusText="PWA install and stale-safe offline shell. No product sync or offline AI is enabled."
@@ -23,10 +22,6 @@ export default function SettingsPage() {
           <InstallReadinessPanel />
         </section>
         <section className="dashboard-section">
-          <h2>OpenAI Access Token</h2>
-          <OpenAISettingsPanel />
-        </section>
-        <section className="dashboard-section">
           <h2>Android Install Steps</h2>
           <ol className="settings-steps">
             <li>Open LifeQuest OS in Chrome on Android.</li>
@@ -39,9 +34,9 @@ export default function SettingsPage() {
           <h2>Offline Boundary</h2>
           <p>
             The offline shell and static assets are cached after first load. App routes use
-            fresh server HTML to avoid stale hydration. AI chat can run from the installed
-            PWA when an OpenAI token is saved on the device; voice sessions and fresh server
-            requests still require network access and are not cached by the service worker.
+            fresh server HTML to avoid stale hydration, while AI chat, AI tool confirmation,
+            health APIs, and fresh server requests require network access and are not cached
+            by the service worker.
           </p>
         </section>
       </div>

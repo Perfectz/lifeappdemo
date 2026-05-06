@@ -2,12 +2,6 @@
 
 import { type FormEvent, useEffect, useState } from "react";
 
-import {
-  confirmAIToolProposalLocally,
-  sendAIChatRequest,
-  type AIChatResponsePayload,
-  type ConfirmToolResponsePayload
-} from "@/client/pwaAIClient";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { OfflineBoundary, aiNetworkRequiredMessage, useNetworkStatus } from "@/components/OfflineBoundary";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -17,12 +11,37 @@ import { createLocalEveningPostmortemRepository } from "@/data/eveningPostmortem
 import { createLocalJournalRepository } from "@/data/journalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
+import type { ConfirmTaskToolRequestInput } from "@/domain/aiTaskTools";
 import type { AIChatMode, AIStoredAppData, AIToolProposal } from "@/domain";
 
 type ChatMessage = {
   id: string;
   role: "user" | "coach";
   content: string;
+};
+
+type AIChatResponse = {
+  error?: string;
+  message?: string;
+  mode?: string;
+  proposals?: AIToolProposal[];
+  usedContext?: {
+    openTaskCount: number;
+    recentMetricCount: number;
+    recentJournalEntryCount: number;
+  };
+};
+
+type ConfirmToolResponse = {
+  ok?: boolean;
+  error?: string;
+  appliedChangeSummary?: string;
+  dailyPlans?: ConfirmTaskToolRequestInput["dailyPlans"];
+  dailyReports?: ConfirmTaskToolRequestInput["dailyReports"];
+  eveningPostmortems?: ConfirmTaskToolRequestInput["eveningPostmortems"];
+  journalEntries?: ConfirmTaskToolRequestInput["journalEntries"];
+  metricEntries?: ConfirmTaskToolRequestInput["metricEntries"];
+  tasks?: ConfirmTaskToolRequestInput["tasks"];
 };
 
 function loadStoredAppData(): AIStoredAppData {
@@ -46,7 +65,7 @@ export function AICoachPanel() {
   const [mode, setMode] = useState<AIChatMode>("general");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [usedContext, setUsedContext] = useState<AIChatResponsePayload["usedContext"]>();
+  const [usedContext, setUsedContext] = useState<AIChatResponse["usedContext"]>();
   const [hasLoaded, setHasLoaded] = useState(false);
   const isOnline = useNetworkStatus();
 
@@ -87,13 +106,20 @@ export function AICoachPanel() {
     setIsSending(true);
 
     try {
-      const payload = await sendAIChatRequest({
-        message: trimmedMessage,
-        mode,
-        appData: loadStoredAppData()
-      }, window.localStorage);
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: trimmedMessage,
+          mode,
+          appData: loadStoredAppData()
+        })
+      });
+      const payload = (await response.json()) as AIChatResponse;
 
-      if (!payload.message) {
+      if (!response.ok || !payload.message) {
         throw new Error(payload.error ?? "AI coach is unavailable right now.");
       }
 
@@ -152,17 +178,24 @@ export function AICoachPanel() {
         createLocalEveningPostmortemRepository(window.localStorage).load();
       const metricEntries = createLocalMetricRepository(window.localStorage).load();
       const journalEntries = createLocalJournalRepository(window.localStorage).load();
-      const payload: ConfirmToolResponsePayload = confirmAIToolProposalLocally({
-        proposal,
-        dailyPlans,
-        dailyReports,
-        eveningPostmortems,
-        journalEntries,
-        metricEntries,
-        tasks
+      const response = await fetch("/api/ai/tools/confirm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          proposal,
+          dailyPlans,
+          dailyReports,
+          eveningPostmortems,
+          journalEntries,
+          metricEntries,
+          tasks
+        })
       });
+      const payload = (await response.json()) as ConfirmToolResponse;
 
-      if (!payload.ok || !payload.appliedChangeSummary) {
+      if (!response.ok || !payload.ok || !payload.appliedChangeSummary) {
         throw new Error(payload.error ?? "Tool proposal could not be applied.");
       }
 
