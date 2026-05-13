@@ -38,6 +38,9 @@ describe("MetricEntry validation", () => {
       moodLevel: 5,
       steps: 6500,
       workoutSummary: " Lifted. ",
+      kettlebellSwingsTotal: 100,
+      karateClass: true,
+      distanceWalkedMiles: 2.5,
       bloodPressureSystolic: 120,
       bloodPressureDiastolic: 80,
       notes: " Good start. "
@@ -54,6 +57,9 @@ describe("MetricEntry validation", () => {
         moodLevel: 5,
         steps: 6500,
         workoutSummary: "Lifted.",
+        kettlebellSwingsTotal: 100,
+        karateClass: true,
+        distanceWalkedMiles: 2.5,
         bloodPressureSystolic: 120,
         bloodPressureDiastolic: 80,
         notes: "Good start."
@@ -77,6 +83,28 @@ describe("MetricEntry validation", () => {
     expect(validateMetricInput({ date: today, checkInType: "morning", steps: -10 })).toEqual({
       ok: false,
       message: "Steps must be a non-negative whole number."
+    });
+
+    expect(
+      validateMetricInput({
+        date: today,
+        checkInType: "morning",
+        kettlebellSwingsTotal: 10.5
+      })
+    ).toEqual({
+      ok: false,
+      message: "Kettlebell swings must be a non-negative whole number."
+    });
+
+    expect(
+      validateMetricInput({
+        date: today,
+        checkInType: "morning",
+        distanceWalkedMiles: -0.5
+      })
+    ).toEqual({
+      ok: false,
+      message: "Distance walked must be non-negative."
     });
 
     expect(

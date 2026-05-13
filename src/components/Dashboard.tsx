@@ -231,6 +231,24 @@ export function Dashboard() {
                     <dd>{latestMetricEntry.steps}</dd>
                   </div>
                 ) : null}
+                {latestMetricEntry.kettlebellSwingsTotal !== undefined ? (
+                  <div>
+                    <dt>Swings</dt>
+                    <dd>{latestMetricEntry.kettlebellSwingsTotal}</dd>
+                  </div>
+                ) : null}
+                {latestMetricEntry.karateClass ? (
+                  <div>
+                    <dt>Karate</dt>
+                    <dd>Class logged</dd>
+                  </div>
+                ) : null}
+                {latestMetricEntry.distanceWalkedMiles !== undefined ? (
+                  <div>
+                    <dt>Walked</dt>
+                    <dd>{latestMetricEntry.distanceWalkedMiles} mi</dd>
+                  </div>
+                ) : null}
               </dl>
             ) : (
               <div className="dashboard-empty dashboard-empty-action">

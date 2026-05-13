@@ -32,6 +32,9 @@ function makeMetric(overrides: Partial<MetricEntry> = {}): MetricEntry {
     source: "manual",
     energyLevel: 4,
     moodLevel: 3,
+    kettlebellSwingsTotal: 100,
+    karateClass: true,
+    distanceWalkedMiles: 2,
     recordedAt: now,
     createdAt: now,
     updatedAt: now,
@@ -119,6 +122,9 @@ describe("AI context", () => {
     expect(prompt).toContain("Focus on the main quest");
     expect(prompt).toContain("id: task-1");
     expect(prompt).toContain("energy 4/5");
+    expect(prompt).toContain("100 kettlebell swings");
+    expect(prompt).toContain("karate class");
+    expect(prompt).toContain("2 mi walked");
     expect(prompt).toContain("Keep the AI read-only first.");
     expect(prompt).not.toContain("Do not include");
     expect(prompt).not.toContain("OPENAI_API_KEY");

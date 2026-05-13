@@ -45,6 +45,13 @@ describe("MetricsCheckIn", () => {
     fireEvent.change(screen.getByLabelText("Steps"), {
       target: { value: "6400" }
     });
+    fireEvent.change(screen.getByLabelText("Kettlebell swings total"), {
+      target: { value: "150" }
+    });
+    fireEvent.click(screen.getByLabelText("Karate class"));
+    fireEvent.change(screen.getByLabelText("Distance walked"), {
+      target: { value: "2.25" }
+    });
     fireEvent.click(screen.getByRole("button", { name: "Save Metrics" }));
 
     await waitFor(() => {
@@ -57,7 +64,10 @@ describe("MetricsCheckIn", () => {
       checkInType: "evening",
       energyLevel: 4,
       moodLevel: 3,
-      steps: 6400
+      steps: 6400,
+      kettlebellSwingsTotal: 150,
+      karateClass: true,
+      distanceWalkedMiles: 2.25
     });
   });
 

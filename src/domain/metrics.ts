@@ -20,6 +20,9 @@ export type MetricInput = {
   moodLevel?: number;
   steps?: number;
   workoutSummary?: string;
+  kettlebellSwingsTotal?: number;
+  karateClass?: boolean;
+  distanceWalkedMiles?: number;
   bloodPressureSystolic?: number;
   bloodPressureDiastolic?: number;
   notes?: string;
@@ -85,6 +88,24 @@ export function validateMetricInput(input: MetricInput): MetricValidationResult 
   }
 
   if (
+    !isNonNegative(input.kettlebellSwingsTotal) ||
+    !isInteger(input.kettlebellSwingsTotal)
+  ) {
+    return { ok: false, message: "Kettlebell swings must be a non-negative whole number." };
+  }
+
+  if (
+    input.karateClass !== undefined &&
+    typeof input.karateClass !== "boolean"
+  ) {
+    return { ok: false, message: "Karate class must be true or false." };
+  }
+
+  if (!isNonNegative(input.distanceWalkedMiles)) {
+    return { ok: false, message: "Distance walked must be non-negative." };
+  }
+
+  if (
     !isPositive(input.bloodPressureSystolic) ||
     !isInteger(input.bloodPressureSystolic)
   ) {
@@ -109,6 +130,9 @@ export function validateMetricInput(input: MetricInput): MetricValidationResult 
       moodLevel: input.moodLevel as MetricLevel | undefined,
       steps: input.steps,
       workoutSummary: normalizeOptionalText(input.workoutSummary),
+      kettlebellSwingsTotal: input.kettlebellSwingsTotal,
+      karateClass: input.karateClass || undefined,
+      distanceWalkedMiles: input.distanceWalkedMiles,
       bloodPressureSystolic: input.bloodPressureSystolic,
       bloodPressureDiastolic: input.bloodPressureDiastolic,
       notes: normalizeOptionalText(input.notes)
@@ -137,6 +161,9 @@ export function createMetricEntry(
     moodLevel: validation.value.moodLevel as MetricLevel | undefined,
     steps: validation.value.steps,
     workoutSummary: validation.value.workoutSummary,
+    kettlebellSwingsTotal: validation.value.kettlebellSwingsTotal,
+    karateClass: validation.value.karateClass,
+    distanceWalkedMiles: validation.value.distanceWalkedMiles,
     bloodPressureSystolic: validation.value.bloodPressureSystolic,
     bloodPressureDiastolic: validation.value.bloodPressureDiastolic,
     notes: validation.value.notes,
@@ -180,6 +207,11 @@ export function isMetricEntry(value: unknown): value is MetricEntry {
     (entry.moodLevel === undefined || metricLevels.includes(entry.moodLevel)) &&
     (entry.steps === undefined || typeof entry.steps === "number") &&
     (entry.workoutSummary === undefined || typeof entry.workoutSummary === "string") &&
+    (entry.kettlebellSwingsTotal === undefined ||
+      typeof entry.kettlebellSwingsTotal === "number") &&
+    (entry.karateClass === undefined || typeof entry.karateClass === "boolean") &&
+    (entry.distanceWalkedMiles === undefined ||
+      typeof entry.distanceWalkedMiles === "number") &&
     (entry.bloodPressureSystolic === undefined ||
       typeof entry.bloodPressureSystolic === "number") &&
     (entry.bloodPressureDiastolic === undefined ||

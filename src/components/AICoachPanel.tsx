@@ -2,6 +2,13 @@
 
 import { type FormEvent, useEffect, useState } from "react";
 
+import {
+  confirmAIToolProposal,
+  sendAIChatRequest,
+  type AIChatResponse
+} from "@/client/aiApiClient";
+import { createClientId } from "@/client/clientIds";
+import { loadStoredAppData } from "@/client/storedAppData";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { OfflineBoundary, aiNetworkRequiredMessage, useNetworkStatus } from "@/components/OfflineBoundary";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -11,8 +18,7 @@ import { createLocalEveningPostmortemRepository } from "@/data/eveningPostmortem
 import { createLocalJournalRepository } from "@/data/journalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
-import type { ConfirmTaskToolRequestInput } from "@/domain/aiTaskTools";
-import type { AIChatMode, AIStoredAppData, AIToolProposal } from "@/domain";
+import type { AIChatMode, AIToolProposal } from "@/domain";
 
 type ChatMessage = {
   id: string;
@@ -20,42 +26,8 @@ type ChatMessage = {
   content: string;
 };
 
-type AIChatResponse = {
-  error?: string;
-  message?: string;
-  mode?: string;
-  proposals?: AIToolProposal[];
-  usedContext?: {
-    openTaskCount: number;
-    recentMetricCount: number;
-    recentJournalEntryCount: number;
-  };
-};
-
-type ConfirmToolResponse = {
-  ok?: boolean;
-  error?: string;
-  appliedChangeSummary?: string;
-  dailyPlans?: ConfirmTaskToolRequestInput["dailyPlans"];
-  dailyReports?: ConfirmTaskToolRequestInput["dailyReports"];
-  eveningPostmortems?: ConfirmTaskToolRequestInput["eveningPostmortems"];
-  journalEntries?: ConfirmTaskToolRequestInput["journalEntries"];
-  metricEntries?: ConfirmTaskToolRequestInput["metricEntries"];
-  tasks?: ConfirmTaskToolRequestInput["tasks"];
-};
-
-function loadStoredAppData(): AIStoredAppData {
-  return {
-    tasks: createLocalTaskRepository(window.localStorage).load(),
-    dailyPlans: createLocalDailyPlanRepository(window.localStorage).load(),
-    metricEntries: createLocalMetricRepository(window.localStorage).load(),
-    journalEntries: createLocalJournalRepository(window.localStorage).load(),
-    dailyReports: createLocalDailyReportRepository(window.localStorage).load()
-  };
-}
-
 function createMessageId(role: ChatMessage["role"]): string {
-  return `${role}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return createClientId(role);
 }
 
 export function AICoachPanel() {
@@ -106,22 +78,11 @@ export function AICoachPanel() {
     setIsSending(true);
 
     try {
-      const response = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: trimmedMessage,
-          mode,
-          appData: loadStoredAppData()
-        })
+      const payload = await sendAIChatRequest({
+        message: trimmedMessage,
+        mode,
+        appData: loadStoredAppData(window.localStorage)
       });
-      const payload = (await response.json()) as AIChatResponse;
-
-      if (!response.ok || !payload.message) {
-        throw new Error(payload.error ?? "AI coach is unavailable right now.");
-      }
 
       setMessages((current) => [
         ...current,
@@ -178,26 +139,15 @@ export function AICoachPanel() {
         createLocalEveningPostmortemRepository(window.localStorage).load();
       const metricEntries = createLocalMetricRepository(window.localStorage).load();
       const journalEntries = createLocalJournalRepository(window.localStorage).load();
-      const response = await fetch("/api/ai/tools/confirm", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          proposal,
-          dailyPlans,
-          dailyReports,
-          eveningPostmortems,
-          journalEntries,
-          metricEntries,
-          tasks
-        })
+      const payload = await confirmAIToolProposal({
+        proposal,
+        dailyPlans,
+        dailyReports,
+        eveningPostmortems,
+        journalEntries,
+        metricEntries,
+        tasks
       });
-      const payload = (await response.json()) as ConfirmToolResponse;
-
-      if (!response.ok || !payload.ok || !payload.appliedChangeSummary) {
-        throw new Error(payload.error ?? "Tool proposal could not be applied.");
-      }
 
       if (payload.tasks) {
         createLocalTaskRepository(window.localStorage).save(payload.tasks);
@@ -246,7 +196,14 @@ export function AICoachPanel() {
         payload.sleepHours !== undefined ? `sleep ${payload.sleepHours}h` : undefined,
         payload.energyLevel !== undefined ? `energy ${payload.energyLevel}/5` : undefined,
         payload.moodLevel !== undefined ? `mood ${payload.moodLevel}/5` : undefined,
-        payload.steps !== undefined ? `${payload.steps} steps` : undefined
+        payload.steps !== undefined ? `${payload.steps} steps` : undefined,
+        payload.kettlebellSwingsTotal !== undefined
+          ? `${payload.kettlebellSwingsTotal} kettlebell swings`
+          : undefined,
+        payload.karateClass ? "karate class" : undefined,
+        payload.distanceWalkedMiles !== undefined
+          ? `${payload.distanceWalkedMiles} mi walked`
+          : undefined
       ].filter(Boolean).join(" | ");
     }
 

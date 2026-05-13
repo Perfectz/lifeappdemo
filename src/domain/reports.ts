@@ -73,6 +73,13 @@ function formatMetricEntry(entry: MetricEntry): string {
     entry.sleepHours !== undefined ? `sleep ${entry.sleepHours}h` : undefined,
     entry.steps !== undefined ? `${entry.steps} steps` : undefined,
     entry.weightLbs !== undefined ? `${entry.weightLbs} lbs` : undefined,
+    entry.kettlebellSwingsTotal !== undefined
+      ? `${entry.kettlebellSwingsTotal} kettlebell swings`
+      : undefined,
+    entry.karateClass ? "karate class" : undefined,
+    entry.distanceWalkedMiles !== undefined
+      ? `${entry.distanceWalkedMiles} mi walked`
+      : undefined,
     entry.workoutSummary ? `workout: ${entry.workoutSummary}` : undefined,
     entry.notes ? `notes: ${entry.notes}` : undefined
   ].filter(Boolean);

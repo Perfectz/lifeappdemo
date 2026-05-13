@@ -236,6 +236,9 @@ function validateLogMetricPayload(payload: unknown): MetricInput | undefined {
     moodLevel: optionalNumber(payload.moodLevel),
     steps: optionalNumber(payload.steps),
     workoutSummary: optionalText(payload.workoutSummary),
+    kettlebellSwingsTotal: optionalNumber(payload.kettlebellSwingsTotal),
+    karateClass: typeof payload.karateClass === "boolean" ? payload.karateClass : undefined,
+    distanceWalkedMiles: optionalNumber(payload.distanceWalkedMiles),
     bloodPressureSystolic: optionalNumber(payload.bloodPressureSystolic),
     bloodPressureDiastolic: optionalNumber(payload.bloodPressureDiastolic),
     notes: optionalText(payload.notes)
@@ -474,7 +477,11 @@ function isMetricEntryLike(value: unknown): value is MetricEntry {
     typeof value.createdAt === "string" &&
     typeof value.updatedAt === "string" &&
     (value.energyLevel === undefined || metricLevels.includes(value.energyLevel as MetricLevel)) &&
-    (value.moodLevel === undefined || metricLevels.includes(value.moodLevel as MetricLevel))
+    (value.moodLevel === undefined || metricLevels.includes(value.moodLevel as MetricLevel)) &&
+    (value.kettlebellSwingsTotal === undefined ||
+      typeof value.kettlebellSwingsTotal === "number") &&
+    (value.karateClass === undefined || typeof value.karateClass === "boolean") &&
+    (value.distanceWalkedMiles === undefined || typeof value.distanceWalkedMiles === "number")
   );
 }
 

@@ -18,6 +18,9 @@ type MetricFormState = {
   moodLevel: string;
   steps: string;
   workoutSummary: string;
+  kettlebellSwingsTotal: string;
+  karateClass: boolean;
+  distanceWalkedMiles: string;
   bloodPressureSystolic: string;
   bloodPressureDiastolic: string;
   notes: string;
@@ -36,6 +39,9 @@ function emptyForm(): MetricFormState {
     moodLevel: "",
     steps: "",
     workoutSummary: "",
+    kettlebellSwingsTotal: "",
+    karateClass: false,
+    distanceWalkedMiles: "",
     bloodPressureSystolic: "",
     bloodPressureDiastolic: "",
     notes: ""
@@ -60,6 +66,9 @@ function buildMetricInput(form: MetricFormState): MetricInput {
     moodLevel: optionalNumber(form.moodLevel),
     steps: optionalNumber(form.steps),
     workoutSummary: form.workoutSummary,
+    kettlebellSwingsTotal: optionalNumber(form.kettlebellSwingsTotal),
+    karateClass: form.karateClass,
+    distanceWalkedMiles: optionalNumber(form.distanceWalkedMiles),
     bloodPressureSystolic: optionalNumber(form.bloodPressureSystolic),
     bloodPressureDiastolic: optionalNumber(form.bloodPressureDiastolic),
     notes: form.notes
@@ -72,6 +81,13 @@ function formatMetricSummary(entry: MetricEntry): string {
     entry.moodLevel ? `Mood ${entry.moodLevel}` : undefined,
     entry.sleepHours !== undefined ? `Sleep ${entry.sleepHours}h` : undefined,
     entry.steps !== undefined ? `${entry.steps} steps` : undefined,
+    entry.kettlebellSwingsTotal !== undefined
+      ? `${entry.kettlebellSwingsTotal} swings`
+      : undefined,
+    entry.karateClass ? "Karate class" : undefined,
+    entry.distanceWalkedMiles !== undefined
+      ? `${entry.distanceWalkedMiles} mi walked`
+      : undefined,
     entry.weightLbs !== undefined ? `${entry.weightLbs} lbs` : undefined
   ].filter(Boolean);
 
@@ -242,6 +258,35 @@ export function MetricsCheckIn() {
                 />
               </label>
               <label>
+                <span>Kettlebell swings total</span>
+                <input
+                  inputMode="numeric"
+                  onChange={(event) => setField("kettlebellSwingsTotal", event.target.value)}
+                  placeholder="0"
+                  type="number"
+                  value={form.kettlebellSwingsTotal}
+                />
+              </label>
+              <label>
+                <span>Distance walked</span>
+                <input
+                  inputMode="decimal"
+                  onChange={(event) => setField("distanceWalkedMiles", event.target.value)}
+                  placeholder="miles"
+                  step="0.1"
+                  type="number"
+                  value={form.distanceWalkedMiles}
+                />
+              </label>
+              <label className="metrics-checkbox">
+                <input
+                  checked={form.karateClass}
+                  onChange={(event) => setField("karateClass", event.target.checked)}
+                  type="checkbox"
+                />
+                <span>Karate class</span>
+              </label>
+              <label>
                 <span>Blood pressure systolic</span>
                 <input
                   inputMode="numeric"
@@ -300,6 +345,13 @@ export function MetricsCheckIn() {
                   <p>{formatMetricSummary(entry)}</p>
                 </div>
                 <small>Source: {entry.source}</small>
+                {entry.kettlebellSwingsTotal !== undefined ? (
+                  <small>{entry.kettlebellSwingsTotal} kettlebell swings</small>
+                ) : null}
+                {entry.karateClass ? <small>Karate class</small> : null}
+                {entry.distanceWalkedMiles !== undefined ? (
+                  <small>{entry.distanceWalkedMiles} mi walked</small>
+                ) : null}
                 {entry.workoutSummary ? <small>{entry.workoutSummary}</small> : null}
               </article>
             ))}

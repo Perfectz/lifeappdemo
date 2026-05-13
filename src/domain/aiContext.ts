@@ -147,7 +147,14 @@ export function formatAIContextForPrompt(context: AIAppContext): string {
       entry.energyLevel !== undefined ? `energy ${entry.energyLevel}/5` : undefined,
       entry.moodLevel !== undefined ? `mood ${entry.moodLevel}/5` : undefined,
       entry.sleepHours !== undefined ? `sleep ${entry.sleepHours}h` : undefined,
-      entry.steps !== undefined ? `${entry.steps} steps` : undefined
+      entry.steps !== undefined ? `${entry.steps} steps` : undefined,
+      entry.kettlebellSwingsTotal !== undefined
+        ? `${entry.kettlebellSwingsTotal} kettlebell swings`
+        : undefined,
+      entry.karateClass ? "karate class" : undefined,
+      entry.distanceWalkedMiles !== undefined
+        ? `${entry.distanceWalkedMiles} mi walked`
+        : undefined
     ].filter(Boolean);
 
     return `- ${parts.join(" | ")}`;

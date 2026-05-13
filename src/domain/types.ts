@@ -72,6 +72,9 @@ export type MetricEntry = TimestampedEntity & {
   moodLevel?: MetricLevel;
   steps?: number;
   workoutSummary?: string;
+  kettlebellSwingsTotal?: number;
+  karateClass?: boolean;
+  distanceWalkedMiles?: number;
   bloodPressureSystolic?: number;
   bloodPressureDiastolic?: number;
   notes?: string;

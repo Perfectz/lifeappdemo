@@ -66,6 +66,9 @@ function makeMetric(overrides: Partial<MetricEntry> = {}): MetricEntry {
     energyLevel: 4,
     moodLevel: 3,
     steps: 6200,
+    kettlebellSwingsTotal: 120,
+    karateClass: true,
+    distanceWalkedMiles: 2.4,
     recordedAt: now,
     createdAt: now,
     updatedAt: now,
@@ -105,6 +108,9 @@ describe("daily report generator", () => {
     expect(report.markdownContent).toContain("# LifeQuest Daily Report - 2026-05-04");
     expect(report.markdownContent).toContain("Ship the report slice");
     expect(report.markdownContent).toContain("energy 4/5");
+    expect(report.markdownContent).toContain("120 kettlebell swings");
+    expect(report.markdownContent).toContain("karate class");
+    expect(report.markdownContent).toContain("2.4 mi walked");
     expect(report.markdownContent).toContain("Report preview works.");
     expect(report.markdownContent).toContain("Small deterministic exports are easier to trust.");
   });

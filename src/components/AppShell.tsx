@@ -36,6 +36,9 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#content">
+        Skip to content
+      </a>
       <aside className="sidebar">
         <Link className="brand" href="/dashboard" aria-label="LifeQuest OS dashboard">
           <span className="brand-mark" aria-hidden="true">
@@ -97,6 +100,23 @@ export function AppShell({ children }: AppShellProps) {
       <main className="content" id="content">
         {children}
       </main>
+      <nav className="mobile-tabbar" aria-label="Mobile primary">
+        {navigationItems.map((item) => (
+          <Link
+            aria-current={pathname === item.href ? "page" : undefined}
+            className={
+              pathname === item.href
+                ? "mobile-tabbar-link mobile-tabbar-link-active"
+                : "mobile-tabbar-link"
+            }
+            href={item.href}
+            key={`mobile-${item.href}`}
+          >
+            <JrpgIcon name={item.icon} />
+            <span>{item.label}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }

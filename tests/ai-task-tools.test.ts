@@ -151,7 +151,10 @@ describe("AI task tools", () => {
           date: "2026-05-04",
           checkInType: "freeform",
           sleepHours: 6,
-          energyLevel: 2
+          energyLevel: 2,
+          kettlebellSwingsTotal: 80,
+          karateClass: true,
+          distanceWalkedMiles: 1.5
         }
       }),
       [],
@@ -166,7 +169,10 @@ describe("AI task tools", () => {
       date: "2026-05-04",
       checkInType: "freeform",
       sleepHours: 6,
-      energyLevel: 2
+      energyLevel: 2,
+      kettlebellSwingsTotal: 80,
+      karateClass: true,
+      distanceWalkedMiles: 1.5
     });
 
     const journal = applyAITaskToolProposal(

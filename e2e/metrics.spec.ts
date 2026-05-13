@@ -15,11 +15,16 @@ test.describe("V05 AM/PM Metrics Check-In", () => {
     await page.getByLabel("Energy level").selectOption("4");
     await page.getByLabel("Mood level").selectOption("3");
     await page.getByLabel("Steps").fill("7200");
+    await page.getByLabel("Kettlebell swings total").fill("120");
+    await page.getByLabel("Karate class").check();
+    await page.getByLabel("Distance walked").fill("1.8");
     await page.getByRole("button", { name: "Save Metrics" }).click();
 
     await expect(page.getByText("Metric check-in saved.")).toBeVisible();
     await expect(page.getByRole("heading", { name: / - morning$/ })).toBeVisible();
-    await expect(page.getByText("Energy 4 | Mood 3 | Sleep 7.5h | 7200 steps")).toBeVisible();
+    await expect(
+      page.getByText("Energy 4 | Mood 3 | Sleep 7.5h | 7200 steps | 120 swings | Karate class | 1.8 mi walked")
+    ).toBeVisible();
 
     await page.goto("/dashboard");
     const metricsSection = page.getByRole("complementary", { name: "Dashboard actions" });
@@ -31,6 +36,12 @@ test.describe("V05 AM/PM Metrics Check-In", () => {
     await expect(metricsSection.getByText("7.5h")).toBeVisible();
     await expect(metricsSection.getByText("Steps")).toBeVisible();
     await expect(metricsSection.getByText("7200")).toBeVisible();
+    await expect(metricsSection.getByText("Swings")).toBeVisible();
+    await expect(metricsSection.getByText("120")).toBeVisible();
+    await expect(metricsSection.getByText("Karate")).toBeVisible();
+    await expect(metricsSection.getByText("Class logged")).toBeVisible();
+    await expect(metricsSection.getByText("Walked")).toBeVisible();
+    await expect(metricsSection.getByText("1.8 mi")).toBeVisible();
   });
 
   test("logs evening metrics and shows recent entries", async ({ page }) => {
@@ -61,6 +72,13 @@ test.describe("V05 AM/PM Metrics Check-In", () => {
     await expect(
       page.getByRole("region", { name: "Metrics" }).getByRole("alert")
     ).toHaveText("Blood pressure systolic must be a positive whole number.");
+
+    await page.getByLabel("Blood pressure systolic").fill("");
+    await page.getByLabel("Kettlebell swings total").fill("4.5");
+    await page.getByRole("button", { name: "Save Metrics" }).click();
+    await expect(
+      page.getByRole("region", { name: "Metrics" }).getByRole("alert")
+    ).toHaveText("Kettlebell swings must be a non-negative whole number.");
 
     const entries = await page.evaluate(() =>
       JSON.parse(window.localStorage.getItem("lifequest.metricEntries.v1") ?? "[]")

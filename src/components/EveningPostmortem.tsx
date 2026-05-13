@@ -3,6 +3,13 @@
 import Link from "next/link";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
+import {
+  confirmAIToolProposal,
+  sendAIChatRequest,
+  type AIChatResponse
+} from "@/client/aiApiClient";
+import { createClientId } from "@/client/clientIds";
+import { loadStoredAppData } from "@/client/storedAppData";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { OfflineBoundary, aiNetworkRequiredMessage, useNetworkStatus } from "@/components/OfflineBoundary";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -14,7 +21,6 @@ import { createLocalJournalRepository } from "@/data/journalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
 import type {
-  AIStoredAppData,
   AIToolProposal,
   DailyPlan,
   DailyReport,
@@ -25,7 +31,6 @@ import type {
   Task,
   TaskOutcome
 } from "@/domain";
-import type { ConfirmTaskToolRequestInput } from "@/domain/aiTaskTools";
 import { getDailyPlanForDate } from "@/domain/dailyPlans";
 import { toLocalIsoDate } from "@/domain/dates";
 import {
@@ -49,24 +54,6 @@ type ChatMessage = {
   id: string;
   role: "user" | "coach";
   content: string;
-};
-
-type AIChatResponse = {
-  message?: string;
-  error?: string;
-  proposals?: AIToolProposal[];
-};
-
-type ConfirmToolResponse = {
-  ok?: boolean;
-  error?: string;
-  appliedChangeSummary?: string;
-  dailyPlans?: ConfirmTaskToolRequestInput["dailyPlans"];
-  dailyReports?: ConfirmTaskToolRequestInput["dailyReports"];
-  eveningPostmortems?: ConfirmTaskToolRequestInput["eveningPostmortems"];
-  journalEntries?: ConfirmTaskToolRequestInput["journalEntries"];
-  metricEntries?: ConfirmTaskToolRequestInput["metricEntries"];
-  tasks?: ConfirmTaskToolRequestInput["tasks"];
 };
 
 const defaultReflection: ReflectionInput = {
@@ -104,17 +91,7 @@ function getReflection(existing?: EveningPostmortemRecord): ReflectionInput {
 }
 
 function createMessageId(role: ChatMessage["role"]): string {
-  return `${role}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function loadStoredAppData(): AIStoredAppData {
-  return {
-    tasks: createLocalTaskRepository(window.localStorage).load(),
-    dailyPlans: createLocalDailyPlanRepository(window.localStorage).load(),
-    metricEntries: createLocalMetricRepository(window.localStorage).load(),
-    journalEntries: createLocalJournalRepository(window.localStorage).load(),
-    dailyReports: createLocalDailyReportRepository(window.localStorage).load()
-  };
+  return createClientId(role);
 }
 
 export function EveningPostmortem() {
@@ -345,22 +322,11 @@ export function EveningPostmortem() {
     setIsSendingAiMessage(true);
 
     try {
-      const response = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: trimmedMessage,
-          mode: "evening",
-          appData: loadStoredAppData()
-        })
+      const payload: AIChatResponse = await sendAIChatRequest({
+        message: trimmedMessage,
+        mode: "evening",
+        appData: loadStoredAppData(window.localStorage)
       });
-      const payload = (await response.json()) as AIChatResponse;
-
-      if (!response.ok || !payload.message) {
-        throw new Error(payload.error ?? "AI evening postmortem is unavailable right now.");
-      }
 
       setAiMessages((current) => [
         ...current,
@@ -404,26 +370,15 @@ export function EveningPostmortem() {
     setError(null);
 
     try {
-      const response = await fetch("/api/ai/tools/confirm", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          proposal,
-          dailyPlans: plans,
-          dailyReports: reports,
-          eveningPostmortems: postmortems,
-          journalEntries,
-          metricEntries,
-          tasks
-        })
+      const payload = await confirmAIToolProposal({
+        proposal,
+        dailyPlans: plans,
+        dailyReports: reports,
+        eveningPostmortems: postmortems,
+        journalEntries,
+        metricEntries,
+        tasks
       });
-      const payload = (await response.json()) as ConfirmToolResponse;
-
-      if (!response.ok || !payload.ok || !payload.appliedChangeSummary) {
-        throw new Error(payload.error ?? "AI proposal could not be applied.");
-      }
 
       if (payload.tasks) {
         createLocalTaskRepository(window.localStorage).save(payload.tasks);
