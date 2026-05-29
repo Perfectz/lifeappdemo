@@ -8,6 +8,7 @@ coverage
 .env*.local
 *.tsbuildinfo
 /tmp-*.png
+/tour-*.png
 /continue-ui-*.png
 /review-*.png
 /ui-upgrade-*.png

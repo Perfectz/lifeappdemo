@@ -1,10 +1,31 @@
 import type { Metadata, Viewport } from "next";
+import { Pixelify_Sans, VT323 } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/AppShell";
 import { PWAServiceWorkerRegister } from "@/components/PWAServiceWorkerRegister";
 import { withBasePath } from "@/config/site";
 import "./globals.css";
+
+// Display font for chrome labels (brand, group captions, nav strongs,
+// hero name). Pixelify Sans is crisp at small sizes and reads like a
+// late-90s JRPG menu header.
+const pixelifySans = Pixelify_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-pixel-display"
+});
+
+// Monospaced bitmap font for status readouts and the command-palette
+// prompt. VT323 is a classic terminal/early-CRT face that lands the
+// PSX status-window feel.
+const vt323 = VT323({
+  subsets: ["latin"],
+  display: "swap",
+  weight: "400",
+  variable: "--font-pixel-mono"
+});
 
 export const metadata: Metadata = {
   title: {
@@ -36,8 +57,15 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${pixelifySans.variable} ${vt323.variable}`}>
       <body>
+        {/* Apply the stored menu theme before paint to avoid a flash of
+            the default skin on first render. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('lifequest.theme.v1');if(t&&t!=='psx'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`
+          }}
+        />
         <PWAServiceWorkerRegister />
         <AppShell>{children}</AppShell>
       </body>

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./test-base";
 
 const routes = [
   { label: "Dashboard", path: "/dashboard", heading: "Today" },
@@ -16,6 +16,7 @@ const routes = [
   { label: "Metrics", path: "/metrics", heading: "Metrics" },
   { label: "Health Import", path: "/health-import", heading: "Health Import" },
   { label: "Journal", path: "/journal", heading: "Journal" },
+  { label: "Trends", path: "/trends", heading: "Trends" },
   { label: "Reports", path: "/reports", heading: "Reports" },
   { label: "AI Coach", path: "/coach", heading: "AI Coach" },
   { label: "Settings", path: "/settings", heading: "Settings" }
@@ -35,8 +36,15 @@ test.describe("V00 walking skeleton navigation", () => {
   for (const route of routes) {
     test(`${route.label} route loads from nav`, async ({ page }) => {
       await page.goto("/dashboard");
-      const primaryNav = page.getByRole("navigation", { name: "Primary" });
-      await primaryNav.locator(`a[href="${route.path}"]`).click();
+      // Menu items live across the Primary nav (sidebar groups), the
+      // Account nav (sidebar footer for Settings), the mobile tabbar,
+      // or — on mobile, for the overflow routes — the More sheet. If
+      // the link isn't already visible, open the More sheet first.
+      const link = page.locator(`a[href="${route.path}"]:visible`).first();
+      if ((await link.count()) === 0) {
+        await page.locator("button.mobile-tabbar-link-more").click();
+      }
+      await page.locator(`a[href="${route.path}"]:visible`).first().click();
 
       await expect(page).toHaveURL(new RegExp(`${route.path}$`));
       await expect(page.getByRole("heading", { name: route.heading, exact: true })).toBeVisible();
@@ -56,6 +64,10 @@ test.describe("V00 walking skeleton navigation", () => {
         await expect(page.getByRole("button", { name: "Save Journal Entry" })).toBeVisible();
       } else if (route.path === "/reports") {
         await expect(page.getByRole("button", { name: "Generate Preview" })).toBeVisible();
+      } else if (route.path === "/trends") {
+        await expect(
+          page.getByRole("heading", { name: "Weekly Quest Goal" })
+        ).toBeVisible();
       } else if (route.path === "/coach") {
         await expect(
           page

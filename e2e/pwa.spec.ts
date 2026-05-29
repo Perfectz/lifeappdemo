@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./test-base";
 
 test.describe("PWA install and stale-safe offline shell", () => {
   test("manifest and service worker installability basics are available", async ({ page }) => {

@@ -34,6 +34,16 @@ export type {
 } from "./types";
 export type { TaskGroups, TaskInput, TaskValidationResult } from "./tasks";
 export type { DashboardStats } from "./dashboard";
+export type { HeroStatus } from "./heroStatus";
+export type { NavStatus, NavStatusMap } from "./navStatus";
+export type {
+  CompletionTrend,
+  DayPoint,
+  MetricTrend,
+  MetricTrendPoint,
+  TagStat,
+  WeekProgress
+} from "./insights";
 export type { DailyPlanInput, DailyPlanValidationResult } from "./dailyPlans";
 export type {
   EveningPostmortemInput,

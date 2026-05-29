@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { celebrate } from "@/client/celebrate";
+import { openQuickAdd } from "@/client/quickAdd";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { StatusPanel } from "@/components/StatusPanel";
 import { TaskForm } from "@/components/TaskForm";
@@ -51,6 +53,12 @@ export function QuestLog() {
 
   function handleComplete(task: Task) {
     setTasks((current) => replaceTask(current, completeTask(task)));
+    celebrate({
+      kind: "quest",
+      title: "QUEST COMPLETE!",
+      subtitle: task.title,
+      pose: "questComplete"
+    });
   }
 
   function handleReopen(task: Task) {
@@ -89,9 +97,12 @@ export function QuestLog() {
         <div className="quest-groups">
           {!hasLoaded ? <p className="quest-empty">Loading Quest Log...</p> : null}
           {hasLoaded && tasks.length === 0 ? (
-            <p className="quest-empty quest-empty-global">
-              No quests yet. Add one small win.
-            </p>
+            <div className="quest-empty quest-empty-global quest-empty-cta">
+              <p>Your quest log is empty. Capture one small win to begin.</p>
+              <button type="button" className="command-button" onClick={() => openQuickAdd()}>
+                <span>Quick add a quest</span>
+              </button>
+            </div>
           ) : null}
           <TaskGroup
             emptyMessage="No active quests."

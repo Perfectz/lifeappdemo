@@ -9,6 +9,7 @@ import type {
   Task
 } from "@/domain/types";
 import { isDailyPlan } from "@/domain/dailyPlans";
+import { getInsightHighlights } from "@/domain/insights";
 import { isJournalEntry } from "@/domain/journal";
 import { isMetricEntry } from "@/domain/metrics";
 import { isDailyReport } from "@/domain/reports";
@@ -28,6 +29,7 @@ export type AIChatRequestInput = {
   message: string;
   mode: AIChatMode;
   appData?: AIStoredAppData;
+  heroName?: string;
 };
 
 export type AIChatRequestValidationResult =
@@ -87,12 +89,18 @@ export function validateAIChatRequestBody(body: unknown): AIChatRequestValidatio
     return { ok: false, message: "Mode is invalid." };
   }
 
+  const heroName =
+    typeof body.heroName === "string" && body.heroName.trim()
+      ? body.heroName.trim().slice(0, 48)
+      : undefined;
+
   return {
     ok: true,
     value: {
       message,
       mode: mode as AIChatMode,
-      appData: normalizeStoredAppData(body.appData)
+      appData: normalizeStoredAppData(body.appData),
+      heroName
     }
   };
 }
@@ -117,13 +125,20 @@ export function buildAIAppContext(
     (left, right) => timestamp(right.updatedAt) - timestamp(left.updatedAt)
   )[0];
 
+  const insightHighlights = getInsightHighlights(
+    asArray(data.tasks),
+    asArray(data.metricEntries),
+    today
+  );
+
   return {
     today,
     openTasks,
     todaysPlan,
     recentMetrics,
     recentJournalEntries,
-    latestReport
+    latestReport,
+    insightHighlights
   };
 }
 
@@ -175,6 +190,10 @@ export function formatAIContextForPrompt(context: AIAppContext): string {
     metricLines.length > 0 ? metricLines.join("\n") : "- None",
     "Recent journal entries:",
     journalLines.length > 0 ? journalLines.join("\n") : "- None",
+    "Behavioral patterns (derived):",
+    context.insightHighlights.length > 0
+      ? context.insightHighlights.map((line) => `- ${line}`).join("\n")
+      : "- None",
     "Latest report:",
     context.latestReport
       ? context.latestReport.markdownContent.slice(0, 1_200)

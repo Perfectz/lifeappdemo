@@ -5,67 +5,123 @@ export type NavigationItem = {
   href: string;
   description: string;
   icon: JrpgIconName;
+  /** Optional shorter label for tight contexts (mobile tabbar, command palette). */
+  shortLabel?: string;
+  /** When true, surfaces in the mobile tabbar's primary 4 slots. */
+  primaryMobile?: boolean;
 };
 
-export const navigationItems: NavigationItem[] = [
+export type NavigationGroup = {
+  id: string;
+  caption: string;
+  items: NavigationItem[];
+};
+
+export const navigationGroups: NavigationGroup[] = [
   {
-    label: "Dashboard",
-    href: "/dashboard",
-    description: "Today command center",
-    icon: "dashboard"
+    id: "today",
+    caption: "Today",
+    items: [
+      {
+        label: "Dashboard",
+        href: "/dashboard",
+        description: "Today command center",
+        icon: "dashboard",
+        primaryMobile: true
+      },
+      {
+        label: "Quest Log",
+        href: "/tasks",
+        description: "Capture and clear quests",
+        icon: "tasks",
+        shortLabel: "Quests",
+        primaryMobile: true
+      },
+      {
+        label: "Morning Stand-Up",
+        href: "/standup/morning",
+        description: "Plan the day",
+        icon: "morning",
+        shortLabel: "Morning",
+        primaryMobile: true
+      },
+      {
+        label: "Evening Postmortem",
+        href: "/standup/evening",
+        description: "Close the day",
+        icon: "evening",
+        shortLabel: "Evening"
+      }
+    ]
   },
   {
-    label: "Quest Log",
-    href: "/tasks",
-    description: "Capture and clear quests",
-    icon: "tasks"
+    id: "reflect",
+    caption: "Reflect",
+    items: [
+      {
+        label: "Metrics",
+        href: "/metrics",
+        description: "Energy check-in",
+        icon: "metrics",
+        primaryMobile: true
+      },
+      {
+        label: "Health Import",
+        href: "/health-import",
+        description: "Samsung export alpha",
+        icon: "healthImport",
+        shortLabel: "Health"
+      },
+      {
+        label: "Journal",
+        href: "/journal",
+        description: "Lesson capture",
+        icon: "journal"
+      },
+      {
+        label: "Trends",
+        href: "/trends",
+        description: "Patterns over time",
+        icon: "trends"
+      }
+    ]
   },
   {
-    label: "Morning Stand-Up",
-    href: "/standup/morning",
-    description: "Plan the day",
-    icon: "morning"
-  },
-  {
-    label: "Evening Postmortem",
-    href: "/standup/evening",
-    description: "Close the day",
-    icon: "evening"
-  },
-  {
-    label: "Metrics",
-    href: "/metrics",
-    description: "Energy check-in",
-    icon: "metrics"
-  },
-  {
-    label: "Health Import",
-    href: "/health-import",
-    description: "Samsung export alpha",
-    icon: "healthImport"
-  },
-  {
-    label: "Journal",
-    href: "/journal",
-    description: "Lesson capture",
-    icon: "journal"
-  },
-  {
-    label: "Reports",
-    href: "/reports",
-    description: "Daily report export",
-    icon: "reports"
-  },
-  {
-    label: "AI Coach",
-    href: "/coach",
-    description: "Read-only coach mode",
-    icon: "coach"
-  },
+    id: "tools",
+    caption: "Tools",
+    items: [
+      {
+        label: "Reports",
+        href: "/reports",
+        description: "Daily report export",
+        icon: "reports"
+      },
+      {
+        label: "AI Coach",
+        href: "/coach",
+        description: "Read-only coach mode",
+        icon: "coach",
+        shortLabel: "Coach"
+      }
+    ]
+  }
+];
+
+export const navigationFooterItems: NavigationItem[] = [
   {
     label: "Settings",
     href: "/settings",
     description: "Configuration",
     icon: "settings"
   }
+];
+
+/**
+ * Flat list of every navigable destination (primary + footer). Kept for
+ * tests, command-palette indexing, and any consumer that needs the
+ * pre-grouped shape.
+ */
+export const navigationItems: NavigationItem[] = [
+  ...navigationGroups.flatMap((group) => group.items),
+  ...navigationFooterItems
 ];

@@ -5,6 +5,7 @@ export type OpenAIChatCompletionInput = {
   message: string;
   mode: string;
   context: string;
+  heroName?: string;
 };
 
 export type OpenAICoachResult = {
@@ -22,6 +23,18 @@ export function setOpenAIChatCompletionForTests(completion: OpenAIChatCompletion
   testCompletion = completion;
 }
 
+export class AINotConfiguredError extends Error {
+  constructor() {
+    super("OpenAI API key is not configured.");
+    this.name = "AINotConfiguredError";
+  }
+}
+
+function intFromEnv(name: string, fallback: number): number {
+  const parsed = Number(process.env[name]);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 export async function completeReadOnlyCoachChat(
   input: OpenAIChatCompletionInput
 ): Promise<OpenAICoachResult> {
@@ -32,17 +45,27 @@ export async function completeReadOnlyCoachChat(
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
-    throw new Error("OpenAI API key is not configured.");
+    throw new AINotConfiguredError();
   }
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  // Cost + safety guards: cap output tokens and abort hung requests.
+  const maxTokens = intFromEnv("OPENAI_MAX_TOKENS", 800);
+  const timeoutMs = intFromEnv("OPENAI_TIMEOUT_MS", 30_000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
+    signal: controller.signal,
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+      max_tokens: maxTokens,
       messages: [
         {
           role: "system",
@@ -63,12 +86,22 @@ export async function completeReadOnlyCoachChat(
         },
         {
           role: "user",
-          content: `Mode: ${input.mode}\n\nApp context:\n${input.context}\n\nPatrick asks:\n${input.message}`
+          content: `Mode: ${input.mode}\n\nApp context:\n${input.context}\n\n${
+            input.heroName?.trim() || "The user"
+          } asks:\n${input.message}`
         }
       ],
       temperature: 0.4
     })
-  });
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("OpenAI request timed out.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     throw new Error("OpenAI request failed.");

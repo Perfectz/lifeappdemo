@@ -12,6 +12,7 @@ export type JrpgIconName =
   | "journal"
   | "reports"
   | "coach"
+  | "trends"
   | "settings";
 
 type JrpgIconProps = {
@@ -24,11 +25,12 @@ const iconAssets: Record<JrpgIconName, string> = {
   tasks: "/assets/sprites/lifequest-nav-icons/02-quest-log.png",
   morning: "/assets/sprites/lifequest-nav-icons/03-morning-standup.png",
   evening: "/assets/sprites/lifequest-nav-icons/04-evening-postmortem.png",
-  healthImport: "/assets/sprites/lifequest-nav-icons/05-metrics.png",
+  healthImport: "/assets/sprites/lifequest-nav-icons/09-health-import.svg",
   metrics: "/assets/sprites/lifequest-nav-icons/05-metrics.png",
   journal: "/assets/sprites/lifequest-nav-icons/06-journal.png",
   reports: "/assets/sprites/lifequest-nav-icons/07-reports.png",
-  coach: "/assets/sprites/lifequest-nav-icons/07-reports.png",
+  coach: "/assets/sprites/lifequest-nav-icons/10-coach.svg",
+  trends: "/assets/sprites/lifequest-nav-icons/11-trends.svg",
   settings: "/assets/sprites/lifequest-nav-icons/08-settings.png"
 };
 

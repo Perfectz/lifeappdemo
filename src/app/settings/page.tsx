@@ -1,6 +1,10 @@
+import { DataBackupPanel } from "@/components/DataBackupPanel";
 import { DemoModePanel } from "@/components/DemoModePanel";
 import { PlaceholderPage } from "@/components/PlaceholderPage";
 import { InstallReadinessPanel } from "@/components/InstallReadinessPanel";
+import { ProfilePanel } from "@/components/ProfilePanel";
+import { RemindersPanel } from "@/components/RemindersPanel";
+import { ThemePicker } from "@/components/ThemePicker";
 
 export default function SettingsPage() {
   return (
@@ -13,6 +17,22 @@ export default function SettingsPage() {
       statusText="PWA install and stale-safe offline shell. No product sync or offline AI is enabled."
     >
       <div className="settings-install-grid">
+        <section className="dashboard-section">
+          <h2>Hero Profile</h2>
+          <ProfilePanel />
+        </section>
+        <section className="dashboard-section">
+          <h2>Reminders</h2>
+          <RemindersPanel />
+        </section>
+        <section className="dashboard-section">
+          <h2>Menu Theme</h2>
+          <ThemePicker />
+        </section>
+        <section className="dashboard-section">
+          <h2>Backup &amp; Restore</h2>
+          <DataBackupPanel />
+        </section>
         <section className="dashboard-section">
           <h2>Portfolio Demo Mode</h2>
           <DemoModePanel />

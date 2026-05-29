@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
+  <!-- bubble body -->
+  <rect x="1" y="2" width="14" height="9" fill="#172131"/>
+  <!-- top border -->
+  <rect x="1" y="2" width="14" height="1" fill="#6ee7b7"/>
+  <!-- bottom border -->
+  <rect x="1" y="10" width="14" height="1" fill="#6ee7b7"/>
+  <!-- left border -->
+  <rect x="1" y="2" width="1" height="9" fill="#6ee7b7"/>
+  <!-- right border -->
+  <rect x="14" y="2" width="1" height="9" fill="#6ee7b7"/>
+  <!-- tail -->
+  <rect x="3" y="11" width="3" height="1" fill="#6ee7b7"/>
+  <rect x="4" y="12" width="2" height="1" fill="#6ee7b7"/>
+  <rect x="5" y="13" width="1" height="1" fill="#6ee7b7"/>
+  <rect x="4" y="11" width="2" height="2" fill="#172131"/>
+  <!-- typing dots -->
+  <rect x="4" y="6" width="2" height="2" fill="#f6c768"/>
+  <rect x="7" y="6" width="2" height="2" fill="#f6c768"/>
+  <rect x="10" y="6" width="2" height="2" fill="#f6c768"/>
+</svg>

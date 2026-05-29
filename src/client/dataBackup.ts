@@ -1,0 +1,99 @@
+import { getLifeQuestStorageUsage } from "@/data/createLocalRepository";
+
+export const backupSchemaVersion = 1;
+export const backupAppId = "lifequest-os";
+
+export type DataBackup = {
+  app: typeof backupAppId;
+  schemaVersion: number;
+  exportedAt: string;
+  data: Record<string, unknown>;
+};
+
+export type ImportResult =
+  | { ok: true; restoredKeys: string[] }
+  | { ok: false; message: string };
+
+/**
+ * Snapshot every LifeQuest key into a portable JSON envelope. Generic
+ * over keys so new entity types are included automatically without
+ * touching this code.
+ */
+export function exportAllData(storage: Storage): DataBackup {
+  const data: Record<string, unknown> = {};
+  const { byKey } = getLifeQuestStorageUsage(storage);
+  for (const { key } of byKey) {
+    const raw = storage.getItem(key);
+    if (raw == null) continue;
+    try {
+      data[key] = JSON.parse(raw);
+    } catch {
+      // Preserve non-JSON values verbatim.
+      data[key] = raw;
+    }
+  }
+  return {
+    app: backupAppId,
+    schemaVersion: backupSchemaVersion,
+    exportedAt: new Date().toISOString(),
+    data
+  };
+}
+
+export function serializeBackup(backup: DataBackup): string {
+  return JSON.stringify(backup, null, 2);
+}
+
+export function backupFileName(now: Date = new Date()): string {
+  const stamp = now.toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  return `lifequest-backup-${stamp}.json`;
+}
+
+function isBackup(value: unknown): value is DataBackup {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<DataBackup>;
+  return (
+    candidate.app === backupAppId &&
+    typeof candidate.schemaVersion === "number" &&
+    typeof candidate.data === "object" &&
+    candidate.data !== null &&
+    !Array.isArray(candidate.data)
+  );
+}
+
+/**
+ * Restore a backup, replacing every LifeQuest key it contains. Only
+ * keys under the `lifequest.` namespace are written, so a malformed or
+ * malicious file can't scribble into unrelated storage.
+ */
+export function importAllData(storage: Storage, rawJson: string): ImportResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawJson);
+  } catch {
+    return { ok: false, message: "That file isn't valid JSON." };
+  }
+
+  if (!isBackup(parsed)) {
+    return {
+      ok: false,
+      message: "That doesn't look like a LifeQuest backup file."
+    };
+  }
+
+  const restoredKeys: string[] = [];
+  try {
+    for (const [key, value] of Object.entries(parsed.data)) {
+      if (!key.startsWith("lifequest.")) continue;
+      storage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
+      restoredKeys.push(key);
+    }
+  } catch {
+    return {
+      ok: false,
+      message: "Storage is full — couldn't write the full backup."
+    };
+  }
+
+  return { ok: true, restoredKeys };
+}

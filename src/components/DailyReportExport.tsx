@@ -169,6 +169,37 @@ export function DailyReportExport() {
               ? `Latest deterministic report ready as ${reportFilename}.`
               : "No generated report for this date yet."}
           </p>
+
+          <div className="report-history">
+            <SectionHeader eyebrow="Archive" title="Report History" />
+            {reports.length === 0 ? (
+              <p className="quest-empty">No reports generated yet.</p>
+            ) : (
+              <ul className="report-history-list">
+                {[...reports]
+                  .sort((a, b) => (a.date < b.date ? 1 : -1))
+                  .map((report) => (
+                    <li key={report.id}>
+                      <button
+                        type="button"
+                        className={
+                          report.date === selectedDate
+                            ? "report-history-item report-history-item-active"
+                            : "report-history-item"
+                        }
+                        onClick={() => {
+                          setSelectedDate(report.date);
+                          setMessage(null);
+                        }}
+                      >
+                        <span className="report-history-date">{report.date}</span>
+                        <span className="report-history-by">{report.generatedBy}</span>
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
         </section>
 
         <section className="dashboard-section report-preview-section" aria-label="Markdown preview">

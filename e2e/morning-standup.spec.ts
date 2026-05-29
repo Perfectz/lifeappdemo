@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "./test-base";
 
 const dailyPlanStorageKey = "lifequest.dailyPlans.v1";
 const taskStorageKey = "lifequest.tasks.v1";

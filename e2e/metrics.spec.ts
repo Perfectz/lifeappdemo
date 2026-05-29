@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./test-base";
 
 test.describe("V05 AM/PM Metrics Check-In", () => {
   test.beforeEach(async ({ page }) => {

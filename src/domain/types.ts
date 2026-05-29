@@ -113,6 +113,8 @@ export type AIAppContext = {
   recentMetrics: MetricEntry[];
   recentJournalEntries: JournalEntry[];
   latestReport?: DailyReport;
+  /** Derived behavioral patterns so the coach can reference real history. */
+  insightHighlights: string[];
 };
 
 export type AIToolProposalStatus = "pending" | "confirmed" | "rejected" | "applied" | "failed";

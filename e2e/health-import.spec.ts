@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./test-base";
 
 test.describe("V15 Health Import Alpha", () => {
   test.beforeEach(async ({ page }) => {

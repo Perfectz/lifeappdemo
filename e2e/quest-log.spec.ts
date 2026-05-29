@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./test-base";
 
 test.describe("V01 Quest Log task CRUD", () => {
   test.beforeEach(async ({ page }) => {
@@ -8,7 +8,7 @@ test.describe("V01 Quest Log task CRUD", () => {
   });
 
   test("create, persist, complete, reopen, and archive a quest", async ({ page }) => {
-    await expect(page.getByText("No quests yet. Add one small win.")).toBeVisible();
+    await expect(page.getByText("Your quest log is empty. Capture one small win to begin.")).toBeVisible();
 
     await page.getByLabel("Quest Title").fill("Finish the V01 slice");
     await page.getByLabel("Description").fill("Keep the scope to Quest Log CRUD.");
@@ -43,6 +43,6 @@ test.describe("V01 Quest Log task CRUD", () => {
     await page.getByRole("button", { name: "Add Quest" }).click();
 
     await expect(page.getByText("Quest title is required.")).toBeVisible();
-    await expect(page.getByText("No quests yet. Add one small win.")).toBeVisible();
+    await expect(page.getByText("Your quest log is empty. Capture one small win to begin.")).toBeVisible();
   });
 });

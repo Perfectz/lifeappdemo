@@ -8,7 +8,10 @@ import {
   type AIChatResponse
 } from "@/client/aiApiClient";
 import { createClientId } from "@/client/clientIds";
+import { persistAIToolResult } from "@/client/persistAIToolResult";
+import { readProfile } from "@/client/profile";
 import { loadStoredAppData } from "@/client/storedAppData";
+import { useHeroName } from "@/client/useHeroName";
 import { AiAdvisorPopup, type AdvisorMood } from "@/components/AiAdvisorPopup";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { CommandButton } from "@/components/CommandButton";
@@ -56,6 +59,7 @@ export function MorningStandup() {
   const [aiDraft, setAiDraft] = useState("");
   const [isSendingAiMessage, setIsSendingAiMessage] = useState(false);
   const isOnline = useNetworkStatus();
+  const heroName = useHeroName();
   const today = toLocalIsoDate();
 
   const activeTasks = useMemo(() => tasks.filter((task) => task.status === "todo"), [tasks]);
@@ -265,7 +269,8 @@ export function MorningStandup() {
       const payload: AIChatResponse = await sendAIChatRequest({
         message: trimmedMessage,
         mode: "morning",
-        appData: loadStoredAppData(window.localStorage)
+        appData: loadStoredAppData(window.localStorage),
+        heroName: readProfile(window.localStorage).heroName
       });
 
       setAiMessages((current) => [
@@ -299,12 +304,13 @@ export function MorningStandup() {
         tasks
       });
 
+      // Persist every returned entity type in one place, then sync the
+      // slices this screen renders.
+      persistAIToolResult(window.localStorage, payload);
       if (payload.tasks) {
-        createLocalTaskRepository(window.localStorage).save(payload.tasks);
         setTasks(payload.tasks);
       }
       if (payload.dailyPlans) {
-        createLocalDailyPlanRepository(window.localStorage).save(payload.dailyPlans);
         setPlans(payload.dailyPlans);
         const nextPlan = getActiveDailyPlanForDate(payload.dailyPlans, today);
         setMainQuestTaskId(nextPlan?.mainQuestTaskId ?? "");
@@ -312,11 +318,9 @@ export function MorningStandup() {
         setIntention(nextPlan?.intention ?? "");
       }
       if (payload.metricEntries) {
-        createLocalMetricRepository(window.localStorage).save(payload.metricEntries);
         setMetricEntries(payload.metricEntries);
       }
       if (payload.journalEntries) {
-        createLocalJournalRepository(window.localStorage).save(payload.journalEntries);
         setJournalEntries(payload.journalEntries);
       }
 
@@ -427,7 +431,7 @@ export function MorningStandup() {
             <div className="coach-message-list" aria-label="Morning AI transcript">
               {aiMessages.map((aiMessage) => (
                 <article className={`coach-message coach-message-${aiMessage.role}`} key={aiMessage.id}>
-                  <strong>{aiMessage.role === "user" ? "Patrick" : "Coach"}</strong>
+                  <strong>{aiMessage.role === "user" ? heroName : "Coach"}</strong>
                   <p>{aiMessage.content}</p>
                 </article>
               ))}

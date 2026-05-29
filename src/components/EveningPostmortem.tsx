@@ -9,7 +9,10 @@ import {
   type AIChatResponse
 } from "@/client/aiApiClient";
 import { createClientId } from "@/client/clientIds";
+import { persistAIToolResult } from "@/client/persistAIToolResult";
+import { readProfile } from "@/client/profile";
 import { loadStoredAppData } from "@/client/storedAppData";
+import { useHeroName } from "@/client/useHeroName";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { OfflineBoundary, aiNetworkRequiredMessage, useNetworkStatus } from "@/components/OfflineBoundary";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -113,6 +116,7 @@ export function EveningPostmortem() {
   const [aiDraft, setAiDraft] = useState("");
   const [isSendingAiMessage, setIsSendingAiMessage] = useState(false);
   const isOnline = useNetworkStatus();
+  const heroName = useHeroName();
   const today = toLocalIsoDate();
 
   const todaysPlan = useMemo(() => getDailyPlanForDate(plans, today), [plans, today]);
@@ -325,7 +329,8 @@ export function EveningPostmortem() {
       const payload: AIChatResponse = await sendAIChatRequest({
         message: trimmedMessage,
         mode: "evening",
-        appData: loadStoredAppData(window.localStorage)
+        appData: loadStoredAppData(window.localStorage),
+        heroName: readProfile(window.localStorage).heroName
       });
 
       setAiMessages((current) => [
@@ -380,8 +385,10 @@ export function EveningPostmortem() {
         tasks
       });
 
+      // Persist every returned entity type in one place, then sync the
+      // slices this screen renders.
+      persistAIToolResult(window.localStorage, payload);
       if (payload.tasks) {
-        createLocalTaskRepository(window.localStorage).save(payload.tasks);
         setTasks(payload.tasks);
         if (proposal.toolName === "complete_task" && proposal.payload && typeof proposal.payload === "object") {
           const taskId = (proposal.payload as { taskId?: unknown }).taskId;
@@ -397,25 +404,18 @@ export function EveningPostmortem() {
         }
       }
       if (payload.dailyPlans) {
-        createLocalDailyPlanRepository(window.localStorage).save(payload.dailyPlans);
         setPlans(payload.dailyPlans);
       }
       if (payload.dailyReports) {
-        createLocalDailyReportRepository(window.localStorage).save(payload.dailyReports);
         setReports(payload.dailyReports);
       }
       if (payload.eveningPostmortems) {
-        createLocalEveningPostmortemRepository(window.localStorage).save(
-          payload.eveningPostmortems
-        );
         setPostmortems(payload.eveningPostmortems);
       }
       if (payload.metricEntries) {
-        createLocalMetricRepository(window.localStorage).save(payload.metricEntries);
         setMetricEntries(payload.metricEntries);
       }
       if (payload.journalEntries) {
-        createLocalJournalRepository(window.localStorage).save(payload.journalEntries);
         setJournalEntries(payload.journalEntries);
       }
 
@@ -563,7 +563,7 @@ export function EveningPostmortem() {
             <div className="coach-message-list" aria-label="Evening AI transcript">
               {aiMessages.map((aiMessage) => (
                 <article className={`coach-message coach-message-${aiMessage.role}`} key={aiMessage.id}>
-                  <strong>{aiMessage.role === "user" ? "Patrick" : "Coach"}</strong>
+                  <strong>{aiMessage.role === "user" ? heroName : "Coach"}</strong>
                   <p>{aiMessage.content}</p>
                 </article>
               ))}

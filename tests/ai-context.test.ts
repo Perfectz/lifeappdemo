@@ -129,4 +129,25 @@ describe("AI context", () => {
     expect(prompt).not.toContain("Do not include");
     expect(prompt).not.toContain("OPENAI_API_KEY");
   });
+
+  it("includes derived behavioral patterns so the coach is history-aware", () => {
+    const context = buildAIAppContext(
+      {
+        tasks: [
+          makeTask({
+            id: "done-1",
+            status: "done",
+            tags: ["work"],
+            completedAt: `${today}T11:00:00.000Z`
+          })
+        ],
+        metricEntries: [makeMetric()]
+      },
+      today
+    );
+
+    expect(context.insightHighlights.length).toBeGreaterThan(0);
+    const prompt = formatAIContextForPrompt(context);
+    expect(prompt).toContain("Behavioral patterns (derived):");
+  });
 });

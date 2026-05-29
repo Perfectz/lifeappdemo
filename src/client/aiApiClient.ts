@@ -33,6 +33,7 @@ type AIChatRequest = {
   appData: AIStoredAppData;
   message: string;
   mode: AIChatMode;
+  heroName?: string;
 };
 
 async function readApiJson<T extends { error?: string }>(

@@ -7,9 +7,18 @@ import {
   validateAIChatRequestBody
 } from "@/domain/aiContext";
 import { toLocalIsoDate } from "@/domain/dates";
-import { completeReadOnlyCoachChat } from "@/server/ai/openaiClient";
+import { AINotConfiguredError, completeReadOnlyCoachChat } from "@/server/ai/openaiClient";
+import { checkRateLimit } from "@/server/ai/rateLimiter";
 
 export async function POST(request: Request) {
+  const limit = checkRateLimit("ai-chat");
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many AI requests. Please slow down for a moment." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+    );
+  }
+
   let body: unknown;
 
   try {
@@ -31,7 +40,8 @@ export async function POST(request: Request) {
     const completion = await completeReadOnlyCoachChat({
       message: validation.value.message,
       mode: validation.value.mode,
-      context: formatAIContextForPrompt(context)
+      context: formatAIContextForPrompt(context),
+      heroName: validation.value.heroName
     });
 
     return NextResponse.json({
@@ -40,7 +50,16 @@ export async function POST(request: Request) {
       proposals: completion.proposals,
       usedContext
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof AINotConfiguredError) {
+      return NextResponse.json(
+        {
+          error:
+            "AI coach isn't configured. The deterministic app works fully without it — add an OpenAI API key to enable coaching."
+        },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
       {
         error: "AI coach is unavailable right now. Try again in a moment."

@@ -8,7 +8,10 @@ import {
   type AIChatResponse
 } from "@/client/aiApiClient";
 import { createClientId } from "@/client/clientIds";
+import { persistAIToolResult } from "@/client/persistAIToolResult";
+import { readProfile } from "@/client/profile";
 import { loadStoredAppData } from "@/client/storedAppData";
+import { useHeroName } from "@/client/useHeroName";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { OfflineBoundary, aiNetworkRequiredMessage, useNetworkStatus } from "@/components/OfflineBoundary";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -40,6 +43,7 @@ export function AICoachPanel() {
   const [usedContext, setUsedContext] = useState<AIChatResponse["usedContext"]>();
   const [hasLoaded, setHasLoaded] = useState(false);
   const isOnline = useNetworkStatus();
+  const heroName = useHeroName();
 
   useEffect(() => {
     setMessages([
@@ -81,7 +85,8 @@ export function AICoachPanel() {
       const payload = await sendAIChatRequest({
         message: trimmedMessage,
         mode,
-        appData: loadStoredAppData(window.localStorage)
+        appData: loadStoredAppData(window.localStorage),
+        heroName: readProfile(window.localStorage).heroName
       });
 
       setMessages((current) => [
@@ -149,21 +154,7 @@ export function AICoachPanel() {
         tasks
       });
 
-      if (payload.tasks) {
-        createLocalTaskRepository(window.localStorage).save(payload.tasks);
-      }
-      if (payload.dailyPlans) {
-        createLocalDailyPlanRepository(window.localStorage).save(payload.dailyPlans);
-      }
-      if (payload.dailyReports) {
-        createLocalDailyReportRepository(window.localStorage).save(payload.dailyReports);
-      }
-      if (payload.metricEntries) {
-        createLocalMetricRepository(window.localStorage).save(payload.metricEntries);
-      }
-      if (payload.journalEntries) {
-        createLocalJournalRepository(window.localStorage).save(payload.journalEntries);
-      }
+      persistAIToolResult(window.localStorage, payload);
       updateProposal(proposal.id, "applied");
       setMessages((current) => [
         ...current,
@@ -278,7 +269,7 @@ export function AICoachPanel() {
             {!hasLoaded ? <p className="quest-empty">Loading coach...</p> : null}
             {messages.map((message) => (
               <article className={`coach-message coach-message-${message.role}`} key={message.id}>
-                <strong>{message.role === "user" ? "Patrick" : "Coach"}</strong>
+                <strong>{message.role === "user" ? heroName : "Coach"}</strong>
                 <p>{message.content}</p>
               </article>
             ))}
