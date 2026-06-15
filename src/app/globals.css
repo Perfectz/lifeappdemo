@@ -4277,25 +4277,116 @@ h1 {
   width: 100%;
 }
 
-.fitness-exercise-list {
+.fitness-exercises {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  list-style: none;
-  margin: 0.2rem 0;
-  padding: 0;
+  gap: 0.4rem;
 }
 
-.fitness-exercise-list li {
+.fitness-exercise {
+  background: var(--menu-window-fill);
+  border: 1px solid var(--bevel-dark);
+  border-radius: 3px;
+}
+
+.fitness-exercise-summary {
+  align-items: baseline;
+  cursor: pointer;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+  list-style: none;
+  min-height: 2.8rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.fitness-exercise-summary::-webkit-details-marker {
+  display: none;
+}
+
+.fitness-exercise-summary::after {
+  color: var(--muted);
+  content: "▸";
+}
+
+.fitness-exercise[open] .fitness-exercise-summary::after {
+  content: "▾";
+}
+
+.fitness-exercise-name {
+  font-weight: 600;
+}
+
+.fitness-exercise-scheme {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  margin-left: auto;
+}
+
+.fitness-exercise-detail {
+  border-top: 1px solid var(--bevel-dark);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.7rem;
+}
+
+.fitness-exercise-variant {
+  font-weight: 600;
+  margin: 0;
+}
+
+.fitness-exercise-instructions {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.fitness-video-link {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  text-decoration: none;
+  width: fit-content;
+}
+
+.fitness-video-link:hover,
+.fitness-video-link:focus-visible {
+  text-decoration: underline;
+}
+
+.fitness-exercise-weight {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 0.82rem;
+  gap: 0.5rem;
+}
+
+.fitness-exercise-weight .fitness-input {
+  max-width: 7rem;
+}
+
+.fitness-set-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.fitness-set-list li {
   align-items: baseline;
   border-bottom: 1px solid var(--bevel-dark);
   display: flex;
+  gap: 0.5rem;
   justify-content: space-between;
-  padding: 0.3rem 0;
+  padding: 0.25rem 0;
 }
 
-.fitness-exercise-list small {
-  color: var(--muted);
+.fitness-set-list small {
+  color: var(--accent);
   font-family: var(--font-mono);
 }
 

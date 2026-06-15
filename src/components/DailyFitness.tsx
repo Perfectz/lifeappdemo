@@ -7,6 +7,7 @@ import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import {
   cardioOptions,
   equipmentForVariant,
+  getExerciseVariant,
   martialArtsOptions,
   strengthVariants,
   strengthWorkouts,
@@ -30,6 +31,11 @@ function optionalMinutes(value: string): number | undefined {
   return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
+function optionalWeight(value: string | undefined): number | undefined {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
 export function DailyFitness() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [now, setNow] = useState<Date | null>(null);
@@ -37,6 +43,7 @@ export function DailyFitness() {
   // Strength form
   const [strengthDayId, setStrengthDayId] = useState(strengthWorkouts[0].id);
   const [variant, setVariant] = useState<StrengthVariant>("Free Weight");
+  const [weights, setWeights] = useState<Record<string, string>>({});
   // Cardio form
   const [cardioId, setCardioId] = useState(cardioOptions[0].id);
   const [cardioMinutes, setCardioMinutes] = useState("");
@@ -83,11 +90,16 @@ export function DailyFitness() {
         type: "strength",
         title: `Day ${selectedStrength.day} — ${selectedStrength.name} · ${variant}`,
         equipment: equipmentForVariant(variant),
-        sets: selectedStrength.exercises.map((exercise) => ({
-          exercise: `${exercise.name} (${exercise.scheme})`
-        }))
+        sets: selectedStrength.exercises.map((exercise) => {
+          const detail = getExerciseVariant(exercise, variant);
+          return {
+            exercise: `${detail.name} (${exercise.scheme})`,
+            weightLbs: optionalWeight(weights[exercise.name])
+          };
+        })
       })
     );
+    setWeights({});
   }
 
   function logCardio() {
@@ -153,6 +165,16 @@ export function DailyFitness() {
             <p>
               <strong>{status.byType.strength.title}</strong>
             </p>
+            {status.byType.strength.sets && status.byType.strength.sets.length > 0 ? (
+              <ul className="fitness-set-list">
+                {status.byType.strength.sets.map((set, index) => (
+                  <li key={`${set.exercise}-${index}`}>
+                    <span>{set.exercise}</span>
+                    {set.weightLbs ? <small>{set.weightLbs} lb</small> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <button
               type="button"
               className="command-button"
@@ -191,14 +213,45 @@ export function DailyFitness() {
                 ))}
               </select>
             </label>
-            <ul className="fitness-exercise-list">
-              {selectedStrength.exercises.map((exercise) => (
-                <li key={exercise.name}>
-                  <span>{exercise.name}</span>
-                  <small>{exercise.scheme}</small>
-                </li>
-              ))}
-            </ul>
+            <div className="fitness-exercises">
+              {selectedStrength.exercises.map((exercise) => {
+                const detail = getExerciseVariant(exercise, variant);
+                return (
+                  <details key={exercise.name} className="fitness-exercise">
+                    <summary className="fitness-exercise-summary">
+                      <span className="fitness-exercise-name">{exercise.name}</span>
+                      <small className="fitness-exercise-scheme">{exercise.scheme}</small>
+                    </summary>
+                    <div className="fitness-exercise-detail">
+                      <p className="fitness-exercise-variant">{detail.name}</p>
+                      <p className="fitness-exercise-instructions">{detail.instructions}</p>
+                      <a
+                        className="fitness-video-link"
+                        href={detail.video}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        ▶ Watch a form video
+                      </a>
+                      <label className="fitness-exercise-weight">
+                        Weight (lb)
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          className="fitness-input"
+                          placeholder="e.g. 25"
+                          value={weights[exercise.name] ?? ""}
+                          onChange={(e) =>
+                            setWeights((prev) => ({ ...prev, [exercise.name]: e.target.value }))
+                          }
+                        />
+                      </label>
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
             <button type="button" className="command-button" onClick={logStrength}>
               <span>Log strength</span>
             </button>

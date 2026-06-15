@@ -45,6 +45,20 @@ describe("DailyFitness", () => {
     ]);
   });
 
+  it("captures per-exercise weight on a strength log", async () => {
+    render(<DailyFitness />);
+
+    const weightInputs = screen.getAllByLabelText("Weight (lb)");
+    fireEvent.change(weightInputs[0], { target: { value: "40" } });
+    fireEvent.click(screen.getByRole("button", { name: "Log strength" }));
+
+    await waitFor(() => expect(screen.getByText("1/3")).toBeVisible());
+
+    const stored = JSON.parse(window.localStorage.getItem(workoutStorageKey) ?? "[]");
+    const strength = stored.find((w: { type: string }) => w.type === "strength");
+    expect(strength.sets[0].weightLbs).toBe(40);
+  });
+
   it("removes a logged session", async () => {
     render(<DailyFitness />);
 
