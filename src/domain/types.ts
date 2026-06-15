@@ -131,7 +131,7 @@ export type AITaskToolName =
   | "generate_daily_report";
 
 export type AIToolProposal = TimestampedEntity & {
-  toolName: AITaskToolName;
+  toolName: AIToolName;
   summary: string;
   payload: unknown;
   status: AIToolProposalStatus;
@@ -178,3 +178,142 @@ export type ImportedHealthRecord = {
   unit?: string;
   raw: unknown;
 };
+
+/* ----------------------------------------------------------------------------
+ * Goals (the three pillars + OKR-style hierarchy)
+ * ------------------------------------------------------------------------- */
+
+export type GoalPillar = "fitness" | "personal" | "professional";
+export type GoalHorizon = "vision" | "yearly" | "quarterly" | "weekly";
+export type GoalStatus = "active" | "achieved" | "paused" | "dropped";
+
+export type Goal = TimestampedEntity & {
+  pillar: GoalPillar;
+  horizon: GoalHorizon;
+  title: string;
+  description?: string;
+  /** Parent in the vision -> yearly -> quarterly -> weekly cascade. */
+  parentGoalId?: EntityId;
+  targetDate?: IsoDate;
+  /** Optional measurable target, e.g. metricName "body_weight", targetValue 180. */
+  metricName?: string;
+  targetValue?: number;
+  currentValue?: number;
+  unit?: string;
+  status: GoalStatus;
+};
+
+/* ----------------------------------------------------------------------------
+ * Workouts (martial arts / home strength / cardio)
+ * ------------------------------------------------------------------------- */
+
+export type WorkoutType = "martial_arts" | "strength" | "cardio";
+export type WorkoutSource = "manual" | "ai" | "health_connect" | "demo";
+export type Equipment =
+  | "bodyweight"
+  | "adjustable_dumbbells"
+  | "kettlebell"
+  | "adjustable_bench";
+
+export type StrengthSet = {
+  exercise: string;
+  reps?: number;
+  weightLbs?: number;
+  /** e.g. "3-1-1" tempo so we can progress without adding load past 25 lb. */
+  tempo?: string;
+  /** Rate of perceived exertion, 1-10. */
+  rpe?: number;
+  durationSeconds?: number;
+};
+
+export type Workout = TimestampedEntity & {
+  date: IsoDate;
+  type: WorkoutType;
+  title?: string;
+  durationMinutes?: number;
+  /** Overall session intensity, 1-10. */
+  intensityRpe?: number;
+  caloriesBurned?: number;
+  notes?: string;
+  source: WorkoutSource;
+  // Strength-specific
+  equipment?: Equipment[];
+  sets?: StrengthSet[];
+  // Martial-arts-specific
+  techniques?: string[];
+  rounds?: number;
+  // Cardio-specific
+  distanceMiles?: number;
+  avgHeartRate?: number;
+  recordedAt: IsoDateTime;
+};
+
+/* ----------------------------------------------------------------------------
+ * Nutrition (manual, photo-AI, or barcode)
+ * ------------------------------------------------------------------------- */
+
+export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+export type NutritionEstimateSource = "manual" | "photo_ai" | "barcode" | "restaurant_db";
+export type EstimateConfidence = "low" | "medium" | "high";
+
+export type Macros = {
+  calories?: number;
+  proteinG?: number;
+  carbsG?: number;
+  fatG?: number;
+  fiberG?: number;
+};
+
+export type FoodEntry = TimestampedEntity & {
+  date: IsoDate;
+  mealType: MealType;
+  description: string;
+  macros: Macros;
+  estimateSource: NutritionEstimateSource;
+  confidence?: EstimateConfidence;
+  /** Storage key / blob ref for an attached food photo. */
+  photoRef?: string;
+  recordedAt: IsoDateTime;
+};
+
+/* ----------------------------------------------------------------------------
+ * Biometrics (multiple time-stamped readings per day; glucose, BP, etc.)
+ * ------------------------------------------------------------------------- */
+
+export type BiometricKind =
+  | "blood_glucose"
+  | "blood_pressure"
+  | "resting_heart_rate"
+  | "body_weight"
+  | "spo2";
+export type GlucoseContext = "fasting" | "pre_meal" | "post_meal" | "random" | "bedtime";
+export type BiometricSource = "manual" | "device" | "health_connect" | "demo";
+
+export type BiometricReading = TimestampedEntity & {
+  kind: BiometricKind;
+  recordedAt: IsoDateTime;
+  // blood_glucose
+  glucoseMgDl?: number;
+  glucoseContext?: GlucoseContext;
+  // blood_pressure
+  systolic?: number;
+  diastolic?: number;
+  pulseBpm?: number;
+  // generic (resting_heart_rate, body_weight, spo2)
+  value?: number;
+  unit?: string;
+  source: BiometricSource;
+  notes?: string;
+};
+
+/* ----------------------------------------------------------------------------
+ * AI health tool registry (propose -> confirm, same gate as task tools)
+ * ------------------------------------------------------------------------- */
+
+export type AIHealthToolName =
+  | "set_goal"
+  | "log_workout"
+  | "log_food"
+  | "log_biometric";
+
+export type AIToolName = AITaskToolName | AIHealthToolName;

@@ -10,6 +10,10 @@ import { toLocalIsoDate } from "@/domain/dates";
 import { AINotConfiguredError, completeReadOnlyCoachChat } from "@/server/ai/openaiClient";
 import { checkRateLimit } from "@/server/ai/rateLimiter";
 
+// Allow the coach response (OpenAI call) up to 60s on Vercel; the Hobby tier
+// default is 10s, which would cut off the in-code 30s OpenAI timeout.
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   const limit = checkRateLimit("ai-chat");
   if (!limit.ok) {

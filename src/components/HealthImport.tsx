@@ -153,6 +153,33 @@ export function HealthImport() {
               type="file"
             />
           </label>
+          <details className="health-import-guide">
+            <summary>How to export from your Galaxy Watch &amp; Samsung Health</summary>
+            <ol className="health-import-steps">
+              <li>
+                Your watch syncs automatically to the <strong>Samsung Health</strong> app
+                on your paired phone — that&apos;s where the data lives.
+              </li>
+              <li>
+                In Samsung Health, open <strong>Settings → Download personal data</strong>,
+                then confirm. It produces a ZIP of CSV files.
+              </li>
+              <li>
+                Unzip it. Look for files like{" "}
+                <code>com.samsung.shealth.step_daily_trend.*.csv</code>,{" "}
+                <code>com.samsung.shealth.sleep.*.csv</code>, or{" "}
+                <code>com.samsung.shealth.exercise.*.csv</code>.
+              </li>
+              <li>
+                Upload one of those CSVs above. The importer reads Samsung&apos;s real
+                format directly (datatype header line and dotted columns) — no editing needed.
+              </li>
+            </ol>
+            <p className="standup-helper">
+              Steps, sleep, heart rate, workouts, and blood pressure are mapped to your
+              metrics. Other record types are skipped safely.
+            </p>
+          </details>
           {batch ? (
             <dl className="health-import-summary">
               <div>

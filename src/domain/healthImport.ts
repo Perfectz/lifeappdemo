@@ -46,9 +46,22 @@ function normalizeKey(key: string): string {
   return key.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 }
 
+/** Final dotted segment of a column name, e.g. com.samsung.health.step_count.count -> count. */
+function lastSegment(key: string): string {
+  const parts = key.split(".");
+  return parts[parts.length - 1] ?? key;
+}
+
 function getValue(row: RawRow, names: string[]): unknown {
   const normalizedNames = names.map(normalizeKey);
-  const match = Object.entries(row).find(([key]) => normalizedNames.includes(normalizeKey(key)));
+  // Match on the full normalized key OR on just the final dotted segment,
+  // so Samsung's dotted columns (com.samsung.health.step_count.count) map
+  // to plain targets (count) without matching unrelated suffixes.
+  const match = Object.entries(row).find(([key]) => {
+    const full = normalizeKey(key);
+    const segment = normalizeKey(lastSegment(key));
+    return normalizedNames.includes(full) || normalizedNames.includes(segment);
+  });
   return match?.[1];
 }
 
@@ -73,6 +86,19 @@ function toNumber(value: unknown): number | undefined {
 function toIsoDateTime(value: unknown): IsoDateTime | undefined {
   if (typeof value !== "string" && typeof value !== "number") {
     return undefined;
+  }
+
+  // Samsung Health exports timestamps as epoch milliseconds (13 digits)
+  // or seconds (10 digits). new Date("1716595200000") is invalid, so
+  // detect and convert numeric epochs explicitly first.
+  const asString = String(value).trim();
+  if (/^\d{13}$/.test(asString)) {
+    const epochMs = new Date(Number(asString));
+    return Number.isNaN(epochMs.getTime()) ? undefined : epochMs.toISOString();
+  }
+  if (/^\d{10}$/.test(asString)) {
+    const epochSeconds = new Date(Number(asString) * 1000);
+    return Number.isNaN(epochSeconds.getTime()) ? undefined : epochSeconds.toISOString();
   }
 
   const parsed = new Date(value);
@@ -147,13 +173,31 @@ function parseCsv(text: string): RawRow[] {
     throw new Error("CSV import needs a header row and at least one data row.");
   }
 
-  const headers = parseCsvLine(lines[0]);
+  // Samsung Health exports prepend a datatype/version preamble line (e.g.
+  // "com.samsung.shealth.step_daily_trend,16,...") before the real header
+  // row. Detect and skip it so the second line is used as the header.
+  let headerIndex = 0;
+  const firstCells = parseCsvLine(lines[0]);
+  const secondCells = lines.length > 1 ? parseCsvLine(lines[1]) : [];
+  const dottedCount = (cells: string[]) => cells.filter((cell) => cell.includes(".")).length;
+  // The header row has more real columns (or more dotted column names)
+  // than the datatype/version preamble line above it.
+  const looksLikeSamsungPreamble =
+    /com\.samsung/i.test(lines[0]) &&
+    lines.length >= 3 &&
+    (secondCells.length > firstCells.length ||
+      dottedCount(secondCells) > dottedCount(firstCells));
+  if (looksLikeSamsungPreamble) {
+    headerIndex = 1;
+  }
+
+  const headers = parseCsvLine(lines[headerIndex]);
 
   if (headers.length < 2 || headers.every((header) => !header)) {
     throw new Error("CSV import is missing usable headers.");
   }
 
-  return lines.slice(1).map((line) => {
+  return lines.slice(headerIndex + 1).map((line) => {
     const cells = parseCsvLine(line);
     return headers.reduce<RawRow>((row, header, index) => {
       row[header] = cells[index] ?? "";
@@ -194,7 +238,17 @@ function parseRows(text: string): RawRow[] {
 function buildRecord(batchId: string, fileName: string, row: RawRow, index: number): ImportedHealthRecord {
   const sourceType = detectSourceType(fileName, row);
   const startTime = toIsoDateTime(
-    getValue(row, ["start_time", "startTime", "start", "date_time", "recorded_at", "time", "date"])
+    getValue(row, [
+      "start_time",
+      "startTime",
+      "start",
+      "date_time",
+      "recorded_at",
+      "day_time",
+      "create_time",
+      "time",
+      "date"
+    ])
   );
   const endTime = toIsoDateTime(getValue(row, ["end_time", "endTime", "end"]));
   const unit = String(getValue(row, ["unit", "count_type", "type"]) ?? "").trim() || undefined;
@@ -202,7 +256,9 @@ function buildRecord(batchId: string, fileName: string, row: RawRow, index: numb
 
   if (sourceType === "sleep") {
     const hours = toNumber(getValue(row, ["sleep_hours", "hours", "duration_hours"]));
-    const minutes = toNumber(getValue(row, ["sleep_minutes", "duration_minutes", "duration"]));
+    const minutes = toNumber(
+      getValue(row, ["sleep_minutes", "duration_minutes", "duration", "sleep_duration"])
+    );
     value = hours ?? (minutes !== undefined ? Math.round((minutes / 60) * 100) / 100 : value);
   }
 

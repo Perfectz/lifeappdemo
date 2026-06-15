@@ -1,6 +1,7 @@
 node_modules
 .next
 out
+.claude
 playwright-report
 test-results
 coverage

@@ -5,12 +5,25 @@ export type {
   DailyReport,
   AIAppContext,
   AIChatMode,
+  AIHealthToolName,
   AITaskToolName,
+  AIToolName,
   AIToolProposal,
   AIToolProposalStatus,
+  BiometricKind,
+  BiometricReading,
+  BiometricSource,
   EntityId,
+  Equipment,
+  EstimateConfidence,
   EveningPostmortem,
   EveningTaskOutcome,
+  FoodEntry,
+  GlucoseContext,
+  Goal,
+  GoalHorizon,
+  GoalPillar,
+  GoalStatus,
   HealthImportBatch,
   ImportedHealthRecord,
   ImportedHealthRecordSourceType,
@@ -19,9 +32,13 @@ export type {
   JournalEntry,
   JournalEntryType,
   JournalSource,
+  Macros,
+  MealType,
   MetricEntry,
   MetricLevel,
   MetricSource,
+  NutritionEstimateSource,
+  StrengthSet,
   Task,
   TaskOutcome,
   TaskPriority,
@@ -30,7 +47,10 @@ export type {
   TimestampedEntity,
   VoiceSession,
   VoiceSessionMode,
-  VoiceSessionStatus
+  VoiceSessionStatus,
+  Workout,
+  WorkoutSource,
+  WorkoutType
 } from "./types";
 export type { TaskGroups, TaskInput, TaskValidationResult } from "./tasks";
 export type { DashboardStats } from "./dashboard";
@@ -80,3 +100,17 @@ export type {
   HealthImportRecordMapping
 } from "./healthImport";
 export type { DemoDataCounts, DemoDataResetResult, DemoDataSet } from "./demoData";
+export type { GoalInput, GoalValidationResult } from "./goals";
+export type {
+  StrengthSetInput,
+  WorkoutInput,
+  WorkoutValidationResult
+} from "./workouts";
+export type { FoodEntryInput, FoodEntryValidationResult } from "./nutrition";
+export type {
+  BiometricReadingInput,
+  BiometricReadingValidationResult,
+  BloodPressureCategory,
+  FastingGlucoseBand
+} from "./biometrics";
+export type { HealthToolApplyResult, HealthToolState } from "./aiHealthTools";

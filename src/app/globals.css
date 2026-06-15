@@ -4859,3 +4859,43 @@ html[data-theme="amber"] .quest-card {
 .quest-empty-cta p {
   margin: 0;
 }
+
+/* ---------- Health import export guide ---------- */
+
+.health-import-guide {
+  background: var(--menu-window-bg);
+  border: 1px solid var(--bevel-dark);
+  border-radius: 2px;
+  box-shadow: var(--bevel-inset);
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem;
+}
+
+.health-import-guide summary {
+  color: var(--accent);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.health-import-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.5rem;
+  padding-left: 1.1rem;
+}
+
+.health-import-steps li {
+  line-height: 1.5;
+}
+
+.health-import-steps code {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  font-size: 0.82rem;
+  padding: 0.05rem 0.3rem;
+  word-break: break-all;
+}
