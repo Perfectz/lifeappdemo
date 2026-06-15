@@ -147,13 +147,9 @@ export function AppShell({ children }: AppShellProps) {
   }, [navStatus, primaryMobileItems]);
 
   useEffect(() => {
-    setNow(new Date());
-
-    function updateAll() {
+    // Hot path: runs on every data change. Reads each repo exactly once.
+    function updateStatus() {
       const storage = window.localStorage;
-      const data = loadLocalDemoDataSet(storage);
-      setIsDemoActive(isDemoModeEnabled(storage) || hasDemoData(data));
-
       const stamp = new Date();
       const today = toLocalIsoDate(stamp);
       const tasks = createLocalTaskRepository(storage).load();
@@ -204,17 +200,30 @@ export function AppShell({ children }: AppShellProps) {
       setNow(stamp);
     }
 
-    updateAll();
-    window.addEventListener("storage", updateAll);
-    window.addEventListener(demoModeChangedEventName, updateAll);
-    window.addEventListener(dataChangedEventName, updateAll);
+    // Demo detection is expensive (reads the full demo set) and rarely
+    // changes, so it's gated behind its own event instead of every save.
+    function updateDemo() {
+      const storage = window.localStorage;
+      setIsDemoActive(isDemoModeEnabled(storage) || hasDemoData(loadLocalDemoDataSet(storage)));
+    }
+
+    function onStorage() {
+      updateStatus();
+      updateDemo();
+    }
+
+    updateStatus();
+    updateDemo();
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(dataChangedEventName, updateStatus);
+    window.addEventListener(demoModeChangedEventName, updateDemo);
 
     return () => {
-      window.removeEventListener("storage", updateAll);
-      window.removeEventListener(demoModeChangedEventName, updateAll);
-      window.removeEventListener(dataChangedEventName, updateAll);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(dataChangedEventName, updateStatus);
+      window.removeEventListener(demoModeChangedEventName, updateDemo);
     };
-  }, [pathname]);
+  }, []);
 
   const dateChip = useMemo(() => (now ? formatDateChip(now) : null), [now]);
   const xpPercent = Math.max(

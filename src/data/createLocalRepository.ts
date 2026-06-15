@@ -83,7 +83,15 @@ export function createLocalRepository<T>(
     load() {
       const current = readKey(storageKey);
       if (current) {
-        return current.filter(guard);
+        const kept = current.filter(guard);
+        const dropped = current.length - kept.length;
+        if (dropped > 0) {
+          // Don't silently evaporate history — make data loss observable.
+          console.warn(
+            `LifeQuest: dropped ${dropped} unreadable record(s) from "${storageKey}" on load.`
+          );
+        }
+        return kept;
       }
 
       // Current key empty/corrupt — attempt migration from a legacy key.

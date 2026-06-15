@@ -131,7 +131,7 @@ export type AITaskToolName =
   | "generate_daily_report";
 
 export type AIToolProposal = TimestampedEntity & {
-  toolName: AIToolName;
+  toolName: AITaskToolName;
   summary: string;
   payload: unknown;
   status: AIToolProposalStatus;
@@ -307,15 +307,3 @@ export type BiometricReading = TimestampedEntity & {
   source: BiometricSource;
   notes?: string;
 };
-
-/* ----------------------------------------------------------------------------
- * AI health tool registry (propose -> confirm, same gate as task tools)
- * ------------------------------------------------------------------------- */
-
-export type AIHealthToolName =
-  | "set_goal"
-  | "log_workout"
-  | "log_food"
-  | "log_biometric";
-
-export type AIToolName = AITaskToolName | AIHealthToolName;

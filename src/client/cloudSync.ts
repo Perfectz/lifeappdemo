@@ -4,7 +4,7 @@ import {
   serializeBackup,
   type ImportResult
 } from "@/client/dataBackup";
-import { dataChangedEventName } from "@/data/createLocalRepository";
+import { dataChangedEventName, emitStorageError } from "@/data/createLocalRepository";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 /**
@@ -12,24 +12,40 @@ import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
  *
  * Local storage stays the source of truth for instant reads. When the user
  * is signed in, we push a full snapshot (via the existing exportAllData
- * envelope) to a per-user row, and pull it back on other devices. Conflict
- * strategy is last-write-wins by updated_at, with a local safety copy taken
- * before any overwrite.
+ * envelope) to a per-user row, and pull it back on other devices.
+ *
+ * Conflict handling: pushes use an optimistic-concurrency check — if the cloud
+ * row moved since our last sync (another device wrote), we do NOT overwrite it;
+ * we pull instead, after stashing a timestamped local backup. That makes the
+ * worst case "remote wins, local recoverable" rather than "silent loss."
  */
 
 const TABLE = "user_data";
 const LAST_SYNCED_KEY = "lifequest.sync.lastSyncedAt";
-const PRE_PULL_BACKUP_KEY = "lifequest.sync.localBackupBeforePull";
+const BACKUP_PREFIX = "lifequest.sync.localBackup.";
+const MAX_BACKUPS = 3;
 const PUSH_DEBOUNCE_MS = 2500;
 const PULL_REFRESH_MARKER = "__cloud_pull__";
 
 export type CloudUser = { id: string; email: string | null };
 export type SyncResult<T> = ({ ok: true } & T) | { ok: false; message: string };
+export type PushResult = { ok: true; at: string } | { ok: false; message: string; conflict?: boolean };
 
 export const isCloudSyncConfigured = isSupabaseConfigured;
 
+/** Last user observed by the auth subscription — avoids a network call per save. */
+let cachedUser: CloudUser | null = null;
+
 function storage(): Storage | null {
   return typeof window !== "undefined" ? window.localStorage : null;
+}
+
+function surfaceSyncError(message: string): void {
+  emitStorageError("cloud sync", new Error(message));
+}
+
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error.";
 }
 
 export function getLastSyncedAt(): string | null {
@@ -44,7 +60,9 @@ export async function getCurrentCloudUser(): Promise<CloudUser | null> {
   const sb = getSupabaseClient();
   if (!sb) return null;
   const { data } = await sb.auth.getUser();
-  return data.user ? { id: data.user.id, email: data.user.email ?? null } : null;
+  const user = data.user ? { id: data.user.id, email: data.user.email ?? null } : null;
+  cachedUser = user;
+  return user;
 }
 
 export async function sendMagicLink(email: string): Promise<SyncResult<unknown>> {
@@ -58,10 +76,7 @@ export async function sendMagicLink(email: string): Promise<SyncResult<unknown>>
       ? `${window.location.origin}${window.location.pathname}`
       : undefined;
 
-  const { error } = await sb.auth.signInWithOtp({
-    email: trimmed,
-    options: { emailRedirectTo }
-  });
+  const { error } = await sb.auth.signInWithOtp({ email: trimmed, options: { emailRedirectTo } });
   if (error) return { ok: false, message: error.message };
   return { ok: true };
 }
@@ -70,11 +85,7 @@ export async function signInWithGoogle(): Promise<SyncResult<unknown>> {
   const sb = getSupabaseClient();
   if (!sb) return { ok: false, message: "Sign-in isn't configured." };
   const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
-  const { error } = await sb.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo }
-  });
-  // On success the browser navigates to Google; this line is reached only on error.
+  const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
   if (error) return { ok: false, message: error.message };
   return { ok: true };
 }
@@ -90,7 +101,6 @@ export async function signUpWithPassword(
 
   const { data, error } = await sb.auth.signUp({ email: email.trim(), password });
   if (error) return { ok: false, message: error.message };
-  // When email confirmation is required, no session is returned yet.
   return { ok: true, needsConfirmation: !data.session };
 }
 
@@ -107,9 +117,9 @@ export async function signInWithPassword(
 
 export async function signOutCloud(): Promise<void> {
   await getSupabaseClient()?.auth.signOut();
+  cachedUser = null;
 }
 
-/** Subscribe to auth changes. Fires immediately is not guaranteed — pair with getCurrentCloudUser for the initial read. */
 export function subscribeAuthState(callback: (user: CloudUser | null) => void): () => void {
   const sb = getSupabaseClient();
   if (!sb) {
@@ -117,20 +127,98 @@ export function subscribeAuthState(callback: (user: CloudUser | null) => void): 
     return () => {};
   }
   const { data } = sb.auth.onAuthStateChange((_event, session) => {
-    callback(
-      session?.user ? { id: session.user.id, email: session.user.email ?? null } : null
-    );
+    const user = session?.user ? { id: session.user.id, email: session.user.email ?? null } : null;
+    cachedUser = user;
+    callback(user);
   });
   return () => data.subscription.unsubscribe();
 }
 
-/** Push the full local snapshot up to the user's cloud row. */
-export async function pushSnapshot(): Promise<SyncResult<{ at: string }>> {
+/** Stash a timestamped local snapshot before an overwrite; keep only the most recent few. */
+function stashLocalBackup(store: Storage): void {
+  try {
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    store.setItem(`${BACKUP_PREFIX}${stamp}`, serializeBackup(exportAllData(store)));
+    const keys: string[] = [];
+    for (let i = 0; i < store.length; i += 1) {
+      const key = store.key(i);
+      if (key && key.startsWith(BACKUP_PREFIX)) keys.push(key);
+    }
+    keys.sort();
+    while (keys.length > MAX_BACKUPS) {
+      const oldest = keys.shift();
+      if (oldest) store.removeItem(oldest);
+    }
+  } catch {
+    // best-effort; never block on the safety copy
+  }
+}
+
+export function hasLocalBackup(): boolean {
+  const store = storage();
+  if (!store) return false;
+  for (let i = 0; i < store.length; i += 1) {
+    if (store.key(i)?.startsWith(BACKUP_PREFIX)) return true;
+  }
+  return false;
+}
+
+/** Restore the most recent pre-pull local backup (undo an unwanted cloud restore). */
+export function restoreLatestLocalBackup(): SyncResult<{ restoredKeys: string[] }> {
+  const store = storage();
+  if (!store) return { ok: false, message: "Storage unavailable." };
+  const keys: string[] = [];
+  for (let i = 0; i < store.length; i += 1) {
+    const key = store.key(i);
+    if (key && key.startsWith(BACKUP_PREFIX)) keys.push(key);
+  }
+  if (keys.length === 0) return { ok: false, message: "No local backup found." };
+  keys.sort();
+  const latest = store.getItem(keys[keys.length - 1]);
+  if (!latest) return { ok: false, message: "Local backup was empty." };
+  const result = importAllData(store, latest);
+  if (!result.ok) return result;
+  window.dispatchEvent(
+    new CustomEvent(dataChangedEventName, { detail: { storageKey: PULL_REFRESH_MARKER } })
+  );
+  return { ok: true, restoredKeys: result.restoredKeys };
+}
+
+async function readRemoteUpdatedAt(
+  userId: string
+): Promise<{ exists: boolean; updatedAt: string | null }> {
+  const sb = getSupabaseClient();
+  if (!sb) return { exists: false, updatedAt: null };
+  const { data, error } = await sb
+    .from(TABLE)
+    .select("updated_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) return { exists: false, updatedAt: null };
+  const updatedAt = (data as { updated_at?: unknown }).updated_at;
+  return { exists: true, updatedAt: typeof updatedAt === "string" ? updatedAt : null };
+}
+
+/** Push the full local snapshot up, refusing to overwrite a newer cloud row. */
+export async function pushSnapshot(): Promise<PushResult> {
   const sb = getSupabaseClient();
   const store = storage();
   if (!sb || !store) return { ok: false, message: "Cloud sync isn't configured." };
-  const user = await getCurrentCloudUser();
+  const user = cachedUser ?? (await getCurrentCloudUser());
   if (!user) return { ok: false, message: "Sign in to back up." };
+
+  // Optimistic concurrency: don't clobber a cloud row another device advanced.
+  const expected = getLastSyncedAt();
+  if (expected) {
+    const remote = await readRemoteUpdatedAt(user.id);
+    if (remote.exists && remote.updatedAt && remote.updatedAt !== expected) {
+      return {
+        ok: false,
+        conflict: true,
+        message: "Cloud has newer changes from another device."
+      };
+    }
+  }
 
   const snapshot = exportAllData(store);
   const at = new Date().toISOString();
@@ -148,7 +236,7 @@ export async function pullSnapshot(): Promise<SyncResult<{ restoredKeys: string[
   const sb = getSupabaseClient();
   const store = storage();
   if (!sb || !store) return { ok: false, message: "Cloud sync isn't configured." };
-  const user = await getCurrentCloudUser();
+  const user = cachedUser ?? (await getCurrentCloudUser());
   if (!user) return { ok: false, message: "Sign in to restore." };
 
   const { data, error } = await sb
@@ -161,12 +249,7 @@ export async function pullSnapshot(): Promise<SyncResult<{ restoredKeys: string[
   const row = data as { data?: unknown; updated_at?: unknown } | null;
   if (!row || !row.data) return { ok: false, message: "No cloud backup found yet." };
 
-  // Safety net: keep a copy of what was here before we overwrite it.
-  try {
-    store.setItem(PRE_PULL_BACKUP_KEY, serializeBackup(exportAllData(store)));
-  } catch {
-    // best-effort; never block a restore on the safety copy
-  }
+  stashLocalBackup(store);
 
   const json = typeof row.data === "string" ? row.data : JSON.stringify(row.data);
   const result: ImportResult = importAllData(store, json);
@@ -174,7 +257,6 @@ export async function pullSnapshot(): Promise<SyncResult<{ restoredKeys: string[
 
   const at = typeof row.updated_at === "string" ? row.updated_at : new Date().toISOString();
   setLastSyncedAt(at);
-  // Refresh every live screen (hero card, nav, current page).
   window.dispatchEvent(
     new CustomEvent(dataChangedEventName, { detail: { storageKey: PULL_REFRESH_MARKER } })
   );
@@ -200,56 +282,71 @@ export function startCloudSync(): () => void {
   }
 
   let pushTimer: ReturnType<typeof setTimeout> | null = null;
+  let reconciling = false;
+
+  const runPush = () => {
+    pushSnapshot()
+      .then((result) => {
+        if (result.ok) return;
+        if (result.conflict) {
+          // Another device advanced the cloud — pull it (local is stashed first).
+          pullSnapshot()
+            .then((pulled) => {
+              if (!pulled.ok) surfaceSyncError(`Cloud sync paused: ${pulled.message}`);
+            })
+            .catch((error) => surfaceSyncError(`Cloud sync failed: ${describeError(error)}`));
+          return;
+        }
+        surfaceSyncError(`Cloud backup failed: ${result.message}`);
+      })
+      .catch((error) => surfaceSyncError(`Cloud backup failed: ${describeError(error)}`));
+  };
 
   const schedulePush = () => {
     if (pushTimer) clearTimeout(pushTimer);
-    pushTimer = setTimeout(() => {
-      void pushSnapshot();
-    }, PUSH_DEBOUNCE_MS);
+    pushTimer = setTimeout(runPush, PUSH_DEBOUNCE_MS);
   };
 
   const onDataChanged = (event: Event) => {
     const detail = (event as CustomEvent).detail as { storageKey?: string } | undefined;
-    // Ignore the refresh we dispatch right after a pull (avoids echo push).
-    if (detail?.storageKey === PULL_REFRESH_MARKER) return;
-    void (async () => {
-      if (await getCurrentCloudUser()) schedulePush();
-    })();
+    if (detail?.storageKey === PULL_REFRESH_MARKER) return; // ignore our own post-pull refresh
+    if (cachedUser) schedulePush(); // cached — no per-event network call
   };
 
-  // On startup / sign-in, decide whether this device should pull or push.
   const reconcile = async () => {
-    const user = await getCurrentCloudUser();
-    if (!user) return;
-    const { data } = await sb
-      .from(TABLE)
-      .select("updated_at")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    const row = data as { updated_at?: unknown } | null;
-
-    if (!row) {
-      // No cloud row yet — seed it from this device.
-      void pushSnapshot();
-      return;
-    }
-
-    const remoteAt = typeof row.updated_at === "string" ? Date.parse(row.updated_at) : NaN;
-    const localStamp = getLastSyncedAt();
-    const localAt = localStamp ? Date.parse(localStamp) : NaN;
-
-    if (Number.isNaN(localAt) || (Number.isFinite(remoteAt) && remoteAt > localAt)) {
-      // This device never synced, or the cloud is newer — pull it down.
-      void pullSnapshot();
-    } else {
-      void pushSnapshot();
+    if (reconciling) return;
+    reconciling = true;
+    try {
+      const user = await getCurrentCloudUser();
+      if (!user) return;
+      const remote = await readRemoteUpdatedAt(user.id);
+      if (!remote.exists) {
+        runPush();
+        return;
+      }
+      const remoteAt = remote.updatedAt ? Date.parse(remote.updatedAt) : NaN;
+      const localStamp = getLastSyncedAt();
+      const localAt = localStamp ? Date.parse(localStamp) : NaN;
+      if (Number.isNaN(localAt) || (Number.isFinite(remoteAt) && remoteAt > localAt)) {
+        const pulled = await pullSnapshot();
+        if (!pulled.ok) surfaceSyncError(`Cloud restore failed: ${pulled.message}`);
+      } else {
+        runPush();
+      }
+    } catch (error) {
+      surfaceSyncError(`Cloud sync failed: ${describeError(error)}`);
+    } finally {
+      reconciling = false;
     }
   };
 
   window.addEventListener(dataChangedEventName, onDataChanged);
   void reconcile();
 
-  const { data: sub } = sb.auth.onAuthStateChange((authEvent) => {
+  const { data: sub } = sb.auth.onAuthStateChange((authEvent, session) => {
+    cachedUser = session?.user
+      ? { id: session.user.id, email: session.user.email ?? null }
+      : null;
     if (authEvent === "SIGNED_IN" || authEvent === "INITIAL_SESSION") {
       void reconcile();
     }

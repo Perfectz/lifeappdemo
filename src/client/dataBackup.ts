@@ -1,7 +1,12 @@
-import { getLifeQuestStorageUsage } from "@/data/createLocalRepository";
-
 export const backupSchemaVersion = 1;
 export const backupAppId = "lifequest-os";
+
+/**
+ * Keys excluded from snapshots: sync metadata + local pre-pull backups. They
+ * must never ride inside an exported/synced snapshot (the backups would bloat
+ * and recursively nest the cloud blob).
+ */
+const EXCLUDED_PREFIX = "lifequest.sync.";
 
 export type DataBackup = {
   app: typeof backupAppId;
@@ -21,8 +26,10 @@ export type ImportResult =
  */
 export function exportAllData(storage: Storage): DataBackup {
   const data: Record<string, unknown> = {};
-  const { byKey } = getLifeQuestStorageUsage(storage);
-  for (const { key } of byKey) {
+  // Single pass over storage keys — no separate byte-size scan.
+  for (let i = 0; i < storage.length; i += 1) {
+    const key = storage.key(i);
+    if (!key || !key.startsWith("lifequest.") || key.startsWith(EXCLUDED_PREFIX)) continue;
     const raw = storage.getItem(key);
     if (raw == null) continue;
     try {
@@ -84,7 +91,7 @@ export function importAllData(storage: Storage, rawJson: string): ImportResult {
   const restoredKeys: string[] = [];
   try {
     for (const [key, value] of Object.entries(parsed.data)) {
-      if (!key.startsWith("lifequest.")) continue;
+      if (!key.startsWith("lifequest.") || key.startsWith(EXCLUDED_PREFIX)) continue;
       storage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
       restoredKeys.push(key);
     }

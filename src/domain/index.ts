@@ -5,9 +5,7 @@ export type {
   DailyReport,
   AIAppContext,
   AIChatMode,
-  AIHealthToolName,
   AITaskToolName,
-  AIToolName,
   AIToolProposal,
   AIToolProposalStatus,
   BiometricKind,
@@ -113,4 +111,3 @@ export type {
   BloodPressureCategory,
   FastingGlucoseBand
 } from "./biometrics";
-export type { HealthToolApplyResult, HealthToolState } from "./aiHealthTools";

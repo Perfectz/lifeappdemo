@@ -40,10 +40,10 @@ export function JrpgIcon({ name, label }: JrpgIconProps) {
       alt={label ?? ""}
       aria-hidden={label ? undefined : true}
       className="jrpg-icon"
-      height={512}
+      height={96}
       src={withBasePath(iconAssets[name])}
       unoptimized
-      width={512}
+      width={96}
     />
   );
 }
