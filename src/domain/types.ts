@@ -245,6 +245,8 @@ export type Workout = TimestampedEntity & {
   // Cardio-specific
   distanceMiles?: number;
   avgHeartRate?: number;
+  /** Added load carried during cardio, e.g. a weight vest (lb). */
+  weightVestLbs?: number;
   recordedAt: IsoDateTime;
 };
 

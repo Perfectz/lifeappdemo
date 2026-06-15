@@ -68,6 +68,7 @@ export type WorkoutInput = {
   rounds?: number;
   distanceMiles?: number;
   avgHeartRate?: number;
+  weightVestLbs?: number;
 };
 
 export type WorkoutValidationResult =
@@ -161,7 +162,8 @@ export function validateWorkoutInput(input: WorkoutInput): WorkoutValidationResu
       techniques: normalizeStringList(input.techniques),
       rounds: optionalFiniteNumber(input.rounds),
       distanceMiles: optionalFiniteNumber(input.distanceMiles),
-      avgHeartRate: optionalFiniteNumber(input.avgHeartRate)
+      avgHeartRate: optionalFiniteNumber(input.avgHeartRate),
+      weightVestLbs: optionalFiniteNumber(input.weightVestLbs)
     }
   };
 }
@@ -194,6 +196,7 @@ export function createWorkout(
     rounds: value.rounds,
     distanceMiles: value.distanceMiles,
     avgHeartRate: value.avgHeartRate,
+    weightVestLbs: value.weightVestLbs,
     recordedAt: now,
     createdAt: now,
     updatedAt: now

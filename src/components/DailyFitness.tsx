@@ -47,6 +47,7 @@ export function DailyFitness() {
   // Cardio form
   const [cardioId, setCardioId] = useState(cardioOptions[0].id);
   const [cardioMinutes, setCardioMinutes] = useState("");
+  const [cardioVestLbs, setCardioVestLbs] = useState("");
   // Martial arts form
   const [martialId, setMartialId] = useState(martialArtsOptions[0].id);
   const [martialMinutes, setMartialMinutes] = useState("");
@@ -109,10 +110,12 @@ export function DailyFitness() {
         date: today,
         type: "cardio",
         title: option.label,
-        durationMinutes: optionalMinutes(cardioMinutes)
+        durationMinutes: optionalMinutes(cardioMinutes),
+        weightVestLbs: optionalWeight(cardioVestLbs)
       })
     );
     setCardioMinutes("");
+    setCardioVestLbs("");
   }
 
   function logMartial() {
@@ -274,6 +277,9 @@ export function DailyFitness() {
               {status.byType.cardio.durationMinutes
                 ? ` · ${status.byType.cardio.durationMinutes} min`
                 : ""}
+              {status.byType.cardio.weightVestLbs
+                ? ` · ${status.byType.cardio.weightVestLbs} lb vest`
+                : ""}
             </p>
             <button
               type="button"
@@ -309,6 +315,18 @@ export function DailyFitness() {
                 placeholder="e.g. 30"
                 value={cardioMinutes}
                 onChange={(e) => setCardioMinutes(e.target.value)}
+              />
+            </label>
+            <label className="fitness-label">
+              Weight vest (lb) — optional
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                className="fitness-input"
+                placeholder="e.g. 20"
+                value={cardioVestLbs}
+                onChange={(e) => setCardioVestLbs(e.target.value)}
               />
             </label>
             <button type="button" className="command-button" onClick={logCardio}>

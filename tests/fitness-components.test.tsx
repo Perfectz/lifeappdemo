@@ -59,6 +59,21 @@ describe("DailyFitness", () => {
     expect(strength.sets[0].weightLbs).toBe(40);
   });
 
+  it("captures weight-vest load on a cardio log", async () => {
+    render(<DailyFitness />);
+
+    fireEvent.change(screen.getByLabelText("Weight vest (lb) — optional"), {
+      target: { value: "20" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Log cardio" }));
+
+    await waitFor(() => expect(screen.getByText("1/3")).toBeVisible());
+
+    const stored = JSON.parse(window.localStorage.getItem(workoutStorageKey) ?? "[]");
+    const cardio = stored.find((w: { type: string }) => w.type === "cardio");
+    expect(cardio.weightVestLbs).toBe(20);
+  });
+
   it("removes a logged session", async () => {
     render(<DailyFitness />);
 
