@@ -5,9 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 import {
   getCurrentCloudUser,
   getLastSyncedAt,
+  hasLocalBackup,
   isCloudSyncConfigured,
   pullSnapshot,
   pushSnapshot,
+  restoreLatestLocalBackup,
   sendMagicLink,
   signOutCloud,
   type CloudUser
@@ -29,11 +31,13 @@ export function CloudSyncPanel() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<Status>(null);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!configured) return;
     setUser(await getCurrentCloudUser());
     setLastSynced(getLastSyncedAt());
+    setCanUndo(hasLocalBackup());
   }, [configured]);
 
   useEffect(() => {
@@ -99,6 +103,19 @@ export function CloudSyncPanel() {
     setStatus({ tone: "ok", text: "Signed out. Local data is untouched." });
   }
 
+  function handleUndoRestore() {
+    if (!window.confirm("Undo the last cloud restore by reverting to the local backup taken just before it?")) {
+      return;
+    }
+    const result = restoreLatestLocalBackup();
+    if (result.ok) {
+      setStatus({ tone: "ok", text: "Reverted to the pre-restore local backup. Reloading…" });
+      window.setTimeout(() => window.location.reload(), 700);
+    } else {
+      setStatus({ tone: "error", text: result.message });
+    }
+  }
+
   return (
     <div className="data-backup-panel">
       <p className="data-backup-help">
@@ -119,6 +136,11 @@ export function CloudSyncPanel() {
             <button type="button" className="command-button" onClick={handleRestore} disabled={busy}>
               <span>Restore from cloud…</span>
             </button>
+            {canUndo ? (
+              <button type="button" className="command-button" onClick={handleUndoRestore} disabled={busy}>
+                <span>Undo restore (local backup)</span>
+              </button>
+            ) : null}
             <button type="button" className="command-button" onClick={handleSignOut} disabled={busy}>
               <span>Sign out</span>
             </button>
