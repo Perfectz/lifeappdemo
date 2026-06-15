@@ -15,6 +15,7 @@ import { celebrate } from "@/client/celebrate";
 import { openQuickAdd } from "@/client/quickAdd";
 import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { CharacterSprite } from "@/components/CharacterSprite";
+import { CloudSyncBootstrap } from "@/components/CloudSyncBootstrap";
 import { CommandPalette } from "@/components/CommandPalette";
 import { JrpgIcon } from "@/components/JrpgIcon";
 import { OnboardingWelcome } from "@/components/OnboardingWelcome";
@@ -537,6 +538,7 @@ export function AppShell({ children }: AppShellProps) {
       <ReminderManager />
       <StorageErrorToast />
       <CelebrationOverlay />
+      <CloudSyncBootstrap />
     </div>
   );
 }

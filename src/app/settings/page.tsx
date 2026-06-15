@@ -1,3 +1,4 @@
+import { CloudSyncPanel } from "@/components/CloudSyncPanel";
 import { DataBackupPanel } from "@/components/DataBackupPanel";
 import { DemoModePanel } from "@/components/DemoModePanel";
 import { PlaceholderPage } from "@/components/PlaceholderPage";
@@ -28,6 +29,10 @@ export default function SettingsPage() {
         <section className="dashboard-section">
           <h2>Menu Theme</h2>
           <ThemePicker />
+        </section>
+        <section className="dashboard-section">
+          <h2>Cloud Sync</h2>
+          <CloudSyncPanel />
         </section>
         <section className="dashboard-section">
           <h2>Backup &amp; Restore</h2>

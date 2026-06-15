@@ -4050,9 +4050,22 @@ h1 {
 }
 
 .data-backup-actions {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.cloud-sync-email {
+  background: var(--menu-window-fill);
+  border: 1px solid var(--bevel-dark);
+  border-radius: 2px;
+  color: inherit;
+  flex: 1 1 12rem;
+  font: inherit;
+  font-size: 16px;
+  min-height: 2.6rem;
+  padding: 0.4rem 0.6rem;
 }
 
 .data-backup-status {
