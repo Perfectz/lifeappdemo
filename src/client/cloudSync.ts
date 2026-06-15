@@ -79,6 +79,32 @@ export async function signInWithGoogle(): Promise<SyncResult<unknown>> {
   return { ok: true };
 }
 
+export async function signUpWithPassword(
+  email: string,
+  password: string
+): Promise<SyncResult<{ needsConfirmation: boolean }>> {
+  const sb = getSupabaseClient();
+  if (!sb) return { ok: false, message: "Sign-up isn't configured." };
+  if (!email.trim()) return { ok: false, message: "Enter your email address." };
+  if (password.length < 6) return { ok: false, message: "Use a password of at least 6 characters." };
+
+  const { data, error } = await sb.auth.signUp({ email: email.trim(), password });
+  if (error) return { ok: false, message: error.message };
+  // When email confirmation is required, no session is returned yet.
+  return { ok: true, needsConfirmation: !data.session };
+}
+
+export async function signInWithPassword(
+  email: string,
+  password: string
+): Promise<SyncResult<unknown>> {
+  const sb = getSupabaseClient();
+  if (!sb) return { ok: false, message: "Sign-in isn't configured." };
+  const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true };
+}
+
 export async function signOutCloud(): Promise<void> {
   await getSupabaseClient()?.auth.signOut();
 }

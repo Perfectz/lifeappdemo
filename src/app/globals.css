@@ -4123,43 +4123,42 @@ h1 {
   margin: 0 0 0.5rem;
 }
 
-.login-google {
+.login-input {
+  background: var(--menu-window-fill);
+  border: 1px solid var(--bevel-dark);
+  border-radius: 2px;
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  min-height: 2.8rem;
+  padding: 0.5rem 0.7rem;
+  width: 100%;
+}
+
+.login-input:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.login-submit {
   align-items: center;
-  background: #ffffff;
+  background: var(--accent);
   border: 1px solid var(--bevel-dark-strong);
   border-radius: 3px;
-  color: #1f1f1f;
+  box-shadow: var(--bevel-inset);
+  color: #08111f;
   cursor: pointer;
   display: inline-flex;
   font-family: var(--font-display);
   font-size: 1rem;
-  gap: 0.6rem;
   justify-content: center;
   min-height: 3rem;
   padding: 0.5rem 1rem;
 }
 
-.login-google[disabled] {
+.login-submit[disabled] {
   cursor: default;
   opacity: 0.6;
-}
-
-.login-google-glyph {
-  background: conic-gradient(from -45deg, #ea4335, #fbbc05, #34a853, #4285f4, #ea4335);
-  border-radius: 50%;
-  color: #fff;
-  font-family: var(--font-display);
-  font-weight: 700;
-  height: 1.4rem;
-  line-height: 1.4rem;
-  text-align: center;
-  width: 1.4rem;
-}
-
-.login-email {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 
 .login-alt {

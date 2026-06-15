@@ -1,95 +1,103 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
-import { sendMagicLink, signInWithGoogle } from "@/client/cloudSync";
+import { signInWithPassword, signUpWithPassword } from "@/client/cloudSync";
+
+type Mode = "signin" | "signup";
 
 /**
- * Full-screen sign-in gate. Google is the primary method; an email magic-link
- * fallback is offered so the user is never locked out (e.g. before the Google
- * OAuth client is configured).
+ * Full-screen sign-in gate using email + password. On success the AuthGate's
+ * auth subscription flips the app in automatically.
  */
 export function LoginScreen() {
-  const [busy, setBusy] = useState(false);
-  const [showEmail, setShowEmail] = useState(false);
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
-  async function handleGoogle() {
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
     setBusy(true);
     setMessage(null);
-    const result = await signInWithGoogle();
-    if (!result.ok) {
+
+    if (mode === "signup") {
+      const result = await signUpWithPassword(email, password);
       setBusy(false);
+      if (!result.ok) {
+        setMessage({ tone: "error", text: result.message });
+        return;
+      }
+      if (result.needsConfirmation) {
+        setMessage({
+          tone: "ok",
+          text: "Account created. It needs confirming once — then sign in below."
+        });
+        setMode("signin");
+      }
+      // If a session was returned, AuthGate transitions automatically.
+      return;
+    }
+
+    const result = await signInWithPassword(email, password);
+    setBusy(false);
+    if (!result.ok) {
       setMessage({ tone: "error", text: result.message });
     }
-    // On success the page redirects to Google, so no further UI update needed.
-  }
-
-  async function handleEmailLink() {
-    setBusy(true);
-    setMessage(null);
-    const result = await sendMagicLink(email);
-    setBusy(false);
-    setMessage(
-      result.ok
-        ? { tone: "ok", text: "Check your email for a sign-in link." }
-        : { tone: "error", text: result.message }
-    );
+    // On success, AuthGate's onAuthStateChange swaps in the app.
   }
 
   return (
     <main className="login-screen">
-      <div className="login-card">
+      <form className="login-card" onSubmit={handleSubmit}>
         <span className="brand-mark login-mark" aria-hidden="true">
           LQ
         </span>
         <h1 className="login-title">LifeQuest OS</h1>
-        <p className="login-subtitle">Sign in to continue your quest.</p>
+        <p className="login-subtitle">
+          {mode === "signin" ? "Sign in to continue your quest." : "Create your account."}
+        </p>
+
+        <input
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          required
+          className="login-input"
+          placeholder="Email"
+          aria-label="Email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+        <input
+          type="password"
+          autoComplete={mode === "signin" ? "current-password" : "new-password"}
+          required
+          className="login-input"
+          placeholder="Password"
+          aria-label="Password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
+
+        <button type="submit" className="login-submit" disabled={busy}>
+          <span>
+            {busy ? "Working…" : mode === "signin" ? "Sign in" : "Create account"}
+          </span>
+        </button>
 
         <button
           type="button"
-          className="login-google"
-          onClick={handleGoogle}
+          className="login-alt"
+          onClick={() => {
+            setMode(mode === "signin" ? "signup" : "signin");
+            setMessage(null);
+          }}
           disabled={busy}
         >
-          <span className="login-google-glyph" aria-hidden="true">
-            G
-          </span>
-          <span>Continue with Google</span>
+          {mode === "signin" ? "Need an account? Create one" : "Have an account? Sign in"}
         </button>
-
-        {showEmail ? (
-          <div className="login-email">
-            <input
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              className="cloud-sync-email"
-              placeholder="you@example.com"
-              aria-label="Email for sign-in link"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-            <button
-              type="button"
-              className="command-button"
-              onClick={handleEmailLink}
-              disabled={busy}
-            >
-              <span>{busy ? "Sending…" : "Send sign-in link"}</span>
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="login-alt"
-            onClick={() => setShowEmail(true)}
-            disabled={busy}
-          >
-            Use an email link instead
-          </button>
-        )}
 
         {message ? (
           <p
@@ -99,7 +107,7 @@ export function LoginScreen() {
             {message.text}
           </p>
         ) : null}
-      </div>
+      </form>
     </main>
   );
 }
