@@ -19,11 +19,9 @@ Stack: **Vercel** (Next.js app + serverless API routes) + **Supabase** (auth + c
 2. **Add New → Project** → import `lifeappdemo`.
 3. Framework preset auto-detects **Next.js**. Leave build settings default.
 4. Add **Environment Variables** (Production + Preview + Development):
-   - `OPENAI_API_KEY`
-   - `OPENAI_MODEL`
+   - `OPENAI_API_KEY` (the only AI secret — model ids live in code at `src/config/ai.ts`)
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
 5. **Deploy.** You get `https://<project>.vercel.app`.
 6. After this, every push to `main` = production deploy; every PR = preview URL.
 

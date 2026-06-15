@@ -1,4 +1,5 @@
 import type { AIToolProposal } from "@/domain";
+import { COACH_MODEL } from "@/config/ai";
 import { validateAIToolProposals } from "@/domain/aiTaskTools";
 
 export type OpenAIChatCompletionInput = {
@@ -64,7 +65,7 @@ export async function completeReadOnlyCoachChat(
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+      model: COACH_MODEL,
       max_tokens: maxTokens,
       messages: [
         {

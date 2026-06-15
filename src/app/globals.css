@@ -4748,26 +4748,35 @@ h1 {
 }
 
 .reminder-banner-cta {
+  align-items: center;
   background: var(--warning);
   border: 1px solid var(--bevel-dark-strong);
   border-radius: 2px;
   box-shadow: var(--bevel-inset);
   color: #2a1c00;
+  display: inline-flex;
   font-family: var(--font-mono);
   font-size: 0.85rem;
+  justify-content: center;
   letter-spacing: 0.05em;
-  padding: 0.25rem 0.55rem;
+  min-height: 2.5rem;
+  padding: 0.25rem 0.7rem;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .reminder-banner-close {
+  align-items: center;
   background: transparent;
   border: 0;
   color: inherit;
   cursor: pointer;
+  display: inline-flex;
   font: inherit;
-  padding: 0 0.2rem;
+  justify-content: center;
+  min-height: 2.5rem;
+  min-width: 2.5rem;
+  padding: 0;
 }
 
 @media (min-width: 860px) {

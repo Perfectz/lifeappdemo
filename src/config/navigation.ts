@@ -27,6 +27,7 @@ export const navigationGroups: NavigationGroup[] = [
         href: "/dashboard",
         description: "Today command center",
         icon: "dashboard",
+        shortLabel: "Home",
         primaryMobile: true
       },
       {

@@ -1,4 +1,5 @@
 import type { CreateRealtimeSessionResponse, VoiceSessionMode } from "@/domain";
+import { REALTIME_VOICE_MODEL } from "@/config/ai";
 
 export type RealtimeClientSecretInput = {
   mode: VoiceSessionMode;
@@ -50,7 +51,7 @@ export async function createRealtimeClientSecret(
       },
       session: {
         type: "realtime",
-        model: process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime",
+        model: REALTIME_VOICE_MODEL,
         instructions:
           "You are the LifeQuest OS voice coach. Keep responses concise and hand off transcript summaries to the text confirmation flow."
       }

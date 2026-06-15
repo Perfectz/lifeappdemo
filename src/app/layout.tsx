@@ -52,7 +52,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#101319"
+  themeColor: "#101319",
+  width: "device-width",
+  initialScale: 1,
+  // Draw under the status bar / gesture area so the existing
+  // env(safe-area-inset-*) CSS actually resolves to non-zero values on
+  // notched phones and installed PWAs. Without viewport-fit=cover those
+  // insets are always 0.
+  viewportFit: "cover"
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
