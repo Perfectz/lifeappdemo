@@ -31,6 +31,14 @@ export const navigationGroups: NavigationGroup[] = [
         primaryMobile: true
       },
       {
+        label: "Fitness",
+        href: "/fitness",
+        description: "Daily training sessions",
+        icon: "metrics",
+        shortLabel: "Train",
+        primaryMobile: true
+      },
+      {
         label: "Quest Log",
         href: "/tasks",
         description: "Capture and clear quests",
@@ -63,8 +71,7 @@ export const navigationGroups: NavigationGroup[] = [
         label: "Metrics",
         href: "/metrics",
         description: "Energy check-in",
-        icon: "metrics",
-        primaryMobile: true
+        icon: "metrics"
       },
       {
         label: "Health Import",
