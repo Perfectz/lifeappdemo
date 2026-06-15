@@ -66,8 +66,36 @@ export async function sendMagicLink(email: string): Promise<SyncResult<unknown>>
   return { ok: true };
 }
 
+export async function signInWithGoogle(): Promise<SyncResult<unknown>> {
+  const sb = getSupabaseClient();
+  if (!sb) return { ok: false, message: "Sign-in isn't configured." };
+  const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo }
+  });
+  // On success the browser navigates to Google; this line is reached only on error.
+  if (error) return { ok: false, message: error.message };
+  return { ok: true };
+}
+
 export async function signOutCloud(): Promise<void> {
   await getSupabaseClient()?.auth.signOut();
+}
+
+/** Subscribe to auth changes. Fires immediately is not guaranteed — pair with getCurrentCloudUser for the initial read. */
+export function subscribeAuthState(callback: (user: CloudUser | null) => void): () => void {
+  const sb = getSupabaseClient();
+  if (!sb) {
+    callback(null);
+    return () => {};
+  }
+  const { data } = sb.auth.onAuthStateChange((_event, session) => {
+    callback(
+      session?.user ? { id: session.user.id, email: session.user.email ?? null } : null
+    );
+  });
+  return () => data.subscription.unsubscribe();
 }
 
 /** Push the full local snapshot up to the user's cloud row. */

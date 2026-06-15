@@ -3,6 +3,7 @@ import { Pixelify_Sans, VT323 } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/AppShell";
+import { AuthGate } from "@/components/AuthGate";
 import { PWAServiceWorkerRegister } from "@/components/PWAServiceWorkerRegister";
 import { withBasePath } from "@/config/site";
 import "./globals.css";
@@ -74,7 +75,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           }}
         />
         <PWAServiceWorkerRegister />
-        <AppShell>{children}</AppShell>
+        <AuthGate>
+          <AppShell>{children}</AppShell>
+        </AuthGate>
       </body>
     </html>
   );

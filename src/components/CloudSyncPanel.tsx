@@ -102,8 +102,8 @@ export function CloudSyncPanel() {
   return (
     <div className="data-backup-panel">
       <p className="data-backup-help">
-        Sign in to back up your local data to the cloud and sync it across devices.
-        Sign-in is optional — the app works fully without it.
+        Your data backs up to the cloud automatically while you&apos;re signed in, and syncs
+        across every device you sign in on.
       </p>
 
       {user ? (
