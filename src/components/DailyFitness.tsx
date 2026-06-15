@@ -36,6 +36,11 @@ function optionalWeight(value: string | undefined): number | undefined {
   return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
+function optionalDistance(value: string | undefined): number | undefined {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
 export function DailyFitness() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [now, setNow] = useState<Date | null>(null);
@@ -47,6 +52,7 @@ export function DailyFitness() {
   // Cardio form
   const [cardioId, setCardioId] = useState(cardioOptions[0].id);
   const [cardioMinutes, setCardioMinutes] = useState("");
+  const [cardioDistance, setCardioDistance] = useState("");
   const [cardioVestLbs, setCardioVestLbs] = useState("");
   // Martial arts form
   const [martialId, setMartialId] = useState(martialArtsOptions[0].id);
@@ -111,10 +117,12 @@ export function DailyFitness() {
         type: "cardio",
         title: option.label,
         durationMinutes: optionalMinutes(cardioMinutes),
+        distanceMiles: optionalDistance(cardioDistance),
         weightVestLbs: optionalWeight(cardioVestLbs)
       })
     );
     setCardioMinutes("");
+    setCardioDistance("");
     setCardioVestLbs("");
   }
 
@@ -274,6 +282,9 @@ export function DailyFitness() {
           <div className="fitness-logged">
             <p>
               <strong>{status.byType.cardio.title}</strong>
+              {status.byType.cardio.distanceMiles
+                ? ` · ${status.byType.cardio.distanceMiles} mi`
+                : ""}
               {status.byType.cardio.durationMinutes
                 ? ` · ${status.byType.cardio.durationMinutes} min`
                 : ""}
@@ -304,6 +315,19 @@ export function DailyFitness() {
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="fitness-label">
+              Distance (mi) — optional
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.1"
+                className="fitness-input"
+                placeholder="e.g. 2.5"
+                value={cardioDistance}
+                onChange={(e) => setCardioDistance(e.target.value)}
+              />
             </label>
             <label className="fitness-label">
               Minutes
