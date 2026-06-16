@@ -35,6 +35,7 @@ export type {
   MetricEntry,
   MetricLevel,
   MetricSource,
+  Note,
   NutritionEstimateSource,
   StrengthSet,
   Task,
@@ -69,6 +70,7 @@ export type {
 } from "./eveningPostmortems";
 export type { MetricInput, MetricValidationResult } from "./metrics";
 export type { JournalEntryInput, JournalValidationResult } from "./journal";
+export type { NoteInput, NoteValidationResult } from "./notes";
 export type {
   DailyReportInput,
   GenerateDailyReportPayload,

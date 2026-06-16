@@ -1,4 +1,3 @@
-import { REALTIME_VOICE_MODEL } from "@/config/ai";
 import { executeVoiceTool, VOICE_TOOL_DEFINITIONS } from "@/client/voiceTools";
 
 /**
@@ -16,7 +15,10 @@ import { executeVoiceTool, VOICE_TOOL_DEFINITIONS } from "@/client/voiceTools";
  * src/config/ai.ts if your account exposes a different realtime id.
  */
 
-const REALTIME_URL = `https://api.openai.com/v1/realtime?model=${encodeURIComponent(REALTIME_VOICE_MODEL)}`;
+// GA ("v2") Realtime WebRTC endpoint. The model is bound when the ephemeral
+// key is minted server-side (src/server/ai/realtimeClient.ts), so it is NOT a
+// query param here.
+const REALTIME_URL = "https://api.openai.com/v1/realtime/calls";
 
 const AGENT_INSTRUCTIONS = [
   "You are the LifeQuest OS voice assistant. The user talks to you to run their life-tracking app hands-free.",
@@ -86,12 +88,15 @@ export async function startVoiceAgent(callbacks: VoiceAgentCallbacks): Promise<V
   };
 
   channel.addEventListener("open", () => {
+    // GA session shape: type "realtime", audio config nested under `audio`.
     send({
       type: "session.update",
       session: {
+        type: "realtime",
         instructions: AGENT_INSTRUCTIONS,
         tools: VOICE_TOOL_DEFINITIONS,
-        tool_choice: "auto"
+        tool_choice: "auto",
+        audio: { output: { voice: "marin" } }
       }
     });
     callbacks.onStatus?.("listening");

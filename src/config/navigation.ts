@@ -87,6 +87,12 @@ export const navigationGroups: NavigationGroup[] = [
         icon: "journal"
       },
       {
+        label: "Notes",
+        href: "/notes",
+        description: "Quick field notes",
+        icon: "journal"
+      },
+      {
         label: "Trends",
         href: "/trends",
         description: "Patterns over time",

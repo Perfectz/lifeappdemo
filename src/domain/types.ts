@@ -98,6 +98,12 @@ export type JournalEntry = TimestampedEntity & {
   source: JournalSource;
 };
 
+export type Note = TimestampedEntity & {
+  title: string;
+  content: string;
+  tags: string[];
+};
+
 export type DailyReport = TimestampedEntity & {
   date: IsoDate;
   markdownContent: string;

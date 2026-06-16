@@ -12,5 +12,5 @@
 /** Text model powering the AI Coach (chat, morning/evening planning, reports). */
 export const COACH_MODEL = "gpt-5.5";
 
-/** Realtime model powering hands-free voice sessions. */
-export const REALTIME_VOICE_MODEL = "gpt-realtime-2.0";
+/** Realtime ("v2" GA) model powering the hands-free voice agent. */
+export const REALTIME_VOICE_MODEL = "gpt-realtime-2";

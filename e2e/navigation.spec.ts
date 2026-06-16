@@ -16,6 +16,7 @@ const routes = [
   { label: "Metrics", path: "/metrics", heading: "Metrics" },
   { label: "Health Import", path: "/health-import", heading: "Health Import" },
   { label: "Journal", path: "/journal", heading: "Journal" },
+  { label: "Notes", path: "/notes", heading: "Notes" },
   { label: "Trends", path: "/trends", heading: "Trends" },
   { label: "Reports", path: "/reports", heading: "Reports" },
   { label: "AI Coach", path: "/coach", heading: "AI Coach" },
@@ -62,6 +63,8 @@ test.describe("V00 walking skeleton navigation", () => {
         await expect(page.getByRole("button", { name: "Confirm Import" })).toBeVisible();
       } else if (route.path === "/journal") {
         await expect(page.getByRole("button", { name: "Save Journal Entry" })).toBeVisible();
+      } else if (route.path === "/notes") {
+        await expect(page.getByRole("button", { name: "Save Note" })).toBeVisible();
       } else if (route.path === "/reports") {
         await expect(page.getByRole("button", { name: "Generate Preview" })).toBeVisible();
       } else if (route.path === "/trends") {
