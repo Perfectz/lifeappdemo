@@ -4390,6 +4390,107 @@ h1 {
   font-family: var(--font-mono);
 }
 
+/* --- Voice assistant (global mic + live overlay) --- */
+.voice-fab {
+  align-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--line-strong));
+  border: 1px solid var(--bevel-dark-strong);
+  border-radius: 50%;
+  bottom: calc(9.2rem + env(safe-area-inset-bottom));
+  box-shadow: var(--bevel-inset), 0 0.5rem 1.2rem rgba(0, 0, 0, 0.45);
+  color: #08111f;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 1.4rem;
+  height: 3.2rem;
+  justify-content: center;
+  position: fixed;
+  right: 1rem;
+  width: 3.2rem;
+  z-index: 21;
+}
+
+.voice-fab-active {
+  animation: voice-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+  0%,
+  100% {
+    box-shadow: var(--bevel-inset), 0 0 0 0 rgba(120, 220, 180, 0.55);
+  }
+  50% {
+    box-shadow: var(--bevel-inset), 0 0 0 0.6rem rgba(120, 220, 180, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-fab-active {
+    animation: none;
+  }
+}
+
+.voice-overlay {
+  background: var(--menu-window-fill);
+  border: 1px solid var(--bevel-dark-strong);
+  border-radius: 6px;
+  bottom: calc(9rem + env(safe-area-inset-bottom));
+  box-shadow: var(--bevel-inset), 0 0.8rem 1.8rem rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  left: 50%;
+  max-width: min(26rem, calc(100vw - 2rem));
+  padding: 0.85rem 1rem;
+  position: fixed;
+  transform: translateX(-50%);
+  width: max-content;
+  z-index: 22;
+}
+
+.voice-overlay-head {
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+  justify-content: space-between;
+}
+
+.voice-overlay-status {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.voice-overlay-action {
+  color: var(--accent);
+  margin: 0;
+}
+
+.voice-overlay-action-err,
+.voice-overlay-error {
+  color: var(--warning);
+  margin: 0;
+}
+
+.voice-overlay-assistant {
+  color: var(--ink, inherit);
+  font-style: italic;
+  margin: 0;
+}
+
+@media (min-width: 860px) {
+  .voice-fab {
+    bottom: 1.25rem;
+  }
+  .voice-overlay {
+    bottom: 1.25rem;
+    left: auto;
+    right: 1rem;
+    transform: none;
+  }
+}
+
 .fitness-logged {
   align-items: center;
   display: flex;

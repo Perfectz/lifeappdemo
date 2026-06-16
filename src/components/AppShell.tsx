@@ -23,6 +23,7 @@ import { QuickAddQuest } from "@/components/QuickAddQuest";
 import { ReminderManager } from "@/components/ReminderManager";
 import { StorageErrorToast } from "@/components/StorageErrorToast";
 import { ThemeBootstrap } from "@/components/ThemeBootstrap";
+import { VoiceAgent } from "@/components/VoiceAgent";
 import { navigationFooterItems, navigationGroups } from "@/config/navigation";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { isDemoModeEnabled, loadLocalDemoDataSet } from "@/data/demoDataRepository";
@@ -548,6 +549,7 @@ export function AppShell({ children }: AppShellProps) {
       <StorageErrorToast />
       <CelebrationOverlay />
       <CloudSyncBootstrap />
+      <VoiceAgent />
     </div>
   );
 }
