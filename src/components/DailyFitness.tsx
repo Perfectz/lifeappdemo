@@ -18,12 +18,20 @@ import { toLocalIsoDate } from "@/domain/dates";
 import { createWorkout } from "@/domain/workouts";
 import type { Workout } from "@/domain";
 
-function prettyDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
+function prettyIso(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric"
   });
+}
+
+function shiftDate(iso: string, deltaDays: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+  dt.setDate(dt.getDate() + deltaDays);
+  return toLocalIsoDate(dt);
 }
 
 function optionalMinutes(value: string): number | undefined {
@@ -44,6 +52,7 @@ function optionalDistance(value: string | undefined): number | undefined {
 export function DailyFitness() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [now, setNow] = useState<Date | null>(null);
+  const [viewedDate, setViewedDate] = useState<string | null>(null);
 
   // Strength form
   const [strengthDayId, setStrengthDayId] = useState(strengthWorkouts[0].id);
@@ -69,8 +78,10 @@ export function DailyFitness() {
     return () => window.removeEventListener(dataChangedEventName, reload);
   }, [reload]);
 
-  const today = now ? toLocalIsoDate(now) : toLocalIsoDate(new Date());
-  const status = useMemo(() => getDailyFitnessStatus(workouts, today), [workouts, today]);
+  const todayIso = now ? toLocalIsoDate(now) : toLocalIsoDate(new Date());
+  const viewed = viewedDate ?? todayIso;
+  const isToday = viewed === todayIso;
+  const status = useMemo(() => getDailyFitnessStatus(workouts, viewed), [workouts, viewed]);
 
   const persist = useCallback((next: Workout[]) => {
     createLocalWorkoutRepository(window.localStorage).save(next);
@@ -93,7 +104,7 @@ export function DailyFitness() {
   function logStrength() {
     addWorkout(
       createWorkout({
-        date: today,
+        date: viewed,
         type: "strength",
         title: `Day ${selectedStrength.day} — ${selectedStrength.name} · ${variant}`,
         equipment: equipmentForVariant(variant),
@@ -113,7 +124,7 @@ export function DailyFitness() {
     const option = cardioOptions.find((o) => o.id === cardioId) ?? cardioOptions[0];
     addWorkout(
       createWorkout({
-        date: today,
+        date: viewed,
         type: "cardio",
         title: option.label,
         durationMinutes: optionalMinutes(cardioMinutes),
@@ -130,7 +141,7 @@ export function DailyFitness() {
     const option = martialArtsOptions.find((o) => o.id === martialId) ?? martialArtsOptions[0];
     addWorkout(
       createWorkout({
-        date: today,
+        date: viewed,
         type: "martial_arts",
         title: option.label,
         durationMinutes: optionalMinutes(martialMinutes)
@@ -143,8 +154,43 @@ export function DailyFitness() {
     <section className="fitness">
       <header className="dashboard-section fitness-header">
         <p className="eyebrow">Daily Training</p>
-        <h1 suppressHydrationWarning>{now ? prettyDate(now) : "Today"}</h1>
-        <p className="fitness-sub">Log all three sessions to close the day.</p>
+        <div className="fitness-datenav">
+          <button
+            type="button"
+            className="fitness-datenav-btn"
+            aria-label="Previous day"
+            onClick={() => setViewedDate(shiftDate(viewed, -1))}
+          >
+            ◀
+          </button>
+          <h1 suppressHydrationWarning>
+            {prettyIso(viewed)}
+            {isToday ? <span className="fitness-today-tag">Today</span> : null}
+          </h1>
+          <button
+            type="button"
+            className="fitness-datenav-btn"
+            aria-label="Next day"
+            disabled={isToday}
+            onClick={() => setViewedDate(shiftDate(viewed, 1))}
+          >
+            ▶
+          </button>
+        </div>
+        <p className="fitness-sub">
+          {isToday
+            ? "Log all three sessions to close the day."
+            : "Viewing a past day — you can still log a missed session."}
+          {!isToday ? (
+            <button
+              type="button"
+              className="fitness-jump-today"
+              onClick={() => setViewedDate(todayIso)}
+            >
+              Jump to today
+            </button>
+          ) : null}
+        </p>
         <div
           className="fitness-pips"
           role="img"

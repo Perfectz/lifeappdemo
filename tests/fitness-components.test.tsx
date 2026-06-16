@@ -100,4 +100,20 @@ describe("DailyFitness", () => {
 
     expect(JSON.parse(window.localStorage.getItem(workoutStorageKey) ?? "[]")).toHaveLength(0);
   });
+
+  it("scrolls to a previous day and logs onto that day, not today", async () => {
+    render(<DailyFitness />);
+    await waitFor(() => expect(screen.getByText("0/3")).toBeVisible());
+
+    fireEvent.click(screen.getByRole("button", { name: "Previous day" }));
+    // Now viewing a past day — a way back to today appears.
+    expect(screen.getByRole("button", { name: "Jump to today" })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Log cardio" }));
+    await waitFor(() => expect(screen.getByText("1/3")).toBeVisible());
+
+    // Back on today, that session should NOT count — it was logged to the past day.
+    fireEvent.click(screen.getByRole("button", { name: "Jump to today" }));
+    await waitFor(() => expect(screen.getByText("0/3")).toBeVisible());
+  });
 });

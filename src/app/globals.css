@@ -4259,6 +4259,63 @@ h1 {
   margin: 0.25rem 0 0;
 }
 
+.fitness-datenav {
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+  justify-content: space-between;
+  margin: 0.25rem 0 0;
+}
+
+.fitness-datenav h1 {
+  flex: 1;
+  font-size: 1.25rem;
+  margin: 0;
+  text-align: center;
+}
+
+.fitness-datenav-btn {
+  align-items: center;
+  background: var(--menu-window-fill);
+  border: 1px solid var(--bevel-dark);
+  border-radius: 50%;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 1rem;
+  height: 2.6rem;
+  justify-content: center;
+  width: 2.6rem;
+}
+
+.fitness-datenav-btn[disabled] {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.fitness-today-tag {
+  background: var(--accent);
+  border-radius: 2px;
+  color: #08111f;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.35rem;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.fitness-jump-today {
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  margin-left: 0.5rem;
+  text-decoration: underline;
+}
+
 .fitness-sub {
   color: var(--muted);
   margin: 0.4rem 0 0.75rem;
