@@ -1102,7 +1102,8 @@ textarea {
   padding: clamp(1rem, 3vw, 1.5rem);
 }
 
-.journal-page {
+.journal-page,
+.notes-page {
   max-width: 76rem;
   padding: clamp(1rem, 3vw, 1.5rem);
 }
@@ -1125,6 +1126,7 @@ textarea {
   .health-import-page,
   .metrics-page,
   .journal-page,
+  .notes-page,
   .reports-page,
   .coach-page {
     border-radius: 14px;
@@ -1137,6 +1139,7 @@ textarea {
 .standup-hero,
 .metrics-hero,
 .journal-hero,
+.notes-hero,
 .reports-hero,
 .coach-hero {
   align-items: center;
@@ -1163,6 +1166,7 @@ textarea {
 .standup-hero h1,
 .metrics-hero h1,
 .journal-hero h1,
+.notes-hero h1,
 .reports-hero h1,
 .coach-hero h1 {
   margin-bottom: 0.75rem;
@@ -1173,6 +1177,7 @@ textarea {
 .standup-hero p,
 .metrics-hero p,
 .journal-hero p,
+.notes-hero p,
 .reports-hero p,
 .coach-hero p {
   color: var(--muted);
@@ -1186,6 +1191,7 @@ textarea {
 .standup-hero::before,
 .metrics-hero::before,
 .journal-hero::before,
+.notes-hero::before,
 .reports-hero::before,
 .coach-hero::before {
   background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.07), transparent);
@@ -1202,6 +1208,7 @@ textarea {
 .standup-hero > *,
 .metrics-hero > *,
 .journal-hero > *,
+.notes-hero > *,
 .reports-hero > *,
 .coach-hero > * {
   position: relative;
@@ -1213,6 +1220,7 @@ textarea {
 .standup-sprite,
 .metrics-sprite,
 .journal-sprite,
+.notes-sprite,
 .reports-sprite,
 .coach-sprite {
   min-height: 7.25rem;
@@ -2243,9 +2251,17 @@ textarea {
   gap: 1rem;
 }
 
+.notes-layout {
+  display: grid;
+  gap: 1rem;
+}
+
 .journal-side,
 .journal-form,
-.journal-entry-list {
+.journal-entry-list,
+.notes-side,
+.notes-form,
+.notes-entry-list {
   display: grid;
   gap: 0.75rem;
 }
@@ -2256,7 +2272,9 @@ textarea {
 }
 
 .journal-form label,
-.journal-date-filter {
+.journal-date-filter,
+.notes-form label,
+.notes-search {
   color: var(--muted);
   display: grid;
   font-size: 0.76rem;
@@ -2267,7 +2285,10 @@ textarea {
 .journal-form input,
 .journal-form select,
 .journal-form textarea,
-.journal-date-filter input {
+.journal-date-filter input,
+.notes-form input,
+.notes-form textarea,
+.notes-search input {
   background: rgba(13, 17, 23, 0.86);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: inset 0 0 0.7rem rgba(0, 0, 0, 0.28);
@@ -2277,7 +2298,8 @@ textarea {
   padding: 0.68rem 0.75rem;
 }
 
-.journal-form textarea {
+.journal-form textarea,
+.notes-form textarea {
   min-height: 12rem;
   resize: vertical;
 }
@@ -2285,21 +2307,28 @@ textarea {
 .journal-form input:focus,
 .journal-form select:focus,
 .journal-form textarea:focus,
-.journal-date-filter input:focus {
+.journal-date-filter input:focus,
+.notes-form input:focus,
+.notes-form textarea:focus,
+.notes-search input:focus {
   border-color: var(--line-strong);
   box-shadow: 0 0 0 3px rgba(61, 139, 253, 0.22);
   outline: none;
 }
 
 .journal-form-actions,
-.journal-entry-actions {
+.journal-entry-actions,
+.notes-form-actions,
+.notes-entry-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
 }
 
 .journal-form button,
-.journal-entry-actions button {
+.journal-entry-actions button,
+.notes-form button,
+.notes-entry-actions button {
   background:
     linear-gradient(135deg, rgba(110, 231, 183, 0.08), rgba(61, 139, 253, 0.08)),
     var(--surface-soft);
@@ -2312,13 +2341,15 @@ textarea {
   padding: 0.58rem 0.85rem;
 }
 
-.journal-form button[type="submit"] {
+.journal-form button[type="submit"],
+.notes-form button[type="submit"] {
   background: linear-gradient(135deg, var(--line-strong), #55d6a5);
   border-color: transparent;
   color: #07111f;
 }
 
-.journal-entry-card {
+.journal-entry-card,
+.notes-entry-card {
   background: var(--surface-raised);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -2331,14 +2362,16 @@ textarea {
   border-color: rgba(110, 231, 183, 0.58);
 }
 
-.journal-entry-card h3 {
+.journal-entry-card h3,
+.notes-entry-card h3 {
   color: var(--text);
   font-size: 1rem;
   line-height: 1.3;
   margin: 0;
 }
 
-.journal-entry-card p {
+.journal-entry-card p,
+.notes-entry-card p {
   color: var(--muted);
   line-height: 1.5;
   margin: 0.35rem 0 0;
@@ -2346,7 +2379,8 @@ textarea {
 }
 
 .journal-entry-meta,
-.journal-entry-prompt {
+.journal-entry-prompt,
+.notes-entry-meta {
   color: var(--accent);
   font-size: 0.78rem;
   font-weight: 800;
@@ -2354,6 +2388,26 @@ textarea {
 
 .journal-entry-prompt {
   color: var(--warning);
+}
+
+.notes-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0.55rem 0 0;
+  padding: 0;
+}
+
+.notes-tag-list li {
+  background: rgba(246, 199, 104, 0.1);
+  border: 1px solid rgba(246, 199, 104, 0.22);
+  border-radius: 999px;
+  color: var(--warning);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1;
+  padding: 0.38rem 0.5rem;
 }
 
 .reports-layout {
@@ -3271,6 +3325,7 @@ h1 {
   .standup-hero,
   .metrics-hero,
   .journal-hero,
+  .notes-hero,
   .reports-hero,
   .coach-hero {
     grid-template-columns: minmax(0, 1fr);
@@ -3283,6 +3338,7 @@ h1 {
   .standup-hero h1,
   .metrics-hero h1,
   .journal-hero h1,
+  .notes-hero h1,
   .reports-hero h1,
   .coach-hero h1 {
     font-size: 1.82rem;
@@ -3295,6 +3351,7 @@ h1 {
   .standup-hero p,
   .metrics-hero p,
   .journal-hero p,
+  .notes-hero p,
   .reports-hero p,
   .coach-hero p {
     line-height: 1.48;
@@ -3305,6 +3362,7 @@ h1 {
   .standup-sprite,
   .metrics-sprite,
   .journal-sprite,
+  .notes-sprite,
   .reports-sprite,
   .coach-sprite {
     bottom: 0.45rem;
@@ -3321,6 +3379,7 @@ h1 {
   .standup-sprite .page-sprite,
   .metrics-sprite .page-sprite,
   .journal-sprite .page-sprite,
+  .notes-sprite .page-sprite,
   .reports-sprite .page-sprite,
   .coach-sprite .page-sprite {
     height: 5.35rem;
@@ -3331,6 +3390,8 @@ h1 {
   .metric-entry-list,
   .journal-form,
   .journal-entry-list,
+  .notes-form,
+  .notes-entry-list,
   .reports-controls,
   .coach-form,
   .quest-create-panel,
@@ -3353,7 +3414,9 @@ h1 {
   .reports-controls button,
   .coach-form button,
   .journal-form button,
-  .journal-entry-actions button {
+  .journal-entry-actions button,
+  .notes-form button,
+  .notes-entry-actions button {
     justify-content: center;
     min-height: 3rem;
     width: 100%;
@@ -3476,6 +3539,7 @@ h1 {
   .standup-hero,
   .metrics-hero,
   .journal-hero,
+  .notes-hero,
   .reports-hero,
   .coach-hero {
     grid-template-columns: minmax(0, 1fr) minmax(10rem, 14rem);
@@ -3486,6 +3550,7 @@ h1 {
   .standup-hero p,
   .metrics-hero p,
   .journal-hero p,
+  .notes-hero p,
   .reports-hero p,
   .coach-hero p {
     line-height: 1.6;
@@ -3496,6 +3561,7 @@ h1 {
   .standup-sprite,
   .metrics-sprite,
   .journal-sprite,
+  .notes-sprite,
   .reports-sprite,
   .coach-sprite {
     min-height: 10rem;
@@ -3507,6 +3573,7 @@ h1 {
   .standup-sprite .page-sprite,
   .metrics-sprite .page-sprite,
   .journal-sprite .page-sprite,
+  .notes-sprite .page-sprite,
   .reports-sprite .page-sprite,
   .coach-sprite .page-sprite {
     height: 11rem;
@@ -3539,6 +3606,11 @@ h1 {
   .journal-layout {
     align-items: start;
     grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
+  }
+
+  .notes-layout {
+    align-items: start;
+    grid-template-columns: minmax(0, 1.05fr) minmax(18rem, 0.95fr);
   }
 
   .reports-layout {
@@ -5285,6 +5357,7 @@ html[data-theme="gameboy"] .dashboard-hero,
 html[data-theme="gameboy"] .standup-hero,
 html[data-theme="gameboy"] .metrics-hero,
 html[data-theme="gameboy"] .journal-hero,
+html[data-theme="gameboy"] .notes-hero,
 html[data-theme="gameboy"] .reports-hero,
 html[data-theme="gameboy"] .coach-hero,
 html[data-theme="amber"] .quest-log-hero,
@@ -5292,6 +5365,7 @@ html[data-theme="amber"] .dashboard-hero,
 html[data-theme="amber"] .standup-hero,
 html[data-theme="amber"] .metrics-hero,
 html[data-theme="amber"] .journal-hero,
+html[data-theme="amber"] .notes-hero,
 html[data-theme="amber"] .reports-hero,
 html[data-theme="amber"] .coach-hero {
   background:

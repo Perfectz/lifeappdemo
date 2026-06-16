@@ -5,6 +5,7 @@ import { createLocalTaskRepository } from "@/data/taskRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalJournalRepository } from "@/data/journalRepository";
+import { createLocalNoteRepository } from "@/data/noteRepository";
 
 describe("voice tool dispatcher", () => {
   beforeEach(() => {
@@ -20,8 +21,39 @@ describe("voice tool dispatcher", () => {
       "log_martial_arts",
       "log_metric",
       "add_journal_entry",
+      "save_note",
+      "get_context",
+      "list_quests",
+      "list_recent_workouts",
+      "read_notes",
       "navigate"
     ]);
+  });
+
+  it("saves a note the user can read later", () => {
+    const result = executeVoiceTool("save_note", {
+      content: "Felt a twinge in the left shoulder during presses — go lighter next time.",
+      tags: ["injury", "strength"]
+    });
+    expect(result.ok).toBe(true);
+    const notes = createLocalNoteRepository(window.localStorage).load();
+    expect(notes).toHaveLength(1);
+    expect(notes[0].content).toContain("twinge");
+    expect(notes[0].tags).toContain("injury");
+  });
+
+  it("reads context as a silent (non-action) tool", () => {
+    executeVoiceTool("create_quest", { title: "Book physio" });
+    const result = executeVoiceTool("get_context", {});
+    expect(result).toMatchObject({ ok: true, silent: true });
+    expect(result.message).toContain("Book physio");
+  });
+
+  it("reads notes back, optionally by query", () => {
+    executeVoiceTool("save_note", { title: "Race plan", content: "Half marathon in September." });
+    const result = executeVoiceTool("read_notes", { query: "marathon" });
+    expect(result).toMatchObject({ ok: true, silent: true });
+    expect(result.message).toContain("Race plan");
   });
 
   it("creates a quest", () => {

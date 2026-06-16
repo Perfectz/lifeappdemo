@@ -14,8 +14,12 @@ import {
 import { toLocalIsoDate } from "@/domain/dates";
 import { completeTask, createTask, taskPriorities, taskTags } from "@/domain/tasks";
 import { createWorkout } from "@/domain/workouts";
-import { checkInTypes, createMetricEntry, type MetricInput } from "@/domain/metrics";
+import { checkInTypes, createMetricEntry, getLatestMetricEntry, type MetricInput } from "@/domain/metrics";
 import { createJournalEntry, journalEntryTypes } from "@/domain/journal";
+import { createLocalNoteRepository } from "@/data/noteRepository";
+import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
+import { createNote, getRecentNotes, searchNotes } from "@/domain/notes";
+import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import type { JournalEntryType, TaskPriority, TaskTag } from "@/domain";
 
 /**
@@ -28,7 +32,13 @@ import type { JournalEntryType, TaskPriority, TaskTag } from "@/domain";
  * delete or archive over voice.
  */
 
-export type VoiceToolResult = { ok: boolean; message: string; navigateTo?: string };
+export type VoiceToolResult = {
+  ok: boolean;
+  message: string;
+  navigateTo?: string;
+  /** Read/context tools: data goes to the model but isn't shown as an "action" in the UI. */
+  silent?: boolean;
+};
 
 const PAGE_PATHS: Record<string, string> = {
   dashboard: "/dashboard",
@@ -142,6 +152,52 @@ export const VOICE_TOOL_DEFINITIONS = [
         type: { type: "string", enum: journalEntryTypes }
       },
       required: ["content"]
+    }
+  },
+  {
+    type: "function",
+    name: "save_note",
+    description:
+      "Save a note from the conversation so the user can read it later on the Notes screen. Use when the user shares something worth remembering or asks you to note it.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Short title; inferred from content if omitted." },
+        content: { type: "string" },
+        tags: { type: "array", items: { type: "string" } }
+      },
+      required: ["content"]
+    }
+  },
+  {
+    type: "function",
+    name: "get_context",
+    description:
+      "Get a snapshot of the user's day — fitness progress, open quests, today's intention, latest health check-in, note count. Call this to ground coaching/advice in their real data before responding.",
+    parameters: { type: "object", properties: {} }
+  },
+  {
+    type: "function",
+    name: "list_quests",
+    description: "List the user's open quests/tasks.",
+    parameters: { type: "object", properties: {} }
+  },
+  {
+    type: "function",
+    name: "list_recent_workouts",
+    description: "List recently logged workouts (strength, cardio, martial arts).",
+    parameters: {
+      type: "object",
+      properties: { limit: { type: "number", description: "How many (default 5)." } }
+    }
+  },
+  {
+    type: "function",
+    name: "read_notes",
+    description: "Read the user's saved notes, optionally filtered by a search query.",
+    parameters: {
+      type: "object",
+      properties: { query: { type: "string", description: "Optional text to search notes for." } }
     }
   },
   {
@@ -302,6 +358,102 @@ function navigate(args: Record<string, unknown>): VoiceToolResult {
   return { ok: true, message: `Opening ${page.replace(/_/g, " ")}.`, navigateTo: path };
 }
 
+function saveNote(args: Record<string, unknown>): VoiceToolResult {
+  const content = asText(args.content);
+  if (!content) return { ok: false, message: "What should I write in the note?" };
+  const title = asText(args.title) || `${content.slice(0, 56)}${content.length > 56 ? "…" : ""}`;
+  const tags = Array.isArray(args.tags)
+    ? args.tags.map((tag) => String(tag))
+    : asText(args.tags)
+      ? asText(args.tags).split(",")
+      : [];
+  const repo = createLocalNoteRepository(store());
+  const note = createNote({ title, content, tags });
+  repo.save([note, ...repo.load()]);
+  return { ok: true, message: `Saved note "${note.title}".` };
+}
+
+function getContext(): VoiceToolResult {
+  const day = today();
+  const openTasks = createLocalTaskRepository(store())
+    .load()
+    .filter((task) => task.status === "todo");
+  const fitness = getDailyFitnessStatus(createLocalWorkoutRepository(store()).load(), day);
+  const latest = getLatestMetricEntry(createLocalMetricRepository(store()).load());
+  const noteCount = createLocalNoteRepository(store()).load().length;
+  const plan = createLocalDailyPlanRepository(store())
+    .load()
+    .find((entry) => entry.date === day);
+
+  const checkIn = latest
+    ? [
+        latest.energyLevel ? `energy ${latest.energyLevel}/5` : "",
+        latest.moodLevel ? `mood ${latest.moodLevel}/5` : "",
+        latest.bloodPressureSystolic
+          ? `BP ${latest.bloodPressureSystolic}/${latest.bloodPressureDiastolic}`
+          : ""
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+
+  const parts = [
+    `Today is ${day}.`,
+    `Fitness ${fitness.completedCount}/3 — strength ${fitness.byType.strength ? "done" : "to do"}, cardio ${fitness.byType.cardio ? "done" : "to do"}, martial arts ${fitness.byType.martial_arts ? "done" : "to do"}.`,
+    openTasks.length
+      ? `${openTasks.length} open quest(s): ${openTasks.slice(0, 5).map((t) => t.title).join("; ")}.`
+      : "No open quests.",
+    plan?.intention ? `Today's intention: ${plan.intention}.` : "",
+    checkIn ? `Latest check-in: ${checkIn}.` : "",
+    `${noteCount} saved note(s).`
+  ].filter(Boolean);
+
+  return { ok: true, silent: true, message: parts.join(" ") };
+}
+
+function listQuests(): VoiceToolResult {
+  const open = createLocalTaskRepository(store())
+    .load()
+    .filter((task) => task.status === "todo");
+  return {
+    ok: true,
+    silent: true,
+    message: open.length
+      ? `Open quests: ${open.map((task) => task.title).join("; ")}.`
+      : "No open quests."
+  };
+}
+
+function listRecentWorkouts(args: Record<string, unknown>): VoiceToolResult {
+  const limit = asNumber(args.limit) ?? 5;
+  const workouts = createLocalWorkoutRepository(store())
+    .load()
+    .slice()
+    .sort((a, b) => (b.recordedAt > a.recordedAt ? 1 : -1))
+    .slice(0, limit);
+  return {
+    ok: true,
+    silent: true,
+    message: workouts.length
+      ? `Recent workouts: ${workouts.map((w) => `${w.title ?? w.type} (${w.date})`).join("; ")}.`
+      : "No workouts logged yet."
+  };
+}
+
+function readNotes(args: Record<string, unknown>): VoiceToolResult {
+  const query = asText(args.query);
+  const all = createLocalNoteRepository(store()).load();
+  const found = query ? searchNotes(all, query) : getRecentNotes(all, 5);
+  if (!found.length) {
+    return { ok: true, silent: true, message: query ? `No notes match "${query}".` : "No notes yet." };
+  }
+  const summary = found
+    .slice(0, 5)
+    .map((note) => `"${note.title}": ${note.content.slice(0, 160)}`)
+    .join(" | ");
+  return { ok: true, silent: true, message: summary };
+}
+
 const HANDLERS: Record<string, (args: Record<string, unknown>) => VoiceToolResult> = {
   create_quest: createQuest,
   complete_quest: completeQuest,
@@ -310,6 +462,11 @@ const HANDLERS: Record<string, (args: Record<string, unknown>) => VoiceToolResul
   log_martial_arts: logMartialArts,
   log_metric: logMetric,
   add_journal_entry: addJournalEntry,
+  save_note: saveNote,
+  get_context: getContext,
+  list_quests: listQuests,
+  list_recent_workouts: listRecentWorkouts,
+  read_notes: readNotes,
   navigate
 };
 
