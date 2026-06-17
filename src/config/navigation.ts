@@ -116,6 +116,12 @@ export const navigationGroups: NavigationGroup[] = [
         description: "Read-only coach mode",
         icon: "coach",
         shortLabel: "Coach"
+      },
+      {
+        label: "Capture",
+        href: "/capture",
+        description: "Log from a photo",
+        icon: "healthImport"
       }
     ]
   }
