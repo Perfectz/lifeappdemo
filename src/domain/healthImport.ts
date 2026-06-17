@@ -235,6 +235,48 @@ function parseRows(text: string): RawRow[] {
   return parseCsv(trimmed);
 }
 
+/**
+ * Extract sleep duration in HOURS from an export row. Handles Samsung
+ * (minutes), Google Health / Fit / Takeout (milliseconds, e.g. the
+ * "Sleeping duration (ms)" column), explicit hours, an ambiguous "duration"
+ * field (unit inferred by magnitude), and session rows that only carry
+ * start/end timestamps.
+ */
+function parseSleepHours(
+  row: RawRow,
+  startTime: IsoDateTime | undefined,
+  endTime: IsoDateTime | undefined
+): number | undefined {
+  const round = (hours: number) => Math.round(hours * 100) / 100;
+
+  const hours = toNumber(getValue(row, ["sleep_hours", "hours", "duration_hours"]));
+  if (hours !== undefined) return round(hours);
+
+  const minutes = toNumber(getValue(row, ["sleep_minutes", "duration_minutes"]));
+  if (minutes !== undefined) return round(minutes / 60);
+
+  const ms = toNumber(
+    getValue(row, ["sleeping_duration_ms", "sleep_duration_ms", "total_sleep_ms", "duration_ms"])
+  );
+  if (ms !== undefined) return round(ms / 3_600_000);
+
+  // Ambiguous "duration"/"sleep_duration" — infer the unit by magnitude.
+  const generic = toNumber(getValue(row, ["sleep_duration", "duration"]));
+  if (generic !== undefined && generic > 0) {
+    if (generic > 1000) return round(generic / 3_600_000); // milliseconds
+    if (generic > 24) return round(generic / 60); // minutes
+    return round(generic); // hours
+  }
+
+  // Session row (Health Connect / Fit sleep session): derive from timestamps.
+  if (startTime && endTime) {
+    const diff = (Date.parse(endTime) - Date.parse(startTime)) / 3_600_000;
+    if (Number.isFinite(diff) && diff > 0 && diff < 24) return round(diff);
+  }
+
+  return undefined;
+}
+
 function buildRecord(batchId: string, fileName: string, row: RawRow, index: number): ImportedHealthRecord {
   const sourceType = detectSourceType(fileName, row);
   const startTime = toIsoDateTime(
@@ -255,11 +297,7 @@ function buildRecord(batchId: string, fileName: string, row: RawRow, index: numb
   let value = toNumber(getValue(row, ["value", "count", "steps", "step_count", "heart_rate", "bpm"]));
 
   if (sourceType === "sleep") {
-    const hours = toNumber(getValue(row, ["sleep_hours", "hours", "duration_hours"]));
-    const minutes = toNumber(
-      getValue(row, ["sleep_minutes", "duration_minutes", "duration", "sleep_duration"])
-    );
-    value = hours ?? (minutes !== undefined ? Math.round((minutes / 60) * 100) / 100 : value);
+    value = parseSleepHours(row, startTime, endTime) ?? value;
   }
 
   return {

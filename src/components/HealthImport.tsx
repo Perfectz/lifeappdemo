@@ -114,8 +114,10 @@ export function HealthImport() {
           <p className="eyebrow">Health Import Alpha</p>
           <h1 id="health-import-title">Health Import</h1>
           <p>
-            Import exported Samsung Health or Galaxy Watch-style CSV/JSON files,
-            preview the mapping, then confirm before saving metrics.
+            Import exported health data — Google Health / Fit (incl. Google Takeout)
+            and Samsung Health CSV/JSON files. Sleep duration is read whether it&apos;s
+            in hours, minutes, milliseconds, or session start/end times. Preview the
+            mapping, then confirm before saving metrics.
           </p>
         </div>
         <div className="page-sprite-frame metrics-sprite" aria-hidden="true">
@@ -178,6 +180,27 @@ export function HealthImport() {
             <p className="standup-helper">
               Steps, sleep, heart rate, workouts, and blood pressure are mapped to your
               metrics. Other record types are skipped safely.
+            </p>
+          </details>
+          <details className="health-import-guide">
+            <summary>How to export sleep from Google Health</summary>
+            <ol className="health-import-steps">
+              <li>
+                Go to <strong>Google Takeout</strong> (takeout.google.com), deselect all,
+                then select <strong>Fit</strong> and export.
+              </li>
+              <li>
+                Unzip the download and open the <strong>Daily activity metrics</strong>{" "}
+                folder — the per-day CSVs include a <code>Sleeping duration (ms)</code> column.
+              </li>
+              <li>
+                Upload a daily CSV above. Sleep duration is read in milliseconds and
+                converted to hours automatically; session exports with start/end times work too.
+              </li>
+            </ol>
+            <p className="standup-helper">
+              Google Health Connect has no live web sync, so this periodic export is the
+              free, no-extra-app way to bring your sleep history in.
             </p>
           </details>
           {batch ? (
