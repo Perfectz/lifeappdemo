@@ -74,6 +74,12 @@ export const navigationGroups: NavigationGroup[] = [
         icon: "metrics"
       },
       {
+        label: "Vitals",
+        href: "/vitals",
+        description: "Blood pressure & weight",
+        icon: "metrics"
+      },
+      {
         label: "Health Import",
         href: "/health-import",
         description: "Samsung export alpha",
