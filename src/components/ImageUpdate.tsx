@@ -155,7 +155,6 @@ export function ImageUpdate() {
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           className="visually-hidden"
           aria-label="Choose an image to analyze"
           onChange={(event) => {

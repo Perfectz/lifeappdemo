@@ -469,7 +469,6 @@ export function AICoachPanel() {
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 className="visually-hidden"
                 aria-label="Attach a photo"
                 onChange={(event) => {
