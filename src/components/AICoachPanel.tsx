@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import {
   confirmAIToolProposal,
@@ -8,10 +8,13 @@ import {
   type AIChatResponse
 } from "@/client/aiApiClient";
 import { createClientId } from "@/client/clientIds";
+import { fileToDownscaledDataUrl } from "@/client/imageDownscale";
 import { persistAIToolResult } from "@/client/persistAIToolResult";
 import { readProfile } from "@/client/profile";
 import { loadStoredAppData } from "@/client/storedAppData";
 import { useHeroName } from "@/client/useHeroName";
+import { executeVoiceTool } from "@/client/voiceTools";
+import { parseVisionResult, type VisionProposal } from "@/domain/visionUpdates";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { OfflineBoundary, aiNetworkRequiredMessage, useNetworkStatus } from "@/components/OfflineBoundary";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -27,10 +30,36 @@ type ChatMessage = {
   id: string;
   role: "user" | "coach";
   content: string;
+  imageDataUrl?: string;
+};
+
+type VisionProposalCard = VisionProposal & {
+  id: string;
+  status: "pending" | "applied" | "dismissed";
 };
 
 function createMessageId(role: ChatMessage["role"]): string {
   return createClientId(role);
+}
+
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start(): void;
+  stop(): void;
+  onresult: ((event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+};
+
+function getSpeechRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as {
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+  };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
 export function AICoachPanel() {
@@ -42,8 +71,13 @@ export function AICoachPanel() {
   const [error, setError] = useState<string | null>(null);
   const [usedContext, setUsedContext] = useState<AIChatResponse["usedContext"]>();
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [visionProposals, setVisionProposals] = useState<VisionProposalCard[]>([]);
+  const [listening, setListening] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const isOnline = useNetworkStatus();
   const heroName = useHeroName();
+  const speechSupported = getSpeechRecognitionCtor() !== null;
 
   useEffect(() => {
     setMessages([
@@ -51,11 +85,111 @@ export function AICoachPanel() {
         id: "coach-welcome",
         role: "coach",
         content:
-          "Confirmation mode is active. I can propose task changes, but nothing changes until you confirm."
+          "Hi — talk, type, or share a photo (steps, a BP reading, a meal). I'll propose updates; nothing changes until you confirm."
       }
     ]);
     setHasLoaded(true);
   }, []);
+
+  async function handlePhoto(file: File) {
+    if (!navigator.onLine) {
+      setError(aiNetworkRequiredMessage);
+      return;
+    }
+    setError(null);
+    let dataUrl: string;
+    try {
+      dataUrl = await fileToDownscaledDataUrl(file);
+    } catch {
+      setError("Couldn't read that image.");
+      return;
+    }
+
+    const note = messageDraft.trim();
+    setMessages((current) => [
+      ...current,
+      { id: createMessageId("user"), role: "user", content: note || "Shared a photo", imageDataUrl: dataUrl }
+    ]);
+    setMessageDraft("");
+    setIsSending(true);
+
+    try {
+      const response = await fetch("/api/ai/vision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: dataUrl, context: note || undefined })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Couldn't analyze that photo.");
+      const result = parseVisionResult(data);
+      setMessages((current) => [
+        ...current,
+        {
+          id: createMessageId("coach"),
+          role: "coach",
+          content: result.question ? `${result.summary} ${result.question}` : result.summary
+        }
+      ]);
+      setVisionProposals((current) => [
+        ...current,
+        ...result.proposals.map((proposal) => ({
+          ...proposal,
+          id: createClientId("vision"),
+          status: "pending" as const
+        }))
+      ]);
+    } catch (photoError) {
+      setError(photoError instanceof Error ? photoError.message : "Photo analysis failed.");
+    } finally {
+      setIsSending(false);
+    }
+  }
+
+  function applyVisionProposal(card: VisionProposalCard) {
+    const outcome = executeVoiceTool(card.tool, card.args);
+    setVisionProposals((current) =>
+      current.map((proposal) =>
+        proposal.id === card.id
+          ? { ...proposal, status: outcome.ok ? "applied" : "pending" }
+          : proposal
+      )
+    );
+    setMessages((current) => [
+      ...current,
+      { id: createMessageId("coach"), role: "coach", content: outcome.message }
+    ]);
+    if (!outcome.ok) setError(outcome.message);
+  }
+
+  function dismissVisionProposal(card: VisionProposalCard) {
+    setVisionProposals((current) =>
+      current.map((proposal) =>
+        proposal.id === card.id ? { ...proposal, status: "dismissed" } : proposal
+      )
+    );
+  }
+
+  function toggleDictation() {
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor) return;
+    const recognition = new Ctor();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? "";
+      setMessageDraft((prev) => (prev ? `${prev} ${transcript}` : transcript).trim());
+    };
+    recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
+    recognition.start();
+    recognitionRef.current = recognition;
+    setListening(true);
+  }
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -246,7 +380,7 @@ export function AICoachPanel() {
         <div>
           <p className="eyebrow">Confirmation coach mode</p>
           <h1 id="coach-title">AI Coach</h1>
-          <p>Ask for task help, then review proposed changes before anything is applied.</p>
+          <p>Chat, talk, or share a photo — review proposed changes before anything is applied.</p>
         </div>
         <div className="page-sprite-frame coach-sprite" aria-hidden="true">
           <CharacterSprite className="page-sprite" pose="thinking" />
@@ -270,7 +404,11 @@ export function AICoachPanel() {
             {messages.map((message) => (
               <article className={`coach-message coach-message-${message.role}`} key={message.id}>
                 <strong>{message.role === "user" ? heroName : "Coach"}</strong>
-                <p>{message.content}</p>
+                {message.imageDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="coach-message-image" src={message.imageDataUrl} alt="Shared upload" />
+                ) : null}
+                {message.content ? <p>{message.content}</p> : null}
               </article>
             ))}
             {isSending ? (
@@ -298,13 +436,49 @@ export function AICoachPanel() {
               <span>Message</span>
               <textarea
                 onChange={(event) => setMessageDraft(event.target.value)}
-                placeholder="What should I focus on today?"
+                placeholder="Type, talk, or attach a photo…"
                 value={messageDraft}
               />
             </label>
-            <button disabled={isSending || !messageDraft.trim()} type="submit">
-              {isSending ? "Sending..." : "Send"}
-            </button>
+            <div className="coach-composer-actions">
+              <button
+                type="button"
+                className="coach-icon-btn"
+                aria-label="Attach a photo"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSending}
+              >
+                📎
+              </button>
+              {speechSupported ? (
+                <button
+                  type="button"
+                  className={listening ? "coach-icon-btn coach-icon-on" : "coach-icon-btn"}
+                  aria-label={listening ? "Stop dictation" : "Dictate your message"}
+                  aria-pressed={listening}
+                  onClick={toggleDictation}
+                  disabled={isSending}
+                >
+                  🎙️
+                </button>
+              ) : null}
+              <button disabled={isSending || !messageDraft.trim()} type="submit">
+                {isSending ? "Sending..." : "Send"}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="visually-hidden"
+                aria-label="Attach a photo"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void handlePhoto(file);
+                  event.target.value = "";
+                }}
+              />
+            </div>
           </form>
 
           {proposals.length > 0 ? (
@@ -338,6 +512,38 @@ export function AICoachPanel() {
                   </div>
                 </article>
               ))}
+            </section>
+          ) : null}
+
+          {visionProposals.some((card) => card.status !== "dismissed") ? (
+            <section className="tool-proposal-list" aria-label="Updates from your photo">
+              <SectionHeader eyebrow="From your photo" title="Proposed Updates" />
+              {visionProposals
+                .filter((card) => card.status !== "dismissed")
+                .map((card) => (
+                  <article className="tool-proposal-card" key={card.id}>
+                    <div>
+                      <h3>{card.label}</h3>
+                      <p>Status: {card.status}</p>
+                    </div>
+                    <div className="tool-proposal-actions">
+                      <button
+                        disabled={card.status !== "pending"}
+                        onClick={() => applyVisionProposal(card)}
+                        type="button"
+                      >
+                        Apply
+                      </button>
+                      <button
+                        disabled={card.status !== "pending"}
+                        onClick={() => dismissVisionProposal(card)}
+                        type="button"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </article>
+                ))}
             </section>
           ) : null}
         </section>
