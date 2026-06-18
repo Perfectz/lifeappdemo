@@ -7,7 +7,11 @@ import {
   validateAIChatRequestBody
 } from "@/domain/aiContext";
 import { toLocalIsoDate } from "@/domain/dates";
-import { AINotConfiguredError, completeReadOnlyCoachChat } from "@/server/ai/openaiClient";
+import {
+  AINotConfiguredError,
+  OpenAIRequestError,
+  completeReadOnlyCoachChat
+} from "@/server/ai/openaiClient";
 import { checkRateLimit } from "@/server/ai/rateLimiter";
 
 // Allow the coach response (OpenAI call) up to 60s on Vercel; the Hobby tier
@@ -50,7 +54,8 @@ export async function POST(request: Request) {
       message: validation.value.message,
       mode: validation.value.mode,
       context: fullContext,
-      heroName: validation.value.heroName
+      heroName: validation.value.heroName,
+      history: validation.value.history
     });
 
     return NextResponse.json({
@@ -67,6 +72,12 @@ export async function POST(request: Request) {
             "AI coach isn't configured. The deterministic app works fully without it — add an OpenAI API key to enable coaching."
         },
         { status: 503 }
+      );
+    }
+    if (error instanceof OpenAIRequestError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status === 429 ? 429 : 502 }
       );
     }
     return NextResponse.json(

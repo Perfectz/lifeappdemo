@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { AINotConfiguredError } from "@/server/ai/openaiClient";
+import { AINotConfiguredError, OpenAIRequestError } from "@/server/ai/openaiClient";
 import { generateCoachBrief } from "@/server/ai/briefClient";
 import { checkRateLimit } from "@/server/ai/rateLimiter";
 
@@ -47,6 +47,9 @@ export async function POST(request: Request) {
         { error: "AI briefing isn't configured." },
         { status: 503 }
       );
+    }
+    if (error instanceof OpenAIRequestError) {
+      return NextResponse.json({ error: error.message }, { status: error.status === 429 ? 429 : 502 });
     }
     return NextResponse.json(
       { error: "Couldn't generate a briefing right now." },

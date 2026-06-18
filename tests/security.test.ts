@@ -80,28 +80,24 @@ describe("secret hygiene baseline", () => {
     expect(healthImportDomain).not.toContain("fetch(");
   });
 
-  it("keeps morning AI planning bounded to one main and three side quests", () => {
+  it("keeps AI changes confirmation-gated and workload realistic", () => {
     const openAiClient = readFileSync(
       join(root, "src", "server", "ai", "openaiClient.ts"),
       "utf8"
     );
 
-    expect(openAiClient).toContain("one Main Quest");
-    expect(openAiClient).toContain("no more than three Side Quests");
+    expect(openAiClient).toContain("only propose actions; never claim they are already applied");
     expect(openAiClient).toContain("realistic workload");
-    expect(openAiClient).toContain("one or two focused planning questions");
   });
 
-  it("keeps evening AI report behavior grounded in stored facts", () => {
+  it("keeps AI grounded in stored facts", () => {
     const openAiClient = readFileSync(
       join(root, "src", "server", "ai", "openaiClient.ts"),
       "utf8"
     );
 
-    expect(openAiClient).toContain("focused reflection questions");
-    expect(openAiClient).toContain("realistic tomorrow follow-ups");
-    expect(openAiClient).toContain("only from stored facts");
     expect(openAiClient).toContain("Do not invent missing metrics");
+    expect(openAiClient).toContain("label absent data clearly");
   });
 
   it("keeps the service worker away from AI and sensitive API caches", () => {

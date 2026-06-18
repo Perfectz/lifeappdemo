@@ -1,5 +1,6 @@
 import type { CreateRealtimeSessionResponse, VoiceSessionMode } from "@/domain";
 import { REALTIME_VOICE_MODEL } from "@/config/ai";
+import { buildOpenAIError } from "@/server/ai/openaiClient";
 
 export type RealtimeClientSecretInput = {
   mode: VoiceSessionMode;
@@ -59,7 +60,7 @@ export async function createRealtimeClientSecret(
   });
 
   if (!response.ok) {
-    throw new Error("Realtime client secret request failed.");
+    throw await buildOpenAIError(response, "Realtime client secret request");
   }
 
   return parseRealtimeClientSecretResponse(await response.json(), input.mode);

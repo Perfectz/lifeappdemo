@@ -1,7 +1,7 @@
 import { COACH_MODEL } from "@/config/ai";
 import { parseProgressAssessment, type ProgressAssessment } from "@/domain/progressAssessment";
 import { progressPhotoAngleLabel, type ProgressPhotoAngle } from "@/domain/progressPhotos";
-import { AINotConfiguredError } from "@/server/ai/openaiClient";
+import { AINotConfiguredError, buildOpenAIError, chatCompletionBody } from "@/server/ai/openaiClient";
 
 export type ProgressImage = {
   angle: ProgressPhotoAngle;
@@ -80,16 +80,18 @@ export async function assessProgressPhotos(
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        model: COACH_MODEL,
-        max_tokens: maxTokens,
-        temperature: 0.4,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userContent }
-        ]
-      })
+      body: JSON.stringify(
+        chatCompletionBody({
+          model: COACH_MODEL,
+          maxCompletionTokens: maxTokens,
+          temperature: 0.4,
+          responseFormat: { type: "json_object" },
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userContent }
+          ]
+        })
+      )
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
@@ -101,7 +103,7 @@ export async function assessProgressPhotos(
   }
 
   if (!response.ok) {
-    throw new Error("Progress assessment request failed.");
+    throw await buildOpenAIError(response, "Progress assessment");
   }
 
   const payload: unknown = await response.json();

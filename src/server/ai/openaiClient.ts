@@ -1,13 +1,82 @@
 import type { AIToolProposal } from "@/domain";
-import { COACH_MODEL } from "@/config/ai";
+import { COACH_MODEL, isReasoningModel } from "@/config/ai";
 import { validateAIToolProposals } from "@/domain/aiTaskTools";
+
+export type CoachHistoryTurn = { role: "user" | "assistant"; content: string };
 
 export type OpenAIChatCompletionInput = {
   message: string;
   mode: string;
   context: string;
   heroName?: string;
+  history?: CoachHistoryTurn[];
 };
+
+type ChatMessage = { role: "system" | "user" | "assistant"; content: unknown };
+
+/**
+ * A failed OpenAI call that carries the upstream status + reason, so routes can
+ * surface an actionable message ("model not found", "invalid key", "quota")
+ * instead of a generic "unavailable".
+ */
+export class OpenAIRequestError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "OpenAIRequestError";
+    this.status = status;
+  }
+}
+
+/** Read OpenAI's error body and build a descriptive, user-safe error. */
+export async function buildOpenAIError(response: Response, label: string): Promise<OpenAIRequestError> {
+  let detail = "";
+  try {
+    const body = (await response.json()) as { error?: { message?: unknown } };
+    if (typeof body?.error?.message === "string") {
+      detail = body.error.message;
+    }
+  } catch {
+    // No JSON body — fall back to the status-based message.
+  }
+  const base =
+    response.status === 401
+      ? "OpenAI rejected the API key — check OPENAI_API_KEY in your environment."
+      : response.status === 429
+        ? "OpenAI rate limit or quota reached — try again shortly."
+        : response.status === 400 || response.status === 404
+          ? "OpenAI rejected the request — the model id or parameters may be unsupported on your key."
+          : `${label} failed (HTTP ${response.status}).`;
+  return new OpenAIRequestError(detail ? `${base} (${detail})` : base, response.status);
+}
+
+/**
+ * Build a Chat Completions body that works for both reasoning models (gpt-5 /
+ * o-series: need max_completion_tokens + reasoning_effort, reject temperature)
+ * and classic chat models (gpt-4o: want temperature).
+ */
+export function chatCompletionBody(opts: {
+  model: string;
+  messages: ChatMessage[];
+  maxCompletionTokens: number;
+  temperature?: number;
+  responseFormat?: { type: "json_object" };
+}): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    model: opts.model,
+    messages: opts.messages,
+    max_completion_tokens: opts.maxCompletionTokens
+  };
+  if (isReasoningModel(opts.model)) {
+    body.reasoning_effort = "low";
+  } else if (opts.temperature !== undefined) {
+    body.temperature = opts.temperature;
+  }
+  if (opts.responseFormat) {
+    body.response_format = opts.responseFormat;
+  }
+  return body;
+}
 
 export type OpenAICoachResult = {
   message: string;
@@ -50,10 +119,42 @@ export async function completeReadOnlyCoachChat(
   }
 
   // Cost + safety guards: cap output tokens and abort hung requests.
-  const maxTokens = intFromEnv("OPENAI_MAX_TOKENS", 800);
+  const maxTokens = intFromEnv("OPENAI_MAX_TOKENS", 1_200);
   const timeoutMs = intFromEnv("OPENAI_TIMEOUT_MS", 30_000);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  const systemPrompt = [
+    "You are the LifeQuest OS coach — part personal trainer, part life coach, part assistant.",
+    "Use the supplied app context to answer concisely and conversationally.",
+    "The user is working to become a specific future version of themselves, described in their About Me / self-profile when present in the context.",
+    "Frame guidance around that identity: when it helps, ask 'what would that future self do?' and connect today's choices (food, training, sleep, vitals, focus) to that goal.",
+    "Be encouraging and honest, never flattering; prioritize the user's stated top health priorities first.",
+    "For task changes, only propose actions; never claim they are already applied.",
+    "When proposing task or data changes, return JSON with message and proposals. Otherwise reply with plain conversational text.",
+    "Supported toolName values are create_task, update_task, complete_task, defer_task, archive_task, log_metric, create_journal_entry, propose_daily_plan, generate_daily_report.",
+    "When recent sleep or energy is low, recommend a realistic workload and avoid overload.",
+    "Do not invent missing metrics, reflections, lessons, or outcomes; label absent data clearly.",
+    "For health metrics, log values without diagnosis or treatment advice.",
+    "For concerning health values, use bounded language like consider discussing with a healthcare professional.",
+    "If data is missing, say so directly."
+  ].join(" ");
+
+  const history = (input.history ?? [])
+    .filter((turn) => turn.content.trim())
+    .slice(-10)
+    .map((turn) => ({ role: turn.role, content: turn.content }));
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: systemPrompt },
+    ...history,
+    {
+      role: "user",
+      content: `Mode: ${input.mode}\n\nApp context:\n${input.context}\n\n${
+        input.heroName?.trim() || "The user"
+      } asks:\n${input.message}`
+    }
+  ];
 
   let response: Response;
   try {
@@ -64,39 +165,14 @@ export async function completeReadOnlyCoachChat(
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      model: COACH_MODEL,
-      max_tokens: maxTokens,
-      messages: [
-        {
-          role: "system",
-          content: [
-            "You are the LifeQuest OS coach.",
-            "Use the supplied app context to answer concisely.",
-            "The user is working to become a specific future version of themselves, described in their About Me / self-profile when present in the context.",
-            "Frame guidance around that identity: when it helps, ask 'what would that future self do?' and connect today's choices (food, training, sleep, vitals, focus) to that goal.",
-            "Be encouraging and honest, never flattering; prioritize the user's stated top health priorities first.",
-            "For task changes, only propose actions; never claim they are already applied.",
-            "When proposing task changes, return JSON with message and proposals.",
-            "Supported toolName values are create_task, update_task, complete_task, defer_task, archive_task, log_metric, create_journal_entry, propose_daily_plan, generate_daily_report.",
-            "In morning mode, ask no more than one or two focused planning questions when enough context exists, then propose one Main Quest and no more than three Side Quests with rationale.",
-            "When recent sleep or energy is low, recommend a realistic workload and avoid overload.",
-            "In evening mode, ask focused reflection questions, propose realistic tomorrow follow-ups, and generate reports only from stored facts.",
-            "Do not invent missing metrics, reflections, lessons, or outcomes; label absent data clearly.",
-            "For health metrics, log values without diagnosis or treatment advice.",
-            "For concerning health values, use bounded language like consider discussing with a healthcare professional.",
-            "If data is missing, say so directly."
-          ].join(" ")
-        },
-        {
-          role: "user",
-          content: `Mode: ${input.mode}\n\nApp context:\n${input.context}\n\n${
-            input.heroName?.trim() || "The user"
-          } asks:\n${input.message}`
-        }
-      ],
-      temperature: 0.4
-    })
+    body: JSON.stringify(
+      chatCompletionBody({
+        model: COACH_MODEL,
+        messages,
+        maxCompletionTokens: maxTokens,
+        temperature: 0.4
+      })
+    )
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
@@ -108,7 +184,7 @@ export async function completeReadOnlyCoachChat(
   }
 
   if (!response.ok) {
-    throw new Error("OpenAI request failed.");
+    throw await buildOpenAIError(response, "OpenAI request");
   }
 
   const payload: unknown = await response.json();
