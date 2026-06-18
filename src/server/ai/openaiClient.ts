@@ -73,6 +73,9 @@ export async function completeReadOnlyCoachChat(
           content: [
             "You are the LifeQuest OS coach.",
             "Use the supplied app context to answer concisely.",
+            "The user is working to become a specific future version of themselves, described in their About Me / self-profile when present in the context.",
+            "Frame guidance around that identity: when it helps, ask 'what would that future self do?' and connect today's choices (food, training, sleep, vitals, focus) to that goal.",
+            "Be encouraging and honest, never flattering; prioritize the user's stated top health priorities first.",
             "For task changes, only propose actions; never claim they are already applied.",
             "When proposing task changes, return JSON with message and proposals.",
             "Supported toolName values are create_task, update_task, complete_task, defer_task, archive_task, log_metric, create_journal_entry, propose_daily_plan, generate_daily_report.",

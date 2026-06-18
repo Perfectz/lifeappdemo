@@ -1,6 +1,5 @@
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { createLocalDailyReportRepository } from "@/data/dailyReportRepository";
-import { createLocalEveningPostmortemRepository } from "@/data/eveningPostmortemRepository";
 import { createLocalJournalRepository } from "@/data/journalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
@@ -11,7 +10,6 @@ export function loadLocalDemoDataSet(storage: Storage): DemoDataSet {
   return {
     dailyPlans: createLocalDailyPlanRepository(storage).load(),
     dailyReports: createLocalDailyReportRepository(storage).load(),
-    eveningPostmortems: createLocalEveningPostmortemRepository(storage).load(),
     journalEntries: createLocalJournalRepository(storage).load(),
     metricEntries: createLocalMetricRepository(storage).load(),
     tasks: createLocalTaskRepository(storage).load()
@@ -21,7 +19,6 @@ export function loadLocalDemoDataSet(storage: Storage): DemoDataSet {
 export function saveLocalDemoDataSet(storage: Storage, data: DemoDataSet) {
   createLocalDailyPlanRepository(storage).save(data.dailyPlans);
   createLocalDailyReportRepository(storage).save(data.dailyReports);
-  createLocalEveningPostmortemRepository(storage).save(data.eveningPostmortems);
   createLocalJournalRepository(storage).save(data.journalEntries);
   createLocalMetricRepository(storage).save(data.metricEntries);
   createLocalTaskRepository(storage).save(data.tasks);

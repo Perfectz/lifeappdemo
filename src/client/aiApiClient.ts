@@ -23,7 +23,6 @@ export type ConfirmToolResponse = {
   appliedChangeSummary?: string;
   dailyPlans?: ConfirmTaskToolRequestInput["dailyPlans"];
   dailyReports?: ConfirmTaskToolRequestInput["dailyReports"];
-  eveningPostmortems?: ConfirmTaskToolRequestInput["eveningPostmortems"];
   journalEntries?: ConfirmTaskToolRequestInput["journalEntries"];
   metricEntries?: ConfirmTaskToolRequestInput["metricEntries"];
   tasks?: ConfirmTaskToolRequestInput["tasks"];

@@ -10,7 +10,6 @@ import {
 } from "@/client/reminders";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
-import { createLocalEveningPostmortemRepository } from "@/data/eveningPostmortemRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
 import { toLocalIsoDate } from "@/domain/dates";
 import { getNavStatusMap } from "@/domain/navStatus";
@@ -28,16 +27,12 @@ function computePending(): PendingReminder | null {
   const statusMap = getNavStatusMap({
     tasks: createLocalTaskRepository(storage).load(),
     plans: createLocalDailyPlanRepository(storage).load(),
-    postmortems: createLocalEveningPostmortemRepository(storage).load(),
     today,
     hour: now.getHours()
   });
 
   if (statusMap["/standup/morning"]?.pulse) {
     return { href: "/standup/morning", label: "Morning stand-up isn't logged yet.", glyph: "🌅" };
-  }
-  if (statusMap["/standup/evening"]?.pulse) {
-    return { href: "/standup/evening", label: "Evening postmortem is still open.", glyph: "🌙" };
   }
   return null;
 }

@@ -43,8 +43,8 @@ export function RemindersPanel() {
   return (
     <div className="reminders-panel">
       <p className="reminders-help">
-        In-app reminders always nudge you when a morning stand-up or evening
-        postmortem is still open. Optionally, get a browser notification too.
+        In-app reminders always nudge you when a morning stand-up is still
+        open. Optionally, get a browser notification too.
       </p>
       <label className="reminders-toggle">
         <input

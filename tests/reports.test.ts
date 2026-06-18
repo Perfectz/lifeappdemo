@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { DailyPlan, EveningPostmortem, JournalEntry, MetricEntry, Task } from "@/domain";
+import type { DailyPlan, JournalEntry, MetricEntry, Task } from "@/domain";
 import { getTomorrowIsoDate } from "@/domain/dates";
 import {
   generateDailyReport,
@@ -35,22 +35,6 @@ function makePlan(overrides: Partial<DailyPlan> = {}): DailyPlan {
     sideQuestTaskIds: [],
     intention: "Turn the day into useful output.",
     status: "closed",
-    createdAt: now,
-    updatedAt: now,
-    ...overrides
-  };
-}
-
-function makePostmortem(overrides: Partial<EveningPostmortem> = {}): EveningPostmortem {
-  return {
-    id: "postmortem-1",
-    date,
-    dailyPlanId: "plan-1",
-    taskOutcomes: [{ taskId: "task-1", outcome: "completed" }],
-    wins: "Report preview works.",
-    friction: "Download behavior needed browser coverage.",
-    lessonsLearned: "Keep exports deterministic first.",
-    tomorrowFollowUps: "Review V08 context shape.",
     createdAt: now,
     updatedAt: now,
     ...overrides
@@ -97,7 +81,6 @@ describe("daily report generator", () => {
         date,
         tasks: [makeTask()],
         dailyPlan: makePlan(),
-        eveningPostmortem: makePostmortem(),
         metricEntries: [makeMetric()],
         journalEntries: [makeJournal()]
       },
@@ -111,7 +94,6 @@ describe("daily report generator", () => {
     expect(report.markdownContent).toContain("120 kettlebell swings");
     expect(report.markdownContent).toContain("karate class");
     expect(report.markdownContent).toContain("2.4 mi walked");
-    expect(report.markdownContent).toContain("Report preview works.");
     expect(report.markdownContent).toContain("Small deterministic exports are easier to trust.");
   });
 
@@ -155,7 +137,6 @@ describe("daily report generator", () => {
         date,
         tasks: [makeTask()],
         dailyPlan: makePlan(),
-        eveningPostmortem: makePostmortem(),
         metricEntries: [],
         journalEntries: [],
         generatedBy: "ai",

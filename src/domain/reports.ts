@@ -1,7 +1,6 @@
 import type {
   DailyPlan,
   DailyReport,
-  EveningPostmortem,
   IsoDate,
   IsoDateTime,
   JournalEntry,
@@ -14,7 +13,6 @@ export type DailyReportInput = {
   date: IsoDate;
   tasks: Task[];
   dailyPlan?: DailyPlan;
-  eveningPostmortem?: EveningPostmortem;
   metricEntries: MetricEntry[];
   journalEntries: JournalEntry[];
   generatedBy?: DailyReport["generatedBy"];
@@ -36,10 +34,6 @@ const noEntryCaptured = "No entry captured";
 
 function bullet(value: string): string {
   return `- ${value}`;
-}
-
-function textOrMissing(value: string | undefined): string {
-  return value?.trim() ? value.trim() : noEntryCaptured;
 }
 
 function titleForTask(task: Task | undefined, fallbackId: string): string {
@@ -92,35 +86,14 @@ function formatJournalEntry(entry: JournalEntry): string {
   return `${entry.type.replace("_", " ")}${prompt}: ${entry.content}`;
 }
 
-function getCompletedTasks(
-  tasks: Task[],
-  postmortem: EveningPostmortem | undefined,
-  date: IsoDate
-): Task[] {
-  const completedFromPostmortem = new Set(
-    postmortem?.taskOutcomes
-      .filter((outcome) => outcome.outcome === "completed")
-      .map((outcome) => outcome.taskId) ?? []
-  );
-
+function getCompletedTasks(tasks: Task[], date: IsoDate): Task[] {
   return tasks.filter(
-    (task) =>
-      completedFromPostmortem.has(task.id) ||
-      (task.status === "done" && isIsoTimestampOnDate(task.completedAt, date))
+    (task) => task.status === "done" && isIsoTimestampOnDate(task.completedAt, date)
   );
 }
 
-function getLinkedInSourceMaterial(
-  postmortem: EveningPostmortem | undefined,
-  journalEntries: JournalEntry[]
-): string[] {
-  const sourceMaterial = [
-    postmortem?.wins ? `Win: ${postmortem.wins}` : undefined,
-    postmortem?.lessonsLearned ? `Lesson: ${postmortem.lessonsLearned}` : undefined,
-    ...journalEntries.map((entry) => formatJournalEntry(entry))
-  ].filter((entry): entry is string => Boolean(entry));
-
-  return sourceMaterial;
+function getLinkedInSourceMaterial(journalEntries: JournalEntry[]): string[] {
+  return journalEntries.map((entry) => formatJournalEntry(entry));
 }
 
 function section(title: string, lines: string[]): string {
@@ -170,12 +143,12 @@ export function generateDailyReport(
   const taskById = new Map(input.tasks.map((task) => [task.id, task]));
   const plannedTaskIds = getPlannedTaskIds(input.dailyPlan);
   const plannedTasks = plannedTaskIds.map((taskId) => titleForTask(taskById.get(taskId), taskId));
-  const completedTasks = getCompletedTasks(input.tasks, input.eveningPostmortem, input.date);
+  const completedTasks = getCompletedTasks(input.tasks, input.date);
   const metricsForDate = input.metricEntries.filter((entry) => entry.date === input.date);
   const journalForDate = input.journalEntries.filter((entry) => entry.date === input.date);
   const lessonJournalEntries = journalForDate.filter((entry) => entry.type === "lesson");
   const linkedInSourceMaterial = input.includeLinkedInSourceMaterial ?? true
-    ? getLinkedInSourceMaterial(input.eveningPostmortem, journalForDate)
+    ? getLinkedInSourceMaterial(journalForDate)
     : [];
   const missingNotes: string[] = [];
 
@@ -189,10 +162,6 @@ export function generateDailyReport(
 
   if (metricsForDate.length === 0) {
     missingNotes.push("Metrics not logged.");
-  }
-
-  if (!input.eveningPostmortem) {
-    missingNotes.push("Evening postmortem not captured.");
   }
 
   if (journalForDate.length === 0) {
@@ -232,16 +201,12 @@ export function generateDailyReport(
       "Metrics Snapshot",
       metricsForDate.length > 0 ? metricsForDate.map((entry) => bullet(formatMetricEntry(entry))) : [notLogged]
     ),
-    section("Wins", [textOrMissing(input.eveningPostmortem?.wins)]),
-    section("Friction", [textOrMissing(input.eveningPostmortem?.friction)]),
     section(
       "Lessons Learned",
-      [
-        textOrMissing(input.eveningPostmortem?.lessonsLearned),
-        ...lessonJournalEntries.map((entry) => bullet(formatJournalEntry(entry)))
-      ].filter(Boolean)
+      lessonJournalEntries.length > 0
+        ? lessonJournalEntries.map((entry) => bullet(formatJournalEntry(entry)))
+        : [noEntryCaptured]
     ),
-    section("Tomorrow Follow-Ups", [textOrMissing(input.eveningPostmortem?.tomorrowFollowUps)]),
     section(
       "LinkedIn Source Material",
       linkedInSourceMaterial.length > 0 ? linkedInSourceMaterial.map(bullet) : [noEntryCaptured]

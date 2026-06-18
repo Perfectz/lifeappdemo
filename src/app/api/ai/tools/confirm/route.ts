@@ -24,8 +24,7 @@ export async function POST(request: Request) {
     validation.value.metricEntries,
     validation.value.journalEntries,
     validation.value.dailyPlans,
-    validation.value.dailyReports,
-    validation.value.eveningPostmortems
+    validation.value.dailyReports
   );
 
   if (!result.ok) {
@@ -37,7 +36,6 @@ export async function POST(request: Request) {
     appliedChangeSummary: result.appliedChangeSummary,
     dailyPlans: result.dailyPlans,
     dailyReports: result.dailyReports,
-    eveningPostmortems: result.eveningPostmortems,
     journalEntries: result.journalEntries,
     metricEntries: result.metricEntries,
     tasks: result.tasks

@@ -14,8 +14,6 @@ export type {
   EntityId,
   Equipment,
   EstimateConfidence,
-  EveningPostmortem,
-  EveningTaskOutcome,
   FoodEntry,
   GlucoseContext,
   Goal,
@@ -39,7 +37,6 @@ export type {
   NutritionEstimateSource,
   StrengthSet,
   Task,
-  TaskOutcome,
   TaskPriority,
   TaskStatus,
   TaskTag,
@@ -64,10 +61,6 @@ export type {
   WeekProgress
 } from "./insights";
 export type { DailyPlanInput, DailyPlanValidationResult } from "./dailyPlans";
-export type {
-  EveningPostmortemInput,
-  EveningPostmortemValidationResult
-} from "./eveningPostmortems";
 export type { MetricInput, MetricValidationResult } from "./metrics";
 export type { JournalEntryInput, JournalValidationResult } from "./journal";
 export type { NoteInput, NoteValidationResult } from "./notes";

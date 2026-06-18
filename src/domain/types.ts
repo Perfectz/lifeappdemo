@@ -40,24 +40,6 @@ export type DailyPlan = TimestampedEntity & {
   status: DailyPlanStatus;
 };
 
-export type TaskOutcome = "completed" | "deferred" | "left_open";
-
-export type EveningTaskOutcome = {
-  taskId: EntityId;
-  outcome: TaskOutcome;
-  note?: string;
-};
-
-export type EveningPostmortem = TimestampedEntity & {
-  date: IsoDate;
-  dailyPlanId?: EntityId;
-  taskOutcomes: EveningTaskOutcome[];
-  wins?: string;
-  friction?: string;
-  lessonsLearned?: string;
-  tomorrowFollowUps?: string;
-};
-
 export type CheckInType = "morning" | "evening" | "freeform";
 export type MetricSource = "manual" | "samsung_export" | "health_connect" | "demo";
 export type MetricLevel = 1 | 2 | 3 | 4 | 5;

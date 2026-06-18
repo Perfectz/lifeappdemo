@@ -1,7 +1,6 @@
 import type {
   DailyPlan,
   DailyReport,
-  EveningPostmortem,
   IsoDate,
   IsoDateTime,
   JournalEntry,
@@ -16,7 +15,6 @@ export const demoModeChangedEventName = "lifequest-demo-mode-changed";
 export type DemoDataSet = {
   dailyPlans: DailyPlan[];
   dailyReports: DailyReport[];
-  eveningPostmortems: EveningPostmortem[];
   journalEntries: JournalEntry[];
   metricEntries: MetricEntry[];
   tasks: Task[];
@@ -25,7 +23,6 @@ export type DemoDataSet = {
 export type DemoDataCounts = {
   dailyPlans: number;
   dailyReports: number;
-  eveningPostmortems: number;
   journalEntries: number;
   metricEntries: number;
   tasks: number;
@@ -169,24 +166,6 @@ export function createDemoDataSet(
       updatedAt: now
     }
   ];
-  const eveningPostmortems: EveningPostmortem[] = [
-    {
-      id: demoId("postmortem-today"),
-      date: today,
-      dailyPlanId: demoId("plan-today"),
-      taskOutcomes: [
-        { taskId: demoId("task-main"), outcome: "left_open", note: "Demo recording queued." },
-        { taskId: demoId("task-health"), outcome: "completed", note: "Import preview verified." },
-        { taskId: demoId("task-report"), outcome: "completed", note: "Report copy tightened." }
-      ],
-      wins: "The core loop is visible from dashboard to report without needing private real data.",
-      friction: "Keep demo data clearly marked so it cannot be confused with Patrick's real records.",
-      lessonsLearned: "A portfolio demo needs opinionated constraints as much as visual polish.",
-      tomorrowFollowUps: "Capture screenshots and write the public walkthrough.",
-      createdAt: now,
-      updatedAt: now
-    }
-  ];
   const dailyReports: DailyReport[] = [
     {
       id: demoId("report-today"),
@@ -219,7 +198,6 @@ export function createDemoDataSet(
   return {
     dailyPlans,
     dailyReports,
-    eveningPostmortems,
     journalEntries,
     metricEntries,
     tasks
@@ -230,7 +208,6 @@ function emptyCounts(): DemoDataCounts {
   return {
     dailyPlans: 0,
     dailyReports: 0,
-    eveningPostmortems: 0,
     journalEntries: 0,
     metricEntries: 0,
     tasks: 0
@@ -241,7 +218,6 @@ export function countDemoData(data: DemoDataSet): DemoDataCounts {
   return {
     dailyPlans: data.dailyPlans.filter((entry) => isDemoId(entry.id)).length,
     dailyReports: data.dailyReports.filter((entry) => isDemoId(entry.id)).length,
-    eveningPostmortems: data.eveningPostmortems.filter((entry) => isDemoId(entry.id)).length,
     journalEntries: data.journalEntries.filter((entry) => entry.source === "demo" || isDemoId(entry.id)).length,
     metricEntries: data.metricEntries.filter((entry) => entry.source === "demo" || isDemoId(entry.id)).length,
     tasks: data.tasks.filter((entry) => isDemoId(entry.id)).length
@@ -259,7 +235,6 @@ export function removeDemoData(data: DemoDataSet): DemoDataResetResult {
     data: {
       dailyPlans: data.dailyPlans.filter((entry) => !isDemoId(entry.id)),
       dailyReports: data.dailyReports.filter((entry) => !isDemoId(entry.id)),
-      eveningPostmortems: data.eveningPostmortems.filter((entry) => !isDemoId(entry.id)),
       journalEntries: data.journalEntries.filter((entry) => entry.source !== "demo" && !isDemoId(entry.id)),
       metricEntries: data.metricEntries.filter((entry) => entry.source !== "demo" && !isDemoId(entry.id)),
       tasks: data.tasks.filter((entry) => !isDemoId(entry.id))
@@ -275,7 +250,6 @@ export function seedDemoData(data: DemoDataSet, today: IsoDate): DemoDataSet {
   return {
     dailyPlans: [...demoData.dailyPlans, ...realData.dailyPlans],
     dailyReports: [...demoData.dailyReports, ...realData.dailyReports],
-    eveningPostmortems: [...demoData.eveningPostmortems, ...realData.eveningPostmortems],
     journalEntries: [...demoData.journalEntries, ...realData.journalEntries],
     metricEntries: [...demoData.metricEntries, ...realData.metricEntries],
     tasks: [...demoData.tasks, ...realData.tasks]

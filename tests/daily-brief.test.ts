@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { DailyPlan, EveningPostmortem, MetricEntry } from "@/domain";
+import type { DailyPlan, MetricEntry } from "@/domain";
 import { buildDailyBrief, type DailyBriefInput } from "@/domain/dailyBrief";
 import { createWorkout } from "@/domain/workouts";
 
@@ -14,7 +14,6 @@ function base(overrides: Partial<DailyBriefInput> = {}): DailyBriefInput {
     workouts: [],
     metrics: [],
     dailyPlans: [],
-    eveningPostmortems: [],
     ...overrides
   };
 }
@@ -83,7 +82,7 @@ describe("daily brief", () => {
     expect(brief.focus.map((f) => f.id)).not.toContain("vitals");
   });
 
-  it("suggests an evening review in the evening when the plan exists and isn't closed", () => {
+  it("is all-clear in the evening when vitals, workouts, and the plan are done", () => {
     const brief = buildDailyBrief(
       base({
         nowMinutes: 20 * 60,
@@ -97,30 +96,7 @@ describe("daily brief", () => {
       })
     );
     expect(brief.timeOfDay).toBe("evening");
-    expect(brief.focus.map((f) => f.id)).toEqual(["evening"]);
-  });
-
-  it("does not suggest an evening review once a postmortem exists", () => {
-    const postmortem: EveningPostmortem = {
-      id: "pm1",
-      date: today,
-      taskOutcomes: [],
-      createdAt: `${today}T20:00:00.000Z`,
-      updatedAt: `${today}T20:00:00.000Z`
-    };
-    const brief = buildDailyBrief(
-      base({
-        nowMinutes: 21 * 60,
-        metrics: [metricToday({ weightLbs: 184 })],
-        workouts: [
-          createWorkout({ date: today, type: "strength" }, `${today}T06:00:00.000Z`),
-          createWorkout({ date: today, type: "cardio" }, `${today}T07:00:00.000Z`),
-          createWorkout({ date: today, type: "martial_arts" }, `${today}T18:00:00.000Z`)
-        ],
-        dailyPlans: [planToday],
-        eveningPostmortems: [postmortem]
-      })
-    );
     expect(brief.allClear).toBe(true);
+    expect(brief.focus).toEqual([]);
   });
 });

@@ -235,7 +235,6 @@ describe("/api/ai/tools/confirm", () => {
           }
         ],
         dailyReports: [],
-        eveningPostmortems: [],
         tasks: [task("main", "Ship V12 report")]
       })
     );

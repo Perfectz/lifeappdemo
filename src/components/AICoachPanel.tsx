@@ -22,7 +22,6 @@ import { OfflineBoundary, aiNetworkRequiredMessage, useNetworkStatus } from "@/c
 import { SectionHeader } from "@/components/SectionHeader";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { createLocalDailyReportRepository } from "@/data/dailyReportRepository";
-import { createLocalEveningPostmortemRepository } from "@/data/eveningPostmortemRepository";
 import { createLocalJournalRepository } from "@/data/journalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
@@ -277,15 +276,12 @@ export function AICoachPanel() {
       const tasks = createLocalTaskRepository(window.localStorage).load();
       const dailyPlans = createLocalDailyPlanRepository(window.localStorage).load();
       const dailyReports = createLocalDailyReportRepository(window.localStorage).load();
-      const eveningPostmortems =
-        createLocalEveningPostmortemRepository(window.localStorage).load();
       const metricEntries = createLocalMetricRepository(window.localStorage).load();
       const journalEntries = createLocalJournalRepository(window.localStorage).load();
       const payload = await confirmAIToolProposal({
         proposal,
         dailyPlans,
         dailyReports,
-        eveningPostmortems,
         journalEntries,
         metricEntries,
         tasks

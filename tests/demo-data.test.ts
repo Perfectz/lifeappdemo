@@ -10,7 +10,6 @@ function emptyData(): DemoDataSet {
   return {
     dailyPlans: [],
     dailyReports: [],
-    eveningPostmortems: [],
     journalEntries: [],
     metricEntries: [],
     tasks: []

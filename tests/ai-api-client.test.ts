@@ -89,7 +89,6 @@ describe("aiApiClient", () => {
           appliedChangeSummary: "Created task: Refine the app",
           dailyPlans: [],
           dailyReports: [],
-          eveningPostmortems: [],
           journalEntries: [],
           metricEntries: [],
           tasks: []
@@ -108,7 +107,6 @@ describe("aiApiClient", () => {
       confirmAIToolProposal({
         dailyPlans: [],
         dailyReports: [],
-        eveningPostmortems: [],
         journalEntries: [],
         metricEntries: [],
         proposal,

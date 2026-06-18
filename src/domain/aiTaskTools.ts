@@ -4,7 +4,6 @@ import type {
   DailyPlan,
   DailyReport,
   EntityId,
-  EveningPostmortem,
   IsoDate,
   IsoDateTime,
   JournalEntry,
@@ -79,7 +78,6 @@ export type AIToolProposalValidationResult =
 export type ConfirmTaskToolRequestInput = {
   dailyPlans: DailyPlan[];
   dailyReports: DailyReport[];
-  eveningPostmortems: EveningPostmortem[];
   journalEntries: JournalEntry[];
   metricEntries: MetricEntry[];
   proposal: AIToolProposal;
@@ -95,7 +93,6 @@ export type AITaskToolApplyResult =
       ok: true;
       dailyPlans: DailyPlan[];
       dailyReports: DailyReport[];
-      eveningPostmortems: EveningPostmortem[];
       journalEntries: JournalEntry[];
       metricEntries: MetricEntry[];
       tasks: Task[];
@@ -396,9 +393,6 @@ export function validateConfirmTaskToolRequest(
       dailyReports: Array.isArray(value.dailyReports)
         ? value.dailyReports.filter(isDailyReportLike)
         : [],
-      eveningPostmortems: Array.isArray(value.eveningPostmortems)
-        ? value.eveningPostmortems.filter(isEveningPostmortemLike)
-        : [],
       journalEntries: Array.isArray(value.journalEntries)
         ? value.journalEntries.filter(isJournalEntryLike)
         : [],
@@ -535,26 +529,6 @@ function isDailyReportLike(value: unknown): value is DailyReport {
   );
 }
 
-function isEveningPostmortemLike(value: unknown): value is EveningPostmortem {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  return (
-    typeof value.id === "string" &&
-    typeof value.date === "string" &&
-    Array.isArray(value.taskOutcomes) &&
-    value.taskOutcomes.every(
-      (outcome) =>
-        isRecord(outcome) &&
-        typeof outcome.taskId === "string" &&
-        ["completed", "deferred", "left_open"].includes(String(outcome.outcome))
-    ) &&
-    typeof value.createdAt === "string" &&
-    typeof value.updatedAt === "string"
-  );
-}
-
 function replaceTask(tasks: Task[], updatedTask: Task): Task[] {
   return tasks.map((task) => (task.id === updatedTask.id ? updatedTask : task));
 }
@@ -570,8 +544,7 @@ export function applyAITaskToolProposal(
   metricEntries: MetricEntry[] = [],
   journalEntries: JournalEntry[] = [],
   dailyPlans: DailyPlan[] = [],
-  dailyReports: DailyReport[] = [],
-  eveningPostmortems: EveningPostmortem[] = []
+  dailyReports: DailyReport[] = []
 ): AITaskToolApplyResult {
   const validation = validateAIToolProposalInput(proposal, now);
 
@@ -588,7 +561,6 @@ export function applyAITaskToolProposal(
         ok: true,
         dailyPlans,
         dailyReports,
-        eveningPostmortems,
         journalEntries,
         metricEntries,
         tasks: [task, ...tasks],
@@ -621,7 +593,6 @@ export function applyAITaskToolProposal(
         ok: true,
         dailyPlans,
         dailyReports,
-        eveningPostmortems,
         journalEntries,
         metricEntries,
         tasks: replaceTask(tasks, updatedTask),
@@ -642,7 +613,6 @@ export function applyAITaskToolProposal(
         ok: true,
         dailyPlans,
         dailyReports,
-        eveningPostmortems,
         journalEntries,
         metricEntries,
         tasks: replaceTask(tasks, updatedTask),
@@ -671,7 +641,6 @@ export function applyAITaskToolProposal(
         ok: true,
         dailyPlans,
         dailyReports,
-        eveningPostmortems,
         journalEntries,
         metricEntries,
         tasks: replaceTask(tasks, updatedTask),
@@ -692,7 +661,6 @@ export function applyAITaskToolProposal(
         ok: true,
         dailyPlans,
         dailyReports,
-        eveningPostmortems,
         journalEntries,
         metricEntries,
         tasks: replaceTask(tasks, updatedTask),
@@ -706,7 +674,6 @@ export function applyAITaskToolProposal(
         ok: true,
         dailyPlans,
         dailyReports,
-        eveningPostmortems,
         journalEntries,
         metricEntries: [entry, ...metricEntries],
         tasks,
@@ -720,7 +687,6 @@ export function applyAITaskToolProposal(
         ok: true,
         dailyPlans,
         dailyReports,
-        eveningPostmortems,
         journalEntries: [entry, ...journalEntries],
         metricEntries,
         tasks,
@@ -739,7 +705,6 @@ export function applyAITaskToolProposal(
         ok: true,
         dailyPlans: upsertDailyPlanForDate(dailyPlans, payload, tasks, now),
         dailyReports,
-        eveningPostmortems,
         journalEntries,
         metricEntries,
         tasks,
@@ -760,9 +725,6 @@ export function applyAITaskToolProposal(
           date: payload.date,
           tasks,
           dailyPlan: dailyPlans.find((plan) => plan.date === payload.date),
-          eveningPostmortem: eveningPostmortems.find(
-            (postmortem) => postmortem.date === payload.date
-          ),
           metricEntries,
           journalEntries,
           generatedBy: payload.style === "ai_assisted" ? "ai" : "deterministic",
@@ -775,7 +737,6 @@ export function applyAITaskToolProposal(
         ok: true,
         dailyPlans,
         dailyReports: upsertDailyReport(dailyReports, report),
-        eveningPostmortems,
         journalEntries,
         metricEntries,
         tasks,
