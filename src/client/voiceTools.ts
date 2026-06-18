@@ -137,6 +137,7 @@ export const VOICE_TOOL_DEFINITIONS = [
         weightLbs: { type: "number" },
         bloodPressureSystolic: { type: "number" },
         bloodPressureDiastolic: { type: "number" },
+        bloodGlucoseMgDl: { type: "number", description: "Blood glucose in mg/dL" },
         notes: { type: "string" }
       }
     }
@@ -331,6 +332,7 @@ function logMetric(args: Record<string, unknown>): VoiceToolResult {
     weightLbs: asNumber(args.weightLbs),
     bloodPressureSystolic: asNumber(args.bloodPressureSystolic),
     bloodPressureDiastolic: asNumber(args.bloodPressureDiastolic),
+    bloodGlucoseMgDl: asNumber(args.bloodGlucoseMgDl),
     notes: asText(args.notes) || undefined
   };
   const repo = createLocalMetricRepository(store());

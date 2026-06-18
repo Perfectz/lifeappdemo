@@ -21,7 +21,7 @@ const SYSTEM_PROMPT = [
   "You extract loggable data from a photo or screenshot for a personal fitness/life app, then propose updates.",
   "Look at the image (e.g. a steps/walking screenshot, treadmill or watch summary, blood-pressure monitor, a meal, a whiteboard note).",
   "Map what you see onto these tools, returning one proposal per distinct update:",
-  "- log_metric: { checkInType?, steps?, sleepHours?, energyLevel? (1-5), moodLevel? (1-5), weightLbs?, bloodPressureSystolic?, bloodPressureDiastolic? }",
+  "- log_metric: { checkInType?, steps?, sleepHours?, energyLevel? (1-5), moodLevel? (1-5), weightLbs?, bloodPressureSystolic?, bloodPressureDiastolic?, bloodGlucoseMgDl? }",
   "- log_cardio: { activity: walk|run|jog|ddr|bike-vest, minutes?, distanceMiles?, weightVestLbs? }",
   "- log_strength: { day: 1-5, variant?: Free Weight|Machine|Kettlebell }",
   "- log_martial_arts: { session: bas-beginner|bas-advanced|shidokan-kickboxing|shidokan-karate, minutes? }",

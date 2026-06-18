@@ -77,6 +77,8 @@ export type MetricEntry = TimestampedEntity & {
   distanceWalkedMiles?: number;
   bloodPressureSystolic?: number;
   bloodPressureDiastolic?: number;
+  bloodGlucoseMgDl?: number;
+  glucoseContext?: GlucoseContext;
   notes?: string;
   recordedAt: IsoDateTime;
 };

@@ -1,5 +1,10 @@
-import type { MetricEntry } from "@/domain/types";
-import { classifyBloodPressure, type BloodPressureCategory } from "@/domain/biometrics";
+import type { GlucoseContext, MetricEntry } from "@/domain/types";
+import {
+  classifyBloodPressure,
+  classifyFastingGlucose,
+  type BloodPressureCategory,
+  type FastingGlucoseBand
+} from "@/domain/biometrics";
 
 /**
  * Vitals views over MetricEntry data (single source of truth — the same store
@@ -14,15 +19,25 @@ export const bloodPressureCategoryLabel: Record<BloodPressureCategory, string> =
   hypertensive_crisis: "Hypertensive crisis"
 };
 
+export const glucoseBandLabel: Record<FastingGlucoseBand, string> = {
+  low: "Low",
+  normal: "Normal",
+  prediabetes: "Prediabetes range",
+  diabetes: "High"
+};
+
 function byRecentDesc(a: MetricEntry, b: MetricEntry): number {
   return Date.parse(b.recordedAt) - Date.parse(a.recordedAt);
 }
 
-/** Entries that carry a blood-pressure reading or a body-weight value, newest first. */
+/** Entries that carry a blood-pressure, glucose, or body-weight value, newest first. */
 export function getVitalsReadings(entries: MetricEntry[]): MetricEntry[] {
   return entries
     .filter(
-      (entry) => entry.bloodPressureSystolic !== undefined || entry.weightLbs !== undefined
+      (entry) =>
+        entry.bloodPressureSystolic !== undefined ||
+        entry.weightLbs !== undefined ||
+        entry.bloodGlucoseMgDl !== undefined
     )
     .sort(byRecentDesc);
 }
@@ -54,6 +69,28 @@ export function latestBloodPressure(entries: MetricEntry[]): LatestBloodPressure
     systolic: found.bloodPressureSystolic,
     diastolic: found.bloodPressureDiastolic,
     category: classifyBloodPressure(found.bloodPressureSystolic, found.bloodPressureDiastolic),
+    recordedAt: found.recordedAt
+  };
+}
+
+export type LatestGlucose = {
+  mgDl: number;
+  context?: GlucoseContext;
+  /** Band only computed for fasting readings (the ADA reference is fasting-based). */
+  band?: FastingGlucoseBand;
+  recordedAt: string;
+};
+
+export function latestGlucose(entries: MetricEntry[]): LatestGlucose | undefined {
+  const found = [...entries]
+    .filter((entry) => entry.bloodGlucoseMgDl !== undefined)
+    .sort(byRecentDesc)[0];
+  if (!found || found.bloodGlucoseMgDl === undefined) return undefined;
+
+  return {
+    mgDl: found.bloodGlucoseMgDl,
+    context: found.glucoseContext,
+    band: found.glucoseContext === "fasting" ? classifyFastingGlucose(found.bloodGlucoseMgDl) : undefined,
     recordedAt: found.recordedAt
   };
 }

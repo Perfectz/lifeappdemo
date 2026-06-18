@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { MetricEntry } from "@/domain";
-import { getVitalsReadings, latestBloodPressure, latestWeight } from "@/domain/vitals";
+import {
+  getVitalsReadings,
+  latestBloodPressure,
+  latestGlucose,
+  latestWeight
+} from "@/domain/vitals";
 
 function entry(overrides: Partial<MetricEntry>): MetricEntry {
   const recordedAt = overrides.recordedAt ?? "2026-06-17T08:00:00.000Z";
@@ -40,9 +45,28 @@ describe("vitals helpers", () => {
     expect(weight).toMatchObject({ weightLbs: 185, changeLbs: -1 });
   });
 
+  it("returns the latest glucose with a fasting band", () => {
+    const readings = [
+      entry({ id: "g1", recordedAt: "2026-06-16T07:00:00.000Z", bloodGlucoseMgDl: 92, glucoseContext: "fasting" }),
+      entry({ id: "g2", recordedAt: "2026-06-17T07:00:00.000Z", bloodGlucoseMgDl: 110, glucoseContext: "fasting" })
+    ];
+    expect(latestGlucose(readings)).toMatchObject({ mgDl: 110, context: "fasting", band: "prediabetes" });
+  });
+
+  it("omits the glucose band for non-fasting readings", () => {
+    const reading = entry({ bloodGlucoseMgDl: 140, glucoseContext: "post_meal" });
+    expect(latestGlucose([reading])?.band).toBeUndefined();
+  });
+
+  it("includes glucose-only entries in the readings list", () => {
+    const reading = entry({ id: "g", bloodGlucoseMgDl: 99 });
+    expect(getVitalsReadings([reading]).map((r) => r.id)).toEqual(["g"]);
+  });
+
   it("handles no readings", () => {
     expect(latestBloodPressure([])).toBeUndefined();
     expect(latestWeight([])).toBeUndefined();
+    expect(latestGlucose([])).toBeUndefined();
     expect(getVitalsReadings([])).toEqual([]);
   });
 });

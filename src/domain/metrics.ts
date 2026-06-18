@@ -1,11 +1,13 @@
 import type {
   CheckInType,
+  GlucoseContext,
   IsoDate,
   IsoDateTime,
   MetricEntry,
   MetricLevel,
   MetricSource
 } from "@/domain/types";
+import { glucoseContexts } from "@/domain/biometrics";
 
 export const checkInTypes: CheckInType[] = ["morning", "evening", "freeform"];
 export const metricSources: MetricSource[] = ["manual", "samsung_export", "health_connect", "demo"];
@@ -25,6 +27,8 @@ export type MetricInput = {
   distanceWalkedMiles?: number;
   bloodPressureSystolic?: number;
   bloodPressureDiastolic?: number;
+  bloodGlucoseMgDl?: number;
+  glucoseContext?: GlucoseContext;
   notes?: string;
 };
 
@@ -119,6 +123,17 @@ export function validateMetricInput(input: MetricInput): MetricValidationResult 
     return { ok: false, message: "Blood pressure diastolic must be a positive whole number." };
   }
 
+  if (!isPositive(input.bloodGlucoseMgDl)) {
+    return { ok: false, message: "Blood glucose must be a positive number." };
+  }
+
+  if (
+    input.glucoseContext !== undefined &&
+    !glucoseContexts.includes(input.glucoseContext)
+  ) {
+    return { ok: false, message: "Glucose context is invalid." };
+  }
+
   return {
     ok: true,
     value: {
@@ -135,6 +150,8 @@ export function validateMetricInput(input: MetricInput): MetricValidationResult 
       distanceWalkedMiles: input.distanceWalkedMiles,
       bloodPressureSystolic: input.bloodPressureSystolic,
       bloodPressureDiastolic: input.bloodPressureDiastolic,
+      bloodGlucoseMgDl: input.bloodGlucoseMgDl,
+      glucoseContext: input.glucoseContext,
       notes: normalizeOptionalText(input.notes)
     }
   };
@@ -166,6 +183,8 @@ export function createMetricEntry(
     distanceWalkedMiles: validation.value.distanceWalkedMiles,
     bloodPressureSystolic: validation.value.bloodPressureSystolic,
     bloodPressureDiastolic: validation.value.bloodPressureDiastolic,
+    bloodGlucoseMgDl: validation.value.bloodGlucoseMgDl,
+    glucoseContext: validation.value.glucoseContext,
     notes: validation.value.notes,
     recordedAt: now,
     createdAt: now,

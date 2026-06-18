@@ -76,7 +76,7 @@ export const navigationGroups: NavigationGroup[] = [
       {
         label: "Vitals",
         href: "/vitals",
-        description: "Blood pressure & weight",
+        description: "Glucose, BP & weight",
         icon: "metrics"
       },
       {
