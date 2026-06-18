@@ -6,6 +6,7 @@ import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalJournalRepository } from "@/data/journalRepository";
 import { createLocalNoteRepository } from "@/data/noteRepository";
+import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 
 describe("voice tool dispatcher", () => {
   beforeEach(() => {
@@ -20,6 +21,7 @@ describe("voice tool dispatcher", () => {
       "log_strength",
       "log_martial_arts",
       "log_metric",
+      "log_food",
       "add_journal_entry",
       "save_note",
       "get_context",
@@ -126,6 +128,30 @@ describe("voice tool dispatcher", () => {
     const result = executeVoiceTool("log_metric", { energyLevel: 99 });
     expect(result.ok).toBe(false);
     expect(createLocalMetricRepository(window.localStorage).load()).toHaveLength(0);
+  });
+
+  it("logs a food entry with macros", () => {
+    const result = executeVoiceTool("log_food", {
+      description: "Chicken and rice bowl",
+      mealType: "lunch",
+      calories: 620,
+      proteinG: 48
+    });
+    expect(result.ok).toBe(true);
+    const foods = createLocalFoodEntryRepository(window.localStorage).load();
+    expect(foods).toHaveLength(1);
+    expect(foods[0]).toMatchObject({
+      mealType: "lunch",
+      description: "Chicken and rice bowl",
+      estimateSource: "photo_ai"
+    });
+    expect(foods[0].macros.calories).toBe(620);
+  });
+
+  it("rejects a food log without a description", () => {
+    const result = executeVoiceTool("log_food", { calories: 200 });
+    expect(result.ok).toBe(false);
+    expect(createLocalFoodEntryRepository(window.localStorage).load()).toHaveLength(0);
   });
 
   it("adds a journal entry", () => {

@@ -2045,6 +2045,221 @@ textarea {
   cursor: not-allowed;
 }
 
+/* Nutrition diary */
+.nutri-mini-btn {
+  border: 1px solid var(--accent, #6366f1);
+  color: var(--accent, #6366f1);
+  background: transparent;
+  border-radius: 0.45rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nutri-mini-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.nutri-daybar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+
+.nutri-daybar-date {
+  font-weight: 700;
+}
+
+.nutri-budget-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.nutri-budget-equation {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.nutri-budget-equation > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.nutri-budget-equation strong {
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.nutri-budget-equation span {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nutri-op {
+  font-size: 1.2rem;
+  color: var(--muted);
+}
+
+.nutri-remaining strong {
+  color: var(--accent, #4ade80);
+}
+
+.nutri-remaining-over strong {
+  color: var(--danger, #f87171);
+}
+
+.nutri-budget-noset {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.nutri-budget-noset strong {
+  font-size: 1.4rem;
+}
+
+.nutri-edit-goals {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.nutri-macros {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.nutri-macro {
+  display: grid;
+  grid-template-columns: 4.2rem 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.nutri-macro-label {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.nutri-macro-bar {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.nutri-macro-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #6366f1);
+}
+
+.nutri-macro-value {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.nutri-goal-editor {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+}
+
+.nutri-goal-editor .login-submit {
+  grid-column: 1 / -1;
+}
+
+.nutri-meal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.nutri-entries {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.nutri-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.nutri-entry small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.nutri-remove {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  flex: 0 0 auto;
+}
+
+.nutri-add-form {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 0.6rem;
+}
+
+.nutri-add-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
+
+.nutri-add-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.nutri-ai-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  align-items: flex-start;
+  margin-top: 0.4rem;
+}
+
 .progress-photo-actions {
   display: flex;
   gap: 0.35rem;

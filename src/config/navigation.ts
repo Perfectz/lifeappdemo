@@ -74,6 +74,13 @@ export const navigationGroups: NavigationGroup[] = [
         shortLabel: "Vitals"
       },
       {
+        label: "Nutrition",
+        href: "/nutrition",
+        description: "Food diary — calories & macros",
+        icon: "metrics",
+        shortLabel: "Food"
+      },
+      {
         label: "Progress Photos",
         href: "/progress",
         description: "Front, profile & face — track the change",
