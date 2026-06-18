@@ -74,6 +74,13 @@ export const navigationGroups: NavigationGroup[] = [
         shortLabel: "Vitals"
       },
       {
+        label: "Progress Photos",
+        href: "/progress",
+        description: "Front, profile & face — track the change",
+        icon: "trends",
+        shortLabel: "Progress"
+      },
+      {
         label: "Health Import",
         href: "/health-import",
         description: "Samsung export alpha",

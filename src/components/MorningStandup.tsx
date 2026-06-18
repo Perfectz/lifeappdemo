@@ -233,6 +233,9 @@ export function MorningStandup() {
         <CommandButton href="/fitness" icon="metrics">
           {fitness.isComplete ? "Review today's workouts" : "Open Fitness to log"}
         </CommandButton>
+        <CommandButton href="/progress" icon="trends">
+          Take today&apos;s progress photos
+        </CommandButton>
       </section>
 
       {/* Step 3 — Intention */}
