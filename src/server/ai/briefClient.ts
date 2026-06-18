@@ -1,5 +1,5 @@
 import { COACH_MODEL } from "@/config/ai";
-import { AINotConfiguredError } from "@/server/ai/openaiClient";
+import { AINotConfiguredError, buildOpenAIError, chatCompletionBody } from "@/server/ai/openaiClient";
 
 /**
  * Turns the deterministic daily-brief facts into a short, personalized coach
@@ -68,15 +68,17 @@ export async function generateCoachBrief(facts: BriefFacts): Promise<string> {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        model: COACH_MODEL,
-        max_tokens: 200,
-        temperature: 0.6,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userText }
-        ]
-      })
+      body: JSON.stringify(
+        chatCompletionBody({
+          model: COACH_MODEL,
+          maxCompletionTokens: 600,
+          temperature: 0.6,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userText }
+          ]
+        })
+      )
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
@@ -88,7 +90,7 @@ export async function generateCoachBrief(facts: BriefFacts): Promise<string> {
   }
 
   if (!response.ok) {
-    throw new Error("Brief request failed.");
+    throw await buildOpenAIError(response, "Brief request");
   }
 
   const payload: unknown = await response.json();

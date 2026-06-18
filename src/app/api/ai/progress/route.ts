@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { isProgressPhotoAngle } from "@/domain/progressPhotos";
-import { AINotConfiguredError } from "@/server/ai/openaiClient";
+import { AINotConfiguredError, OpenAIRequestError } from "@/server/ai/openaiClient";
 import { assessProgressPhotos, type ProgressImage } from "@/server/ai/progressClient";
 import { checkRateLimit } from "@/server/ai/rateLimiter";
 
@@ -68,6 +68,9 @@ export async function POST(request: Request) {
         { error: "Progress assessment isn't configured. Add an OpenAI API key to enable it." },
         { status: 503 }
       );
+    }
+    if (error instanceof OpenAIRequestError) {
+      return NextResponse.json({ error: error.message }, { status: error.status === 429 ? 429 : 502 });
     }
     return NextResponse.json(
       { error: "Couldn't assess your photos right now. Try again in a moment." },

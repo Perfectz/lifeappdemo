@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { AINotConfiguredError } from "@/server/ai/openaiClient";
+import { AINotConfiguredError, OpenAIRequestError } from "@/server/ai/openaiClient";
 import { extractUpdatesFromImage } from "@/server/ai/visionClient";
 import { checkRateLimit } from "@/server/ai/rateLimiter";
 
@@ -47,6 +47,9 @@ export async function POST(request: Request) {
         { error: "Image analysis isn't configured. Add an OpenAI API key to enable it." },
         { status: 503 }
       );
+    }
+    if (error instanceof OpenAIRequestError) {
+      return NextResponse.json({ error: error.message }, { status: error.status === 429 ? 429 : 502 });
     }
     return NextResponse.json(
       { error: "Couldn't analyze that image right now. Try again in a moment." },

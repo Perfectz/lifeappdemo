@@ -1,6 +1,6 @@
 import { COACH_MODEL } from "@/config/ai";
 import { parseVisionResult, type VisionResult } from "@/domain/visionUpdates";
-import { AINotConfiguredError } from "@/server/ai/openaiClient";
+import { AINotConfiguredError, buildOpenAIError, chatCompletionBody } from "@/server/ai/openaiClient";
 
 export type VisionExtractionInput = {
   /** A data URL (data:image/...;base64,....). */
@@ -68,22 +68,24 @@ export async function extractUpdatesFromImage(
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        model: COACH_MODEL,
-        max_tokens: maxTokens,
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userText },
-              { type: "image_url", image_url: { url: input.imageDataUrl } }
-            ]
-          }
-        ]
-      })
+      body: JSON.stringify(
+        chatCompletionBody({
+          model: COACH_MODEL,
+          maxCompletionTokens: maxTokens,
+          temperature: 0.2,
+          responseFormat: { type: "json_object" },
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: userText },
+                { type: "image_url", image_url: { url: input.imageDataUrl } }
+              ]
+            }
+          ]
+        })
+      )
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
@@ -95,7 +97,7 @@ export async function extractUpdatesFromImage(
   }
 
   if (!response.ok) {
-    throw new Error("Vision request failed.");
+    throw await buildOpenAIError(response, "Vision request");
   }
 
   const payload: unknown = await response.json();

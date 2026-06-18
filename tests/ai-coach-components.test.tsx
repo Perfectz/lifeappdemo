@@ -35,15 +35,7 @@ describe("AICoachPanel", () => {
     );
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({
-        message: "Start with Open local quest.",
-        mode: "general",
-        usedContext: {
-          openTaskCount: 1,
-          recentMetricCount: 0,
-          recentJournalEntryCount: 0
-        }
-      })
+      json: async () => ({ message: "Start with Open local quest.", mode: "general" })
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -64,8 +56,29 @@ describe("AICoachPanel", () => {
         body: expect.stringContaining("Open local quest")
       })
     );
-    expect(screen.getByText("Open tasks used")).toBeVisible();
-    expect(screen.getAllByText("1").length).toBeGreaterThan(0);
+  });
+
+  it("sends prior turns as conversation history", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: "Reply.", mode: "general" })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<AICoachPanel />);
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "First message" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(screen.getByText("Reply.")).toBeVisible());
+
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Second message" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(secondBody.history).toEqual([
+      { role: "user", content: "First message" },
+      { role: "assistant", content: "Reply." }
+    ]);
   });
 
   it("shows a safe error when the chat request fails", async () => {
@@ -79,15 +92,11 @@ describe("AICoachPanel", () => {
 
     render(<AICoachPanel />);
 
-    fireEvent.change(screen.getByLabelText("Message"), {
-      target: { value: "Help" }
-    });
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Help" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "AI coach is unavailable right now."
-      );
+      expect(screen.getByRole("alert")).toHaveTextContent("AI coach is unavailable right now.");
     });
   });
 
@@ -129,20 +138,12 @@ describe("AICoachPanel", () => {
               id: "proposal-1",
               toolName: "create_task",
               summary: "Create task: Walk on the treadmill tomorrow",
-              payload: {
-                title: "Walk on the treadmill tomorrow",
-                tags: ["health"]
-              },
+              payload: { title: "Walk on the treadmill tomorrow", tags: ["health"] },
               status: "pending",
               createdAt: now,
               updatedAt: now
             }
-          ],
-          usedContext: {
-            openTaskCount: 0,
-            recentMetricCount: 0,
-            recentJournalEntryCount: 0
-          }
+          ]
         })
       })
       .mockResolvedValueOnce({
@@ -178,16 +179,14 @@ describe("AICoachPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Applied change: Created task: Walk on the treadmill tomorrow")
-      ).toBeVisible();
+      expect(screen.getByText(/Done — Created task: Walk on the treadmill tomorrow/)).toBeVisible();
     });
     expect(JSON.parse(window.localStorage.getItem(taskStorageKey) ?? "[]")[0]).toMatchObject({
       title: "Walk on the treadmill tomorrow"
     });
   });
 
-  it("rejects a proposal without mutating tasks", async () => {
+  it("dismisses a proposal without mutating tasks", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -211,18 +210,16 @@ describe("AICoachPanel", () => {
 
     render(<AICoachPanel />);
 
-    fireEvent.change(screen.getByLabelText("Message"), {
-      target: { value: "Add a task." }
-    });
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Add a task." } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => {
       expect(screen.getByText("Create task: Do not add this")).toBeVisible();
     });
-    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Rejected proposal: Create task: Do not add this")).toBeVisible();
+      expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
     });
     expect(JSON.parse(window.localStorage.getItem(taskStorageKey) ?? "[]")).toHaveLength(0);
   });

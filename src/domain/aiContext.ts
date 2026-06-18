@@ -25,12 +25,15 @@ export type AIStoredAppData = {
   dailyReports?: DailyReport[];
 };
 
+export type CoachHistoryTurn = { role: "user" | "assistant"; content: string };
+
 export type AIChatRequestInput = {
   message: string;
   mode: AIChatMode;
   appData?: AIStoredAppData;
   heroName?: string;
   aboutMe?: string;
+  history?: CoachHistoryTurn[];
 };
 
 export type AIChatRequestValidationResult =
@@ -63,6 +66,22 @@ function normalizeStoredAppData(value: unknown): AIStoredAppData | undefined {
       ? value.dailyReports.filter(isDailyReport)
       : undefined
   };
+}
+
+function normalizeHistory(value: unknown): CoachHistoryTurn[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const turns: CoachHistoryTurn[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    const role = entry.role === "assistant" ? "assistant" : entry.role === "user" ? "user" : null;
+    const content = typeof entry.content === "string" ? entry.content.trim().slice(0, 4_000) : "";
+    if (role && content) {
+      turns.push({ role, content });
+    }
+  }
+  return turns.slice(-10);
 }
 
 function timestamp(value: string | undefined): number {
@@ -100,6 +119,8 @@ export function validateAIChatRequestBody(body: unknown): AIChatRequestValidatio
       ? body.aboutMe.trim().slice(0, 8_000)
       : undefined;
 
+  const history = normalizeHistory(body.history);
+
   return {
     ok: true,
     value: {
@@ -107,7 +128,8 @@ export function validateAIChatRequestBody(body: unknown): AIChatRequestValidatio
       mode: mode as AIChatMode,
       appData: normalizeStoredAppData(body.appData),
       heroName,
-      aboutMe
+      aboutMe,
+      history
     }
   };
 }
