@@ -4657,6 +4657,53 @@ h1 {
   text-decoration: underline;
 }
 
+/* --- About Me wiki editor --- */
+.wiki-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.wiki-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.wiki-section-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.wiki-section-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+
+.wiki-textarea {
+  background: var(--menu-window-fill);
+  border: 1px solid var(--bevel-dark);
+  border-radius: 3px;
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  margin-top: 0.3rem;
+  padding: 0.6rem;
+  resize: vertical;
+  width: 100%;
+}
+
+.wiki-import {
+  background: var(--menu-window-fill);
+  border: 1px solid var(--bevel-dark);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
 .fitness-sub {
   color: var(--muted);
   margin: 0.4rem 0 0.75rem;

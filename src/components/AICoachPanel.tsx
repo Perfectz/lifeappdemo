@@ -9,6 +9,8 @@ import {
 } from "@/client/aiApiClient";
 import { createClientId } from "@/client/clientIds";
 import { fileToDownscaledDataUrl } from "@/client/imageDownscale";
+import { loadWiki } from "@/data/wikiRepository";
+import { formatWikiForPrompt } from "@/domain/personalWiki";
 import { persistAIToolResult } from "@/client/persistAIToolResult";
 import { readProfile } from "@/client/profile";
 import { loadStoredAppData } from "@/client/storedAppData";
@@ -220,7 +222,8 @@ export function AICoachPanel() {
         message: trimmedMessage,
         mode,
         appData: loadStoredAppData(window.localStorage),
-        heroName: readProfile(window.localStorage).heroName
+        heroName: readProfile(window.localStorage).heroName,
+        aboutMe: formatWikiForPrompt(loadWiki(window.localStorage)) || undefined
       });
 
       setMessages((current) => [

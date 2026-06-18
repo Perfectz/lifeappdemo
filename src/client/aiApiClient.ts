@@ -34,6 +34,7 @@ type AIChatRequest = {
   message: string;
   mode: AIChatMode;
   heroName?: string;
+  aboutMe?: string;
 };
 
 async function readApiJson<T extends { error?: string }>(

@@ -88,6 +88,12 @@ export const navigationGroups: NavigationGroup[] = [
         shortLabel: "Health"
       },
       {
+        label: "About Me",
+        href: "/profile",
+        description: "Personal context for the AI",
+        icon: "journal"
+      },
+      {
         label: "Journal",
         href: "/journal",
         description: "Lesson capture",

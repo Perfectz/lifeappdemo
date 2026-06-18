@@ -30,6 +30,7 @@ export type AIChatRequestInput = {
   mode: AIChatMode;
   appData?: AIStoredAppData;
   heroName?: string;
+  aboutMe?: string;
 };
 
 export type AIChatRequestValidationResult =
@@ -94,13 +95,19 @@ export function validateAIChatRequestBody(body: unknown): AIChatRequestValidatio
       ? body.heroName.trim().slice(0, 48)
       : undefined;
 
+  const aboutMe =
+    typeof body.aboutMe === "string" && body.aboutMe.trim()
+      ? body.aboutMe.trim().slice(0, 8_000)
+      : undefined;
+
   return {
     ok: true,
     value: {
       message,
       mode: mode as AIChatMode,
       appData: normalizeStoredAppData(body.appData),
-      heroName
+      heroName,
+      aboutMe
     }
   };
 }

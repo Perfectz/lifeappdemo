@@ -19,6 +19,8 @@ import { createJournalEntry, journalEntryTypes } from "@/domain/journal";
 import { createLocalNoteRepository } from "@/data/noteRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { createNote, getRecentNotes, searchNotes } from "@/domain/notes";
+import { loadWiki } from "@/data/wikiRepository";
+import { formatWikiForPrompt } from "@/domain/personalWiki";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import type { JournalEntryType, TaskPriority, TaskTag } from "@/domain";
 
@@ -200,6 +202,13 @@ export const VOICE_TOOL_DEFINITIONS = [
       type: "object",
       properties: { query: { type: "string", description: "Optional text to search notes for." } }
     }
+  },
+  {
+    type: "function",
+    name: "read_about_me",
+    description:
+      "Read the user's personal profile — health, goals, training, nutrition, preferences, people, constraints. Use it to ground advice in who they are.",
+    parameters: { type: "object", properties: {} }
   },
   {
     type: "function",
@@ -456,6 +465,15 @@ function readNotes(args: Record<string, unknown>): VoiceToolResult {
   return { ok: true, silent: true, message: summary };
 }
 
+function readAboutMe(): VoiceToolResult {
+  const text = formatWikiForPrompt(loadWiki(store()));
+  return {
+    ok: true,
+    silent: true,
+    message: text || "No personal profile saved yet — the user can add one on the About Me screen."
+  };
+}
+
 const HANDLERS: Record<string, (args: Record<string, unknown>) => VoiceToolResult> = {
   create_quest: createQuest,
   complete_quest: completeQuest,
@@ -469,6 +487,7 @@ const HANDLERS: Record<string, (args: Record<string, unknown>) => VoiceToolResul
   list_quests: listQuests,
   list_recent_workouts: listRecentWorkouts,
   read_notes: readNotes,
+  read_about_me: readAboutMe,
   navigate
 };
 

@@ -26,6 +26,7 @@ describe("voice tool dispatcher", () => {
       "list_quests",
       "list_recent_workouts",
       "read_notes",
+      "read_about_me",
       "navigate"
     ]);
   });

@@ -41,10 +41,15 @@ export async function POST(request: Request) {
   const usedContext = summarizeAIAppContext(context);
 
   try {
+    const contextText = formatAIContextForPrompt(context);
+    const fullContext = validation.value.aboutMe
+      ? `About the user (their self-profile):\n${validation.value.aboutMe}\n\n${contextText}`
+      : contextText;
+
     const completion = await completeReadOnlyCoachChat({
       message: validation.value.message,
       mode: validation.value.mode,
-      context: formatAIContextForPrompt(context),
+      context: fullContext,
       heroName: validation.value.heroName
     });
 
