@@ -9,6 +9,7 @@ import { CharacterSprite } from "@/components/CharacterSprite";
 import { CommandButton } from "@/components/CommandButton";
 import { DashboardQuestCard } from "@/components/DashboardQuestCard";
 import type { JrpgIconName } from "@/components/JrpgIcon";
+import { NorthStarCard } from "@/components/NorthStarCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatusPanel } from "@/components/StatusPanel";
 import { dataChangedEventName } from "@/data/createLocalRepository";
@@ -232,6 +233,8 @@ export function Dashboard() {
           )}
         </section>
       ) : null}
+
+      {hasLoaded ? <NorthStarCard /> : null}
 
       <section className="dashboard-grid" aria-label="Today snapshot">
         <StatusPanel
