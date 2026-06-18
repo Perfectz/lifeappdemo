@@ -1,4 +1,4 @@
-import type { GlucoseContext, MetricEntry } from "@/domain/types";
+import type { GlucoseContext, IsoDate, MetricEntry } from "@/domain/types";
 import {
   classifyBloodPressure,
   classifyFastingGlucose,
@@ -110,5 +110,72 @@ export function latestWeight(entries: MetricEntry[]): LatestWeight | undefined {
       previous?.weightLbs !== undefined
         ? Math.round((current.weightLbs - previous.weightLbs) * 10) / 10
         : undefined
+  };
+}
+
+export type VitalsTrendPoint = {
+  date: IsoDate;
+  label: string;
+  glucose?: number;
+  systolic?: number;
+  diastolic?: number;
+  weightLbs?: number;
+};
+
+export type VitalsTrend = {
+  points: VitalsTrendPoint[];
+  avgGlucose?: number;
+  avgSystolic?: number;
+  avgDiastolic?: number;
+};
+
+function shiftIso(iso: IsoDate, deltaDays: number): IsoDate {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, (m ?? 1) - 1, d ?? 1);
+  date.setDate(date.getDate() + deltaDays);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
+function average(values: (number | undefined)[]): number | undefined {
+  const nums = values.filter((value): value is number => value !== undefined);
+  if (nums.length === 0) return undefined;
+  return Math.round((nums.reduce((sum, value) => sum + value, 0) / nums.length) * 10) / 10;
+}
+
+/**
+ * One point per day for the last `days`, each holding that day's latest glucose,
+ * blood pressure, and weight (gaps stay undefined). Drives the sparklines.
+ */
+export function getVitalsTrend(entries: MetricEntry[], today: IsoDate, days = 14): VitalsTrend {
+  const sorted = [...entries].sort(byRecentDesc); // newest first
+  const points: VitalsTrendPoint[] = [];
+
+  for (let offset = days - 1; offset >= 0; offset -= 1) {
+    const date = shiftIso(today, -offset);
+    const dayEntries = sorted.filter((entry) => entry.date === date);
+    const pick = (selector: (entry: MetricEntry) => number | undefined): number | undefined => {
+      for (const entry of dayEntries) {
+        const value = selector(entry);
+        if (value !== undefined) return value;
+      }
+      return undefined;
+    };
+    points.push({
+      date,
+      label: date.slice(5),
+      glucose: pick((entry) => entry.bloodGlucoseMgDl),
+      systolic: pick((entry) => entry.bloodPressureSystolic),
+      diastolic: pick((entry) => entry.bloodPressureDiastolic),
+      weightLbs: pick((entry) => entry.weightLbs)
+    });
+  }
+
+  return {
+    points,
+    avgGlucose: average(points.map((point) => point.glucose)),
+    avgSystolic: average(points.map((point) => point.systolic)),
+    avgDiastolic: average(points.map((point) => point.diastolic))
   };
 }

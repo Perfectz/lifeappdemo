@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { MetricEntry } from "@/domain";
 import {
   getVitalsReadings,
+  getVitalsTrend,
   latestBloodPressure,
   latestGlucose,
   latestWeight
@@ -68,5 +69,21 @@ describe("vitals helpers", () => {
     expect(latestWeight([])).toBeUndefined();
     expect(latestGlucose([])).toBeUndefined();
     expect(getVitalsReadings([])).toEqual([]);
+  });
+
+  it("buckets a vitals trend with per-day latest values and averages", () => {
+    const readings = [
+      entry({ id: "t1", recordedAt: "2026-06-16T08:00:00.000Z", date: "2026-06-16", bloodGlucoseMgDl: 90, bloodPressureSystolic: 120, bloodPressureDiastolic: 80, weightLbs: 185 }),
+      entry({ id: "t2", recordedAt: "2026-06-17T08:00:00.000Z", date: "2026-06-17", bloodGlucoseMgDl: 100, bloodPressureSystolic: 124, bloodPressureDiastolic: 82, weightLbs: 184 }),
+      entry({ id: "t3", recordedAt: "2026-06-17T06:00:00.000Z", date: "2026-06-17", bloodGlucoseMgDl: 200 })
+    ];
+    const trend = getVitalsTrend(readings, "2026-06-17", 7);
+    expect(trend.points).toHaveLength(7);
+    const todayPoint = trend.points[trend.points.length - 1];
+    expect(todayPoint.date).toBe("2026-06-17");
+    expect(todayPoint.glucose).toBe(100); // latest reading of the day wins over the earlier 200
+    expect(todayPoint.weightLbs).toBe(184);
+    expect(trend.avgGlucose).toBe(95);
+    expect(trend.avgSystolic).toBe(122);
   });
 });

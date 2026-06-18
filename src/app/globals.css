@@ -4546,6 +4546,44 @@ h1 {
   font-family: var(--font-mono);
 }
 
+.vitals-trends {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.vitals-trend-row {
+  align-items: center;
+  border: 1px solid var(--bevel-dark);
+  border-radius: 4px;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.5rem 0.7rem;
+}
+
+.vitals-trend-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 7.5rem;
+}
+
+.vitals-trend-label small {
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.vitals-spark {
+  flex: 1;
+  height: 2.75rem;
+  width: 100%;
+}
+
+.vitals-spark-empty {
+  color: var(--muted);
+  flex: 1;
+  font-size: 0.8rem;
+}
+
 .fitness-sub {
   color: var(--muted);
   margin: 0.4rem 0 0.75rem;

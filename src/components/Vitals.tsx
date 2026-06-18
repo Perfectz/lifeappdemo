@@ -11,6 +11,7 @@ import { createMetricEntry, type MetricInput } from "@/domain/metrics";
 import {
   bloodPressureCategoryLabel,
   getVitalsReadings,
+  getVitalsTrend,
   glucoseBandLabel,
   latestBloodPressure,
   latestGlucose,
@@ -96,6 +97,7 @@ export function Vitals() {
   const bp = latestBloodPressure(entries);
   const wt = latestWeight(entries);
   const history = getVitalsReadings(entries).slice(0, 14);
+  const trend = getVitalsTrend(entries, toLocalIsoDate(new Date()), 14);
 
   return (
     <section className="dashboard-section vitals-panel" aria-label="Daily vitals">
@@ -242,6 +244,40 @@ export function Vitals() {
       </div>
 
       {history.length > 0 ? (
+        <div className="vitals-trends">
+          <h2 className="vitals-history-title">14-day trend</h2>
+          <div className="vitals-trend-row">
+            <div className="vitals-trend-label">
+              <strong>Glucose</strong>
+              <small>{trend.avgGlucose ? `avg ${trend.avgGlucose} mg/dL` : "—"}</small>
+            </div>
+            <Sparkline values={trend.points.map((point) => point.glucose)} color="var(--accent)" />
+          </div>
+          <div className="vitals-trend-row">
+            <div className="vitals-trend-label">
+              <strong>Blood pressure</strong>
+              <small>
+                {trend.avgSystolic && trend.avgDiastolic
+                  ? `avg ${trend.avgSystolic}/${trend.avgDiastolic}`
+                  : "—"}
+              </small>
+            </div>
+            <Sparkline values={trend.points.map((point) => point.systolic)} color="var(--warning)" />
+          </div>
+          <div className="vitals-trend-row">
+            <div className="vitals-trend-label">
+              <strong>Weight</strong>
+              <small>{wt ? `${wt.weightLbs} lb` : "—"}</small>
+            </div>
+            <Sparkline
+              values={trend.points.map((point) => point.weightLbs)}
+              color="var(--line-strong, #55d6a5)"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {history.length > 0 ? (
         <div>
           <h2 className="vitals-history-title">Recent readings</h2>
           <ul className="vitals-history">
@@ -269,5 +305,49 @@ export function Vitals() {
         with a healthcare professional.
       </p>
     </section>
+  );
+}
+
+function Sparkline({ values, color }: { values: (number | undefined)[]; color: string }) {
+  const defined = values
+    .map((value, index) => ({ value, index }))
+    .filter((point): point is { value: number; index: number } => point.value !== undefined);
+
+  if (defined.length < 2) {
+    return <span className="vitals-spark-empty">Not enough data yet</span>;
+  }
+
+  const nums = defined.map((point) => point.value);
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
+  const range = max - min || 1;
+  const width = 220;
+  const height = 44;
+  const pad = 4;
+  const xAt = (index: number) =>
+    values.length > 1 ? pad + (index / (values.length - 1)) * (width - 2 * pad) : width / 2;
+  const yAt = (value: number) => height - pad - ((value - min) / range) * (height - 2 * pad);
+  const polyline = defined.map((point) => `${xAt(point.index).toFixed(1)},${yAt(point.value).toFixed(1)}`).join(" ");
+
+  return (
+    <svg
+      className="vitals-spark"
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      role="img"
+      aria-label={`Trend, latest ${nums[nums.length - 1]}`}
+    >
+      <polyline
+        points={polyline}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {defined.map((point) => (
+        <circle key={point.index} cx={xAt(point.index)} cy={yAt(point.value)} r="2.5" fill={color} />
+      ))}
+    </svg>
   );
 }
