@@ -42,6 +42,7 @@ export function Dashboard() {
   const [postmortems, setPostmortems] = useState<EveningPostmortem[]>([]);
   const [now, setNow] = useState<Date | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [aiMessage, setAiMessage] = useState<string | null>(null);
   const heroName = useHeroName();
   const today = toLocalIsoDate();
   const readableToday = formatReadableDate();
@@ -118,7 +119,7 @@ export function Dashboard() {
       now
         ? buildDailyBrief({
             today,
-            hour: now.getHours(),
+            nowMinutes: now.getHours() * 60 + now.getMinutes(),
             tasks,
             workouts,
             metrics: metricEntries,
@@ -145,6 +146,46 @@ export function Dashboard() {
     return () => window.removeEventListener(dataChangedEventName, refresh);
   }, []);
 
+  // Personalize the briefing with GPT-5.5 when online; the deterministic
+  // summary stays as the instant/offline fallback. Only refetch when the
+  // briefing's content meaningfully changes.
+  const briefSignature = brief
+    ? `${brief.timeOfDay}|${brief.allClear}|${brief.focus
+        .map((item) => `${item.id}${item.overdue ? "!" : ""}`)
+        .join(",")}`
+    : "";
+
+  useEffect(() => {
+    if (!brief || !briefSignature) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    setAiMessage(null);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/ai/brief", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            timeOfDay: brief.timeOfDay,
+            heroName,
+            allClear: brief.allClear,
+            items: brief.focus.map((item) => item.message)
+          })
+        });
+        const data = await response.json();
+        if (!cancelled && response.ok && typeof data.message === "string") {
+          setAiMessage(data.message);
+        }
+      } catch {
+        // Keep the deterministic fallback.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [briefSignature]);
+
   return (
     <section className="dashboard-page" aria-labelledby="dashboard-title">
       <header className="dashboard-hero">
@@ -169,7 +210,7 @@ export function Dashboard() {
             <div>
               <p className="eyebrow">Coach</p>
               <p className="coach-brief-summary">
-                Good {brief.timeOfDay}, {heroName}. {brief.summary}
+                {aiMessage ?? `Good ${brief.timeOfDay}, ${heroName}. ${brief.summary}`}
               </p>
             </div>
           </div>

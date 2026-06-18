@@ -9,7 +9,7 @@ const today = "2026-06-17";
 function base(overrides: Partial<DailyBriefInput> = {}): DailyBriefInput {
   return {
     today,
-    hour: 9,
+    nowMinutes: 9 * 60,
     tasks: [],
     workouts: [],
     metrics: [],
@@ -54,7 +54,7 @@ describe("daily brief", () => {
   it("is all-clear when vitals, all workouts, and the plan are done", () => {
     const brief = buildDailyBrief(
       base({
-        hour: 10,
+        nowMinutes: 10 * 60,
         metrics: [metricToday({ weightLbs: 184 })],
         workouts: [
           createWorkout({ date: today, type: "strength" }, `${today}T06:00:00.000Z`),
@@ -68,6 +68,13 @@ describe("daily brief", () => {
     expect(brief.focus).toEqual([]);
   });
 
+  it("marks the fitness item overdue when behind the workout windows", () => {
+    // 10:00am, past the 9am first-workout deadline, with nothing logged.
+    const brief = buildDailyBrief(base({ nowMinutes: 10 * 60, metrics: [metricToday({ weightLbs: 184 })] }));
+    const fitness = brief.focus.find((item) => item.id === "fitness");
+    expect(fitness?.overdue).toBe(true);
+  });
+
   it("drops the vitals item once a vitals value is logged today", () => {
     const brief = buildDailyBrief({
       ...base(),
@@ -79,7 +86,7 @@ describe("daily brief", () => {
   it("suggests an evening review in the evening when the plan exists and isn't closed", () => {
     const brief = buildDailyBrief(
       base({
-        hour: 20,
+        nowMinutes: 20 * 60,
         metrics: [metricToday({ weightLbs: 184 })],
         workouts: [
           createWorkout({ date: today, type: "strength" }, `${today}T06:00:00.000Z`),
@@ -103,7 +110,7 @@ describe("daily brief", () => {
     };
     const brief = buildDailyBrief(
       base({
-        hour: 21,
+        nowMinutes: 21 * 60,
         metrics: [metricToday({ weightLbs: 184 })],
         workouts: [
           createWorkout({ date: today, type: "strength" }, `${today}T06:00:00.000Z`),
