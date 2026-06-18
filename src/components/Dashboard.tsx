@@ -13,11 +13,10 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { StatusPanel } from "@/components/StatusPanel";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
-import { createLocalEveningPostmortemRepository } from "@/data/eveningPostmortemRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
-import type { DailyPlan, EveningPostmortem, MetricEntry, Task, Workout } from "@/domain";
+import type { DailyPlan, MetricEntry, Task, Workout } from "@/domain";
 import { buildDailyBrief } from "@/domain/dailyBrief";
 import { getDashboardStats } from "@/domain/dashboard";
 import { getActiveDailyPlanForDate } from "@/domain/dailyPlans";
@@ -30,7 +29,6 @@ const FOCUS_ICON: Record<string, JrpgIconName> = {
   "/fitness": "metrics",
   "/metrics": "metrics",
   "/standup/morning": "morning",
-  "/standup/evening": "evening",
   "/tasks": "tasks"
 };
 
@@ -39,7 +37,6 @@ export function Dashboard() {
   const [plans, setPlans] = useState<DailyPlan[]>([]);
   const [metricEntries, setMetricEntries] = useState<MetricEntry[]>([]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
-  const [postmortems, setPostmortems] = useState<EveningPostmortem[]>([]);
   const [now, setNow] = useState<Date | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
@@ -70,7 +67,6 @@ export function Dashboard() {
       hasDemoData({
         dailyPlans: plans,
         dailyReports: [],
-        eveningPostmortems: [],
         journalEntries: [],
         metricEntries,
         tasks
@@ -82,7 +78,6 @@ export function Dashboard() {
       countDemoData({
         dailyPlans: plans,
         dailyReports: [],
-        eveningPostmortems: [],
         journalEntries: [],
         metricEntries,
         tasks
@@ -123,11 +118,10 @@ export function Dashboard() {
             tasks,
             workouts,
             metrics: metricEntries,
-            dailyPlans: plans,
-            eveningPostmortems: postmortems
+            dailyPlans: plans
           })
         : null,
-    [now, today, tasks, workouts, metricEntries, plans, postmortems]
+    [now, today, tasks, workouts, metricEntries, plans]
   );
 
   useEffect(() => {
@@ -137,7 +131,6 @@ export function Dashboard() {
       setPlans(createLocalDailyPlanRepository(storage).load());
       setMetricEntries(createLocalMetricRepository(storage).load());
       setWorkouts(createLocalWorkoutRepository(storage).load());
-      setPostmortems(createLocalEveningPostmortemRepository(storage).load());
       setNow(new Date());
       setHasLoaded(true);
     }
@@ -401,9 +394,6 @@ export function Dashboard() {
               </CommandButton>
               <CommandButton href="/health-import" icon="healthImport">
                 Import Health Data
-              </CommandButton>
-              <CommandButton href="/standup/evening" icon="evening">
-                Start Evening Postmortem
               </CommandButton>
             </div>
           </section>

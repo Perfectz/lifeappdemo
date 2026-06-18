@@ -3,7 +3,6 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AICoachPanel } from "@/components/AICoachPanel";
-import { eveningPostmortemStorageKey } from "@/data/eveningPostmortemRepository";
 import { taskStorageKey } from "@/data/taskRepository";
 
 const now = "2026-05-04T10:00:00.000Z";
@@ -186,73 +185,6 @@ describe("AICoachPanel", () => {
     expect(JSON.parse(window.localStorage.getItem(taskStorageKey) ?? "[]")[0]).toMatchObject({
       title: "Walk on the treadmill tomorrow"
     });
-  });
-
-  it("persists returned evening postmortems when a proposal is confirmed", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          message: "Proposal ready.",
-          mode: "evening",
-          proposals: [
-            {
-              id: "proposal-pm",
-              toolName: "create_journal_entry",
-              summary: "Capture lesson in postmortem",
-              payload: { content: "Shipped the launch quest." },
-              status: "pending",
-              createdAt: now,
-              updatedAt: now
-            }
-          ],
-          usedContext: {
-            openTaskCount: 0,
-            recentMetricCount: 0,
-            recentJournalEntryCount: 0
-          }
-        })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          ok: true,
-          appliedChangeSummary: "Captured evening postmortem.",
-          eveningPostmortems: [
-            {
-              id: "pm-1",
-              date: "2026-05-04",
-              taskOutcomes: [],
-              lessonsLearned: "Shipped the launch quest.",
-              createdAt: now,
-              updatedAt: now
-            }
-          ]
-        })
-      });
-    vi.stubGlobal("fetch", fetchMock);
-
-    render(<AICoachPanel />);
-
-    fireEvent.change(screen.getByLabelText("Message"), {
-      target: { value: "Log my evening reflection." }
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Send" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Capture lesson in postmortem")).toBeVisible();
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Applied change: Captured evening postmortem.")).toBeVisible();
-    });
-    // Regression guard: the postmortem must actually be written to storage,
-    // not silently dropped on save-back.
-    expect(
-      JSON.parse(window.localStorage.getItem(eveningPostmortemStorageKey) ?? "[]")[0]
-    ).toMatchObject({ id: "pm-1", lessonsLearned: "Shipped the launch quest." });
   });
 
   it("rejects a proposal without mutating tasks", async () => {

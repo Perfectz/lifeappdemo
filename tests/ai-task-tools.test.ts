@@ -274,7 +274,6 @@ describe("AI task tools", () => {
       [],
       [],
       [],
-      [],
       []
     );
 

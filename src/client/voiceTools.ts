@@ -52,7 +52,6 @@ const PAGE_PATHS: Record<string, string> = {
   coach: "/coach",
   reports: "/reports",
   morning_standup: "/standup/morning",
-  evening_postmortem: "/standup/evening",
   settings: "/settings"
 };
 

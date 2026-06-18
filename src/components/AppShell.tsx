@@ -27,7 +27,6 @@ import { VoiceAgent } from "@/components/VoiceAgent";
 import { navigationFooterItems, navigationGroups } from "@/config/navigation";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { isDemoModeEnabled, loadLocalDemoDataSet } from "@/data/demoDataRepository";
-import { createLocalEveningPostmortemRepository } from "@/data/eveningPostmortemRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
 import { dataChangedEventName } from "@/data/createLocalRepository";
@@ -156,7 +155,6 @@ export function AppShell({ children }: AppShellProps) {
       const tasks = createLocalTaskRepository(storage).load();
       const metrics = createLocalMetricRepository(storage).load();
       const plans = createLocalDailyPlanRepository(storage).load();
-      const postmortems = createLocalEveningPostmortemRepository(storage).load();
       const nextStatus = getHeroStatus(tasks, metrics, today);
 
       // Celebrate progression milestones — but only after the first
@@ -193,7 +191,6 @@ export function AppShell({ children }: AppShellProps) {
         getNavStatusMap({
           tasks,
           plans,
-          postmortems,
           today,
           hour: stamp.getHours()
         })

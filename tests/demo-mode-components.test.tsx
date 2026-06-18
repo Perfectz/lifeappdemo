@@ -6,7 +6,6 @@ import { Dashboard } from "@/components/Dashboard";
 import { DemoModePanel } from "@/components/DemoModePanel";
 import { dailyPlanStorageKey } from "@/data/dailyPlanRepository";
 import { dailyReportStorageKey } from "@/data/dailyReportRepository";
-import { eveningPostmortemStorageKey } from "@/data/eveningPostmortemRepository";
 import { journalStorageKey } from "@/data/journalRepository";
 import { metricStorageKey } from "@/data/metricRepository";
 import { taskStorageKey } from "@/data/taskRepository";
@@ -37,7 +36,6 @@ describe("demo mode components", () => {
     window.localStorage.setItem(metricStorageKey, JSON.stringify(demoData.metricEntries));
     window.localStorage.setItem(journalStorageKey, JSON.stringify(demoData.journalEntries));
     window.localStorage.setItem(dailyReportStorageKey, JSON.stringify(demoData.dailyReports));
-    window.localStorage.setItem(eveningPostmortemStorageKey, JSON.stringify(demoData.eveningPostmortems));
     window.localStorage.setItem(demoModeStorageKey, "enabled");
 
     render(<Dashboard />);

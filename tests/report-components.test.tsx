@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DailyReportExport } from "@/components/DailyReportExport";
 import { dailyPlanStorageKey } from "@/data/dailyPlanRepository";
 import { dailyReportStorageKey } from "@/data/dailyReportRepository";
-import { eveningPostmortemStorageKey } from "@/data/eveningPostmortemRepository";
 import { journalStorageKey } from "@/data/journalRepository";
 import { metricStorageKey } from "@/data/metricRepository";
 import { taskStorageKey } from "@/data/taskRepository";
@@ -40,23 +39,6 @@ function seedReportData() {
         sideQuestTaskIds: [],
         intention: "Export the day clearly.",
         status: "closed",
-        createdAt: now,
-        updatedAt: now
-      }
-    ])
-  );
-  window.localStorage.setItem(
-    eveningPostmortemStorageKey,
-    JSON.stringify([
-      {
-        id: "postmortem-1",
-        date,
-        dailyPlanId: "plan-1",
-        taskOutcomes: [{ taskId: "task-1", outcome: "completed" }],
-        wins: "Markdown is readable.",
-        friction: "Clipboard needed a mock.",
-        lessonsLearned: "Export plain text first.",
-        tomorrowFollowUps: "Use report as V08 context.",
         createdAt: now,
         updatedAt: now
       }

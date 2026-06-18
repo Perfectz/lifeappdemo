@@ -4,95 +4,69 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { MorningStandup } from "@/components/MorningStandup";
 import { dailyPlanStorageKey } from "@/data/dailyPlanRepository";
-import { taskStorageKey } from "@/data/taskRepository";
-import type { DailyPlan, Task } from "@/domain";
-
-const now = "2026-05-04T09:00:00.000Z";
-
-function todayIsoDate(): string {
-  const today = new Date();
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
-    today.getDate()
-  ).padStart(2, "0")}`;
-}
-
-function makeTask(overrides: Partial<Task> = {}): Task {
-  return {
-    id: "task-1",
-    title: "Plan V03",
-    status: "todo",
-    priority: "medium",
-    tags: [],
-    createdAt: now,
-    updatedAt: now,
-    ...overrides
-  };
-}
-
-function makePlan(overrides: Partial<DailyPlan> = {}): DailyPlan {
-  return {
-    id: "plan-1",
-    date: todayIsoDate(),
-    mainQuestTaskId: "task-1",
-    sideQuestTaskIds: [],
-    status: "planned",
-    createdAt: now,
-    updatedAt: now,
-    ...overrides
-  };
-}
+import { metricStorageKey } from "@/data/metricRepository";
 
 describe("MorningStandup", () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
 
-  it("shows active tasks as planning options", async () => {
-    window.localStorage.setItem(
-      taskStorageKey,
-      JSON.stringify([
-        makeTask({ id: "active", title: "Choose me" }),
-        makeTask({ id: "done", title: "Already done", status: "done" })
-      ])
-    );
-
+  it("renders the three morning steps", async () => {
     render(<MorningStandup />);
-
     await waitFor(() => {
-      expect(screen.getAllByText("Choose me").length).toBeGreaterThan(0);
+      expect(screen.getByRole("heading", { name: /Good morning/i })).toBeVisible();
     });
-    expect(screen.queryByText("Already done")).not.toBeInTheDocument();
+    expect(screen.getByText("Log this morning's vitals")).toBeVisible();
+    expect(screen.getByText(/Today's training/)).toBeVisible();
+    expect(screen.getByText("Set today's intention")).toBeVisible();
   });
 
-  it("adds a quick task to selectable planning options", async () => {
+  it("logs morning vitals to the metric store", async () => {
     render(<MorningStandup />);
 
-    await waitFor(() => {
-      expect(screen.getByText("No open tasks yet. Create one to start planning.")).toBeVisible();
-    });
+    fireEvent.change(screen.getByLabelText(/Glucose/i), { target: { value: "96" } });
+    fireEvent.change(screen.getByLabelText(/Systolic/i), { target: { value: "122" } });
+    fireEvent.change(screen.getByLabelText(/Diastolic/i), { target: { value: "78" } });
+    fireEvent.change(screen.getByLabelText(/Weight/i), { target: { value: "228" } });
+    fireEvent.click(screen.getByRole("button", { name: "Log vitals" }));
 
-    fireEvent.change(screen.getByLabelText("Quick Quest"), {
-      target: { value: "Quick capture" }
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Add Quick Quest" }));
+    await waitFor(() =>
+      expect(screen.getByText(/Morning vitals logged/i)).toBeVisible()
+    );
 
-    await waitFor(() => {
-      expect(screen.getAllByText("Quick capture").length).toBeGreaterThan(0);
+    const stored = JSON.parse(window.localStorage.getItem(metricStorageKey) ?? "[]");
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toMatchObject({
+      bloodGlucoseMgDl: 96,
+      bloodPressureSystolic: 122,
+      bloodPressureDiastolic: 78,
+      weightLbs: 228,
+      checkInType: "morning"
     });
   });
 
-  it("loads an existing plan for editing", async () => {
-    window.localStorage.setItem(taskStorageKey, JSON.stringify([makeTask()]));
-    window.localStorage.setItem(
-      dailyPlanStorageKey,
-      JSON.stringify([makePlan({ intention: "Edit the day." })])
-    );
+  it("requires at least one vitals value", async () => {
+    render(<MorningStandup />);
+    fireEvent.click(screen.getByRole("button", { name: "Log vitals" }));
 
+    await waitFor(() =>
+      expect(screen.getByText(/Enter a glucose, blood pressure, or weight value/i)).toBeVisible()
+    );
+    expect(JSON.parse(window.localStorage.getItem(metricStorageKey) ?? "[]")).toHaveLength(0);
+  });
+
+  it("saves a daily intention to the plan store", async () => {
     render(<MorningStandup />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Edit today's plan.")).toBeVisible();
+    fireEvent.change(screen.getByPlaceholderText(/anchor the day/i), {
+      target: { value: "Walk before the first meeting." }
     });
-    expect(screen.getByLabelText("Intention")).toHaveValue("Edit the day.");
+    fireEvent.click(screen.getByRole("button", { name: "Save intention" }));
+
+    await waitFor(() => expect(screen.getByText(/Intention saved/i)).toBeVisible());
+
+    const stored = JSON.parse(window.localStorage.getItem(dailyPlanStorageKey) ?? "[]");
+    expect(stored).toHaveLength(1);
+    expect(stored[0].intention).toBe("Walk before the first meeting.");
   });
 });

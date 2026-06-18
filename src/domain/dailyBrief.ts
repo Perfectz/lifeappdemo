@@ -1,6 +1,5 @@
 import type {
   DailyPlan,
-  EveningPostmortem,
   IsoDate,
   MetricEntry,
   Task,
@@ -49,7 +48,6 @@ export type DailyBriefInput = {
   workouts: Workout[];
   metrics: MetricEntry[];
   dailyPlans: DailyPlan[];
-  eveningPostmortems: EveningPostmortem[];
 };
 
 function vitalsLoggedToday(metrics: MetricEntry[], today: IsoDate): boolean {
@@ -73,7 +71,7 @@ function formatTime(minutes: number): string {
 }
 
 export function buildDailyBrief(input: DailyBriefInput): DailyBrief {
-  const { today, nowMinutes, workouts, metrics, dailyPlans, eveningPostmortems } = input;
+  const { today, nowMinutes, workouts, metrics, dailyPlans } = input;
   const hour = Math.floor(nowMinutes / 60);
   const focus: FocusItem[] = [];
 
@@ -117,16 +115,6 @@ export function buildDailyBrief(input: DailyBriefInput): DailyBrief {
       message: "You haven't planned today yet — pick a main quest in your morning stand-up.",
       ctaLabel: "Plan my day",
       href: "/standup/morning"
-    });
-  }
-
-  const eveningDone = eveningPostmortems.some((postmortem) => postmortem.date === today);
-  if (nowMinutes >= 18 * 60 && todayPlan && !eveningDone) {
-    focus.push({
-      id: "evening",
-      message: "Close out the day with an evening postmortem.",
-      ctaLabel: "Evening review",
-      href: "/standup/evening"
     });
   }
 

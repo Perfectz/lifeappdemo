@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import type {
   DailyPlan,
   DailyReport,
-  EveningPostmortem,
   JournalEntry,
   MetricEntry,
   Task
@@ -45,20 +44,6 @@ describe("domain placeholder types", () => {
       recordedAt: now
     };
 
-    const postmortem: EveningPostmortem = {
-      id: "postmortem-1",
-      createdAt: now,
-      updatedAt: now,
-      date: plan.date,
-      dailyPlanId: plan.id,
-      taskOutcomes: [
-        {
-          taskId: task.id,
-          outcome: "completed"
-        }
-      ]
-    };
-
     const journal: JournalEntry = {
       id: "journal-1",
       createdAt: now,
@@ -79,11 +64,10 @@ describe("domain placeholder types", () => {
       generatedBy: "deterministic"
     };
 
-    expect([task, plan, metric, postmortem, journal, report].map((item) => item.id)).toEqual([
+    expect([task, plan, metric, journal, report].map((item) => item.id)).toEqual([
       "task-1",
       "plan-1",
       "metric-1",
-      "postmortem-1",
       "journal-1",
       "report-1"
     ]);

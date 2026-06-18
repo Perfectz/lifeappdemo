@@ -11,7 +11,7 @@ import { createLocalTaskRepository } from "@/data/taskRepository";
 const STEPS = [
   { icon: "🌅", title: "Plan", text: "Open a Morning Stand-Up and pick one Main Quest." },
   { icon: "⚔️", title: "Clear", text: "Work your Quest Log and complete quests to earn XP." },
-  { icon: "🌙", title: "Reflect", text: "Close the day with an Evening Postmortem and lessons." },
+  { icon: "🌙", title: "Reflect", text: "Close the day by journaling wins and lessons." },
   { icon: "📈", title: "Grow", text: "Watch Trends reveal your patterns over time." }
 ];
 

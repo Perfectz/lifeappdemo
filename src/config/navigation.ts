@@ -53,13 +53,6 @@ export const navigationGroups: NavigationGroup[] = [
         icon: "morning",
         shortLabel: "Morning",
         primaryMobile: true
-      },
-      {
-        label: "Evening Postmortem",
-        href: "/standup/evening",
-        description: "Close the day",
-        icon: "evening",
-        shortLabel: "Evening"
       }
     ]
   },

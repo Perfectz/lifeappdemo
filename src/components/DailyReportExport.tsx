@@ -6,15 +6,13 @@ import { CharacterSprite } from "@/components/CharacterSprite";
 import { SectionHeader } from "@/components/SectionHeader";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { createLocalDailyReportRepository } from "@/data/dailyReportRepository";
-import { createLocalEveningPostmortemRepository } from "@/data/eveningPostmortemRepository";
 import { createLocalJournalRepository } from "@/data/journalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
-import type { DailyPlan, DailyReport, EveningPostmortem, JournalEntry, MetricEntry, Task } from "@/domain";
+import type { DailyPlan, DailyReport, JournalEntry, MetricEntry, Task } from "@/domain";
 import { getDailyPlanForDate } from "@/domain/dailyPlans";
 import { toLocalIsoDate } from "@/domain/dates";
 import { hasDemoData } from "@/domain/demoData";
-import { getEveningPostmortemForDate } from "@/domain/eveningPostmortems";
 import {
   generateDailyReport,
   getDailyReportFilename,
@@ -26,7 +24,6 @@ export function DailyReportExport() {
   const [selectedDate, setSelectedDate] = useState(toLocalIsoDate());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [plans, setPlans] = useState<DailyPlan[]>([]);
-  const [postmortems, setPostmortems] = useState<EveningPostmortem[]>([]);
   const [metrics, setMetrics] = useState<MetricEntry[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [reports, setReports] = useState<DailyReport[]>([]);
@@ -44,12 +41,11 @@ export function DailyReportExport() {
       hasDemoData({
         dailyPlans: plans,
         dailyReports: reports,
-        eveningPostmortems: postmortems,
         journalEntries,
         metricEntries: metrics,
         tasks
       }),
-    [journalEntries, metrics, plans, postmortems, reports, tasks]
+    [journalEntries, metrics, plans, reports, tasks]
   );
 
   useEffect(() => {
@@ -57,7 +53,6 @@ export function DailyReportExport() {
 
     setTasks(createLocalTaskRepository(window.localStorage).load());
     setPlans(createLocalDailyPlanRepository(window.localStorage).load());
-    setPostmortems(createLocalEveningPostmortemRepository(window.localStorage).load());
     setMetrics(createLocalMetricRepository(window.localStorage).load());
     setJournalEntries(createLocalJournalRepository(window.localStorage).load());
     setReports(loadedReports);
@@ -80,7 +75,6 @@ export function DailyReportExport() {
       date: selectedDate,
       tasks,
       dailyPlan: getDailyPlanForDate(plans, selectedDate),
-      eveningPostmortem: getEveningPostmortemForDate(postmortems, selectedDate),
       metricEntries: metrics,
       journalEntries
     });
