@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "LifeQuest OS",
     short_name: "LifeQuest",
     description: "A local-first JRPG-inspired life operating system.",
-    start_url: withBasePath(basePath ? "/dashboard/" : "/dashboard"),
+    start_url: withBasePath(basePath ? "/vitals/" : "/vitals"),
     scope: basePath ? `${basePath}/` : "/",
     display: "standalone",
     display_override: ["window-controls-overlay", "standalone", "minimal-ui"],

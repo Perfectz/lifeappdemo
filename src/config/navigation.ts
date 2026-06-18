@@ -51,8 +51,7 @@ export const navigationGroups: NavigationGroup[] = [
         href: "/standup/morning",
         description: "Plan the day",
         icon: "morning",
-        shortLabel: "Morning",
-        primaryMobile: true
+        shortLabel: "Morning"
       },
       {
         label: "Evening Postmortem",
@@ -77,7 +76,9 @@ export const navigationGroups: NavigationGroup[] = [
         label: "Vitals",
         href: "/vitals",
         description: "Glucose, BP & weight",
-        icon: "metrics"
+        icon: "metrics",
+        shortLabel: "Vitals",
+        primaryMobile: true
       },
       {
         label: "Health Import",
