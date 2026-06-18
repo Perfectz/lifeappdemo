@@ -8,7 +8,7 @@ describe("PWA manifest", () => {
 
     expect(value.name).toBe("LifeQuest OS");
     expect(value.short_name).toBe("LifeQuest");
-    expect(value.start_url).toBe("/vitals");
+    expect(value.start_url).toBe("/dashboard");
     expect(value.scope).toBe("/");
     expect(value.display).toBe("standalone");
     expect(value.theme_color).toBe("#101319");

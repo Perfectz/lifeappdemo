@@ -1,28 +1,48 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { useHeroName } from "@/client/useHeroName";
 import { AiAdvisorPopup } from "@/components/AiAdvisorPopup";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { CommandButton } from "@/components/CommandButton";
 import { DashboardQuestCard } from "@/components/DashboardQuestCard";
+import type { JrpgIconName } from "@/components/JrpgIcon";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatusPanel } from "@/components/StatusPanel";
+import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
+import { createLocalEveningPostmortemRepository } from "@/data/eveningPostmortemRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
-import type { DailyPlan, MetricEntry, Task } from "@/domain";
+import { createLocalWorkoutRepository } from "@/data/workoutRepository";
+import type { DailyPlan, EveningPostmortem, MetricEntry, Task, Workout } from "@/domain";
+import { buildDailyBrief } from "@/domain/dailyBrief";
 import { getDashboardStats } from "@/domain/dashboard";
 import { getActiveDailyPlanForDate } from "@/domain/dailyPlans";
 import { formatReadableDate, toLocalIsoDate } from "@/domain/dates";
 import { countDemoData, hasDemoData } from "@/domain/demoData";
 import { getLatestMetricEntry } from "@/domain/metrics";
 
+const FOCUS_ICON: Record<string, JrpgIconName> = {
+  "/vitals": "metrics",
+  "/fitness": "metrics",
+  "/metrics": "metrics",
+  "/standup/morning": "morning",
+  "/standup/evening": "evening",
+  "/tasks": "tasks"
+};
+
 export function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [plans, setPlans] = useState<DailyPlan[]>([]);
   const [metricEntries, setMetricEntries] = useState<MetricEntry[]>([]);
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [postmortems, setPostmortems] = useState<EveningPostmortem[]>([]);
+  const [now, setNow] = useState<Date | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const heroName = useHeroName();
   const today = toLocalIsoDate();
   const readableToday = formatReadableDate();
   const stats = useMemo(() => getDashboardStats(tasks, today), [tasks, today]);
@@ -93,11 +113,36 @@ export function Dashboard() {
     return "Start the morning stand-up and choose one Main Quest before adding more side objectives.";
   }, [hasLoaded, mainQuest, stats.plannedTodayTasks.length, todaysPlan]);
 
+  const brief = useMemo(
+    () =>
+      now
+        ? buildDailyBrief({
+            today,
+            hour: now.getHours(),
+            tasks,
+            workouts,
+            metrics: metricEntries,
+            dailyPlans: plans,
+            eveningPostmortems: postmortems
+          })
+        : null,
+    [now, today, tasks, workouts, metricEntries, plans, postmortems]
+  );
+
   useEffect(() => {
-    setTasks(createLocalTaskRepository(window.localStorage).load());
-    setPlans(createLocalDailyPlanRepository(window.localStorage).load());
-    setMetricEntries(createLocalMetricRepository(window.localStorage).load());
-    setHasLoaded(true);
+    function refresh() {
+      const storage = window.localStorage;
+      setTasks(createLocalTaskRepository(storage).load());
+      setPlans(createLocalDailyPlanRepository(storage).load());
+      setMetricEntries(createLocalMetricRepository(storage).load());
+      setWorkouts(createLocalWorkoutRepository(storage).load());
+      setPostmortems(createLocalEveningPostmortemRepository(storage).load());
+      setNow(new Date());
+      setHasLoaded(true);
+    }
+    refresh();
+    window.addEventListener(dataChangedEventName, refresh);
+    return () => window.removeEventListener(dataChangedEventName, refresh);
   }, []);
 
   return (
@@ -113,6 +158,46 @@ export function Dashboard() {
           <CharacterSprite className="page-sprite" pose="victory" />
         </div>
       </header>
+
+      {brief ? (
+        <section
+          className={brief.allClear ? "coach-brief coach-brief-clear" : "coach-brief"}
+          aria-label="Coach briefing"
+        >
+          <div className="coach-brief-head">
+            <CharacterSprite className="coach-brief-sprite" pose={brief.allClear ? "victory" : "thinking"} />
+            <div>
+              <p className="eyebrow">Coach</p>
+              <p className="coach-brief-summary">
+                Good {brief.timeOfDay}, {heroName}. {brief.summary}
+              </p>
+            </div>
+          </div>
+
+          {brief.allClear ? (
+            <p className="coach-brief-allclear">✓ Vitals, workouts, and your plan are handled. Keep it rolling.</p>
+          ) : (
+            <>
+              <p className="coach-brief-focus">{brief.focus[0].message}</p>
+              <CommandButton href={brief.focus[0].href} icon={FOCUS_ICON[brief.focus[0].href] ?? "dashboard"}>
+                {brief.focus[0].ctaLabel}
+              </CommandButton>
+              {brief.focus.length > 1 ? (
+                <ul className="coach-brief-more">
+                  {brief.focus.slice(1).map((item) => (
+                    <li key={item.id}>
+                      <span>{item.message}</span>
+                      <Link href={item.href} className="coach-brief-link">
+                        {item.ctaLabel} →
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          )}
+        </section>
+      ) : null}
 
       <section className="dashboard-grid" aria-label="Today snapshot">
         <StatusPanel

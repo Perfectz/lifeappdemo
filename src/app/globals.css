@@ -4584,6 +4584,79 @@ h1 {
   font-size: 0.8rem;
 }
 
+/* --- Dashboard coach briefing --- */
+.coach-brief {
+  background: var(--menu-window-fill);
+  border: 1px solid var(--line-strong, var(--accent));
+  border-radius: 6px;
+  box-shadow: var(--bevel-inset), 0 0 0 1px rgba(120, 220, 180, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1rem;
+}
+
+.coach-brief-clear {
+  border-color: var(--bevel-dark);
+  box-shadow: var(--bevel-inset);
+}
+
+.coach-brief-head {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.coach-brief-sprite {
+  height: 3rem;
+  width: 3rem;
+}
+
+.coach-brief-summary {
+  font-size: 1.05rem;
+  font-weight: 650;
+  margin: 0;
+}
+
+.coach-brief-focus {
+  color: var(--warning);
+  margin: 0;
+}
+
+.coach-brief-allclear {
+  color: var(--accent);
+  margin: 0;
+}
+
+.coach-brief-more {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+}
+
+.coach-brief-more li {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.coach-brief-link {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.coach-brief-link:hover,
+.coach-brief-link:focus-visible {
+  text-decoration: underline;
+}
+
 .fitness-sub {
   color: var(--muted);
   margin: 0.4rem 0 0.75rem;
