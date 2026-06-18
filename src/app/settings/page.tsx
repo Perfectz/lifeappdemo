@@ -1,6 +1,8 @@
 import { CloudSyncPanel } from "@/components/CloudSyncPanel";
 import { DataBackupPanel } from "@/components/DataBackupPanel";
 import { DemoModePanel } from "@/components/DemoModePanel";
+import { PushNotificationsPanel } from "@/components/PushNotificationsPanel";
+import { pushNotificationsEnabled } from "@/config/features";
 import { PlaceholderPage } from "@/components/PlaceholderPage";
 import { InstallReadinessPanel } from "@/components/InstallReadinessPanel";
 import { ProfilePanel } from "@/components/ProfilePanel";
@@ -34,6 +36,12 @@ export default function SettingsPage() {
           <h2>Cloud Sync</h2>
           <CloudSyncPanel />
         </section>
+        {pushNotificationsEnabled ? (
+          <section className="dashboard-section">
+            <h2>Phone Reminders</h2>
+            <PushNotificationsPanel />
+          </section>
+        ) : null}
         <section className="dashboard-section">
           <h2>Backup &amp; Restore</h2>
           <DataBackupPanel />

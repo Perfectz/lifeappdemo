@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 import { basePath } from "@/config/site";
 
-const currentCacheVersion = "lifequest-v18";
+const currentCacheVersion = "lifequest-v19";
 
 export function PWAServiceWorkerRegister() {
   useEffect(() => {
