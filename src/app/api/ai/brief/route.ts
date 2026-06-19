@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     heroName?: unknown;
     allClear?: unknown;
     items?: unknown;
+    aboutMe?: unknown;
   };
 
   const items = Array.isArray(facts.items)
@@ -38,7 +39,8 @@ export async function POST(request: Request) {
       timeOfDay: typeof facts.timeOfDay === "string" ? facts.timeOfDay : "day",
       heroName: typeof facts.heroName === "string" ? facts.heroName.slice(0, 48) : undefined,
       allClear: facts.allClear === true,
-      items
+      items,
+      aboutMe: typeof facts.aboutMe === "string" ? facts.aboutMe.slice(0, 2000) : undefined
     });
     return NextResponse.json({ message });
   } catch (error) {

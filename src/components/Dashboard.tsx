@@ -19,8 +19,12 @@ import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
+import { createLocalMemoryRepository } from "@/data/memoryRepository";
+import { loadWiki } from "@/data/wikiRepository";
 import type { DailyPlan, MetricEntry, Task, Workout } from "@/domain";
 import { buildDailyBrief } from "@/domain/dailyBrief";
+import { formatMemoriesForPrompt } from "@/domain/memory";
+import { formatWikiForPrompt } from "@/domain/personalWiki";
 import { getDashboardStats } from "@/domain/dashboard";
 import { getActiveDailyPlanForDate } from "@/domain/dailyPlans";
 import { formatReadableDate, toLocalIsoDate } from "@/domain/dates";
@@ -165,7 +169,14 @@ export function Dashboard() {
             timeOfDay: brief.timeOfDay,
             heroName,
             allClear: brief.allClear,
-            items: brief.focus.map((item) => item.message)
+            items: brief.focus.map((item) => item.message),
+            aboutMe:
+              [
+                formatWikiForPrompt(loadWiki(window.localStorage)),
+                formatMemoriesForPrompt(createLocalMemoryRepository(window.localStorage).load())
+              ]
+                .filter(Boolean)
+                .join("\n\n") || undefined
           })
         });
         const data = await response.json();
