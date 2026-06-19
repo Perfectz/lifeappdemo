@@ -53,6 +53,67 @@ export function FoodSearch({ date }: { date: string }) {
 
   useEffect(() => () => stopScan(), []);
 
+  // Wire the camera + detect loop only AFTER the <video> mounts (when scanning
+  // flips true). Doing this synchronously inside startScan failed because the
+  // video ref isn't attached until the next render.
+  useEffect(() => {
+    if (!scanning) return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream) return;
+    let cancelled = false;
+    video.srcObject = stream;
+
+    let detector: DetectorLike;
+    try {
+      const Detector = (window as unknown as { BarcodeDetector: new (opts?: unknown) => DetectorLike })
+        .BarcodeDetector;
+      try {
+        detector = new Detector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39"] });
+      } catch {
+        detector = new Detector();
+      }
+    } catch {
+      setError("Barcode scanning isn't available here — type the number instead.");
+      stopScan();
+      return;
+    }
+
+    const tick = async () => {
+      if (cancelled || !videoRef.current) return;
+      try {
+        const codes = await detector.detect(videoRef.current);
+        if (codes.length > 0 && codes[0].rawValue) {
+          const code = codes[0].rawValue;
+          stopScan();
+          setBarcode(code);
+          void lookupBarcode(code);
+          return;
+        }
+      } catch {
+        // transient detect error — keep trying
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    video
+      .play()
+      .then(() => {
+        rafRef.current = requestAnimationFrame(tick);
+      })
+      .catch(() => {
+        setError("Couldn't start the camera preview.");
+        stopScan();
+      });
+
+    return () => {
+      cancelled = true;
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanning]);
+
   function showResults(items: FoodSearchItem[]) {
     setResults(items);
     setGrams(
@@ -105,37 +166,14 @@ export function FoodSearch({ date }: { date: string }) {
     }
     setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      streamRef.current = stream;
-      setScanning(true);
-      const video = videoRef.current;
-      if (!video) return;
-      video.srcObject = stream;
-      await video.play();
-      const Detector = (window as unknown as { BarcodeDetector: new (opts?: unknown) => DetectorLike })
-        .BarcodeDetector;
-      const detector = new Detector({
-        formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"]
+      // Acquire the camera, then flip `scanning` on — the effect above wires up
+      // the preview + detect loop once the <video> has mounted.
+      streamRef.current = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }
       });
-      const tick = async () => {
-        if (!streamRef.current || !videoRef.current) return;
-        try {
-          const codes = await detector.detect(videoRef.current);
-          if (codes.length > 0 && codes[0].rawValue) {
-            const code = codes[0].rawValue;
-            stopScan();
-            setBarcode(code);
-            void lookupBarcode(code);
-            return;
-          }
-        } catch {
-          // transient detect error — keep trying
-        }
-        rafRef.current = requestAnimationFrame(tick);
-      };
-      rafRef.current = requestAnimationFrame(tick);
+      setScanning(true);
     } catch {
-      setError("Couldn't open the camera. Type the barcode number instead.");
+      setError("Couldn't open the camera — allow camera access, or type the barcode number instead.");
       stopScan();
     }
   }
