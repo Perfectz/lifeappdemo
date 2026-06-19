@@ -7071,3 +7071,53 @@ html[data-theme="amber"] .quest-card {
   color: var(--text, #fff);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Targeted UI polish: number legibility + mobile feel ----------
+   Keeps the retro theme + mint/gold palette; just makes the numbers you read
+   daily crisp and aligned, the meters animate, and taps feel responsive. */
+
+.status-panel strong,
+.metric-snapshot dd,
+.north-star-dial strong,
+.nutri-budget-equation strong,
+.nutri-budget-noset strong,
+.setup-budget strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle motion when a metric/macro/calorie bar updates. */
+.north-star-meter span,
+.nutri-macro-bar span,
+.nutri-trend-bar {
+  transition: width 0.45s ease, height 0.45s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .north-star-meter span,
+  .nutri-macro-bar span,
+  .nutri-trend-bar {
+    transition: none;
+  }
+}
+
+/* Mobile tap feel: kill the default Android tap-flash, add a press nudge. */
+button,
+.command-button,
+.nutri-mini-btn,
+.setup-prompt {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.login-submit:active:not([disabled]),
+.command-button:active,
+.nutri-mini-btn:active,
+.chat-send:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* On narrow phones, give the dense nutrition entry inputs room to breathe. */
+@media (max-width: 480px) {
+  .nutri-add-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
