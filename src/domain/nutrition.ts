@@ -130,6 +130,38 @@ export function sumMacros(entries: FoodEntry[]): Required<Macros> {
   );
 }
 
+/** A single day's food entries, newest first. */
+export function getFoodEntriesForDate(entries: FoodEntry[], date: IsoDate): FoodEntry[] {
+  return entries
+    .filter((entry) => entry.date === date)
+    .sort((a, b) => (b.recordedAt > a.recordedAt ? 1 : -1));
+}
+
+/** Group a day's entries by meal, in display order. */
+export function groupEntriesByMeal(entries: FoodEntry[]): Record<MealType, FoodEntry[]> {
+  const grouped: Record<MealType, FoodEntry[]> = {
+    breakfast: [],
+    lunch: [],
+    dinner: [],
+    snack: []
+  };
+  for (const entry of entries) {
+    grouped[entry.mealType].push(entry);
+  }
+  return grouped;
+}
+
+/** Calories left in the day's budget (can go negative when over budget). */
+export function caloriesRemaining(
+  calorieTarget: number | undefined,
+  consumedCalories: number
+): number | undefined {
+  if (calorieTarget === undefined) {
+    return undefined;
+  }
+  return Math.round(calorieTarget - consumedCalories);
+}
+
 export function isFoodEntry(value: unknown): value is FoodEntry {
   if (!value || typeof value !== "object") {
     return false;

@@ -25,6 +25,7 @@ const SYSTEM_PROMPT = [
   "- log_cardio: { activity: walk|run|jog|ddr|bike-vest, minutes?, distanceMiles?, weightVestLbs? }",
   "- log_strength: { day: 1-5, variant?: Free Weight|Machine|Kettlebell }",
   "- log_martial_arts: { session: bas-beginner|bas-advanced|shidokan-kickboxing|shidokan-karate, minutes? }",
+  "- log_food: { description, mealType?: breakfast|lunch|dinner|snack, calories?, proteinG?, carbsG?, fatG?, fiberG?, confidence? } — for a photo of a meal/food/drink or a nutrition label; estimate calories and macros.",
   "- create_quest: { title, priority?, tags? }",
   "- add_journal_entry: { content }",
   'Respond ONLY with strict JSON: {"summary": string, "confidence": "high"|"medium"|"low", "question"?: string, "proposals": [{"tool": string, "args": object, "label": string}]}.',

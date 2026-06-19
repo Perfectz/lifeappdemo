@@ -18,6 +18,8 @@ import { checkInTypes, createMetricEntry, getLatestMetricEntry, type MetricInput
 import { createJournalEntry, journalEntryTypes } from "@/domain/journal";
 import { createLocalNoteRepository } from "@/data/noteRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
+import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
+import { createFoodEntry, mealTypes } from "@/domain/nutrition";
 import { createNote, getRecentNotes, searchNotes } from "@/domain/notes";
 import { loadWiki } from "@/data/wikiRepository";
 import { formatWikiForPrompt } from "@/domain/personalWiki";
@@ -52,6 +54,7 @@ const PAGE_PATHS: Record<string, string> = {
   coach: "/coach",
   reports: "/reports",
   morning_standup: "/standup/morning",
+  nutrition: "/nutrition",
   settings: "/settings"
 };
 
@@ -141,6 +144,26 @@ export const VOICE_TOOL_DEFINITIONS = [
         bloodGlucoseMgDl: { type: "number", description: "Blood glucose in mg/dL" },
         notes: { type: "string" }
       }
+    }
+  },
+  {
+    type: "function",
+    name: "log_food",
+    description:
+      "Log a food/meal the user ate, with calories and macros when known (e.g. from a meal photo or description). Estimate reasonable values when the user doesn't give exact numbers.",
+    parameters: {
+      type: "object",
+      properties: {
+        description: { type: "string", description: "What was eaten." },
+        mealType: { type: "string", enum: mealTypes },
+        calories: { type: "number" },
+        proteinG: { type: "number" },
+        carbsG: { type: "number" },
+        fatG: { type: "number" },
+        fiberG: { type: "number" },
+        confidence: { type: "string", enum: ["low", "medium", "high"] }
+      },
+      required: ["description"]
     }
   },
   {
@@ -349,6 +372,38 @@ function logMetric(args: Record<string, unknown>): VoiceToolResult {
   return { ok: true, message: "Logged your check-in." };
 }
 
+function logFood(args: Record<string, unknown>): VoiceToolResult {
+  const description = asText(args.description);
+  if (!description) return { ok: false, message: "What food should I log?" };
+  const mealType = mealTypes.includes(args.mealType as (typeof mealTypes)[number])
+    ? (args.mealType as (typeof mealTypes)[number])
+    : "snack";
+  const confidence = ["low", "medium", "high"].includes(asText(args.confidence))
+    ? (asText(args.confidence) as "low" | "medium" | "high")
+    : undefined;
+  const repo = createLocalFoodEntryRepository(store());
+  const entry = createFoodEntry({
+    date: today(),
+    mealType,
+    description,
+    macros: {
+      calories: asNumber(args.calories),
+      proteinG: asNumber(args.proteinG),
+      carbsG: asNumber(args.carbsG),
+      fatG: asNumber(args.fatG),
+      fiberG: asNumber(args.fiberG)
+    },
+    estimateSource: "photo_ai",
+    confidence
+  });
+  repo.save([entry, ...repo.load()]);
+  const kcal = entry.macros.calories;
+  return {
+    ok: true,
+    message: `Logged ${mealType}: ${description}${kcal ? ` (~${kcal} cal)` : ""}.`
+  };
+}
+
 function addJournalEntry(args: Record<string, unknown>): VoiceToolResult {
   const content = asText(args.content);
   if (!content) return { ok: false, message: "What should I write in the journal?" };
@@ -480,6 +535,7 @@ const HANDLERS: Record<string, (args: Record<string, unknown>) => VoiceToolResul
   log_strength: logStrength,
   log_martial_arts: logMartialArts,
   log_metric: logMetric,
+  log_food: logFood,
   add_journal_entry: addJournalEntry,
   save_note: saveNote,
   get_context: getContext,

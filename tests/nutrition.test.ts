@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  caloriesRemaining,
   createFoodEntry,
+  getFoodEntriesForDate,
+  groupEntriesByMeal,
   isFoodEntry,
   sumMacros,
   validateFoodEntryInput
@@ -46,5 +49,25 @@ describe("nutrition domain", () => {
   it("guards food-entry shape", () => {
     expect(isFoodEntry(createFoodEntry({ date: "2026-06-15", mealType: "snack", description: "nuts" }, now))).toBe(true);
     expect(isFoodEntry({ id: "x", description: "nuts" })).toBe(false);
+  });
+
+  it("filters a day's entries and groups them by meal", () => {
+    const entries = [
+      createFoodEntry({ date: "2026-06-15", mealType: "breakfast", description: "eggs" }, now),
+      createFoodEntry({ date: "2026-06-15", mealType: "lunch", description: "salad" }, now),
+      createFoodEntry({ date: "2026-06-14", mealType: "dinner", description: "old" }, now)
+    ];
+    const day = getFoodEntriesForDate(entries, "2026-06-15");
+    expect(day).toHaveLength(2);
+    const grouped = groupEntriesByMeal(day);
+    expect(grouped.breakfast).toHaveLength(1);
+    expect(grouped.lunch[0].description).toBe("salad");
+    expect(grouped.dinner).toHaveLength(0);
+  });
+
+  it("computes calories remaining against a budget", () => {
+    expect(caloriesRemaining(2000, 1400)).toBe(600);
+    expect(caloriesRemaining(2000, 2300)).toBe(-300);
+    expect(caloriesRemaining(undefined, 1400)).toBeUndefined();
   });
 });
