@@ -1,6 +1,7 @@
 import type { AIToolProposal } from "@/domain";
 import { COACH_MODEL, isReasoningModel } from "@/config/ai";
 import { validateAIToolProposals } from "@/domain/aiTaskTools";
+import { COACH_ACTIONS_PROMPT } from "@/domain/coachActions";
 
 export type CoachHistoryTurn = { role: "user" | "assistant"; content: string };
 
@@ -135,6 +136,7 @@ export async function completeReadOnlyCoachChat(
     "When proposing task or data changes, return JSON with message and proposals. Otherwise reply with plain conversational text.",
     "Supported toolName values are create_task, update_task, complete_task, defer_task, archive_task, log_metric, create_journal_entry, propose_daily_plan, generate_daily_report, save_memory.",
     "Use save_memory ({ key, content }) to store or update a durable fact about the user in long-term memory — resume, favorite workouts, preferences, schedule, anything they share or ask you to remember. Re-using a key updates that memory. Propose it (the user confirms) whenever you learn something worth keeping.",
+    COACH_ACTIONS_PROMPT,
     "When recent sleep or energy is low, recommend a realistic workload and avoid overload.",
     "Do not invent missing metrics, reflections, lessons, or outcomes; label absent data clearly.",
     "For health metrics, log values without diagnosis or treatment advice.",

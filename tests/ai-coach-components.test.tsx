@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AICoachPanel } from "@/components/AICoachPanel";
 import { taskStorageKey } from "@/data/taskRepository";
+import { foodEntryStorageKey } from "@/data/foodEntryRepository";
 
 const now = "2026-05-04T10:00:00.000Z";
 
@@ -110,6 +111,48 @@ describe("AICoachPanel", () => {
       expect(screen.queryByText("What should I eat for breakfast?")).not.toBeInTheDocument()
     );
     expect(screen.getByRole("button", { name: /History \(1\)/ })).toBeVisible();
+  });
+
+  it("lets the coach log a meal (log_food) and saves it on confirm", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          message: "Want me to log that?",
+          mode: "general",
+          proposals: [
+            {
+              id: "p-food",
+              toolName: "log_food",
+              summary: "Log breakfast: oatmeal with berries",
+              payload: { description: "Oatmeal with berries", mealType: "breakfast", calories: 320, proteinG: 12 },
+              status: "pending",
+              createdAt: now,
+              updatedAt: now
+            }
+          ]
+        })
+      })
+    );
+
+    render(<AICoachPanel />);
+    fireEvent.change(screen.getByLabelText("Message"), {
+      target: { value: "Add oatmeal with berries to breakfast" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(screen.getByText("Log breakfast: oatmeal with berries")).toBeVisible());
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem(foodEntryStorageKey) ?? "[]");
+      expect(stored[0]).toMatchObject({
+        description: "Oatmeal with berries",
+        mealType: "breakfast",
+        macros: { calories: 320, proteinG: 12 }
+      });
+    });
   });
 
   it("shows a safe error when the chat request fails", async () => {

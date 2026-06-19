@@ -20,6 +20,10 @@ import { createLocalNoteRepository } from "@/data/noteRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 import { createFoodEntry, mealTypes } from "@/domain/nutrition";
+import { loadNutritionGoals, saveNutritionGoals } from "@/data/nutritionGoalsRepository";
+import { withNutritionGoalEdits } from "@/domain/nutritionGoals";
+import { loadHealthGoals, saveHealthGoals } from "@/data/healthGoalsRepository";
+import { withGoalEdits } from "@/domain/healthGoals";
 import { createNote, getRecentNotes, searchNotes } from "@/domain/notes";
 import { loadWiki } from "@/data/wikiRepository";
 import { formatWikiForPrompt } from "@/domain/personalWiki";
@@ -272,6 +276,38 @@ export const VOICE_TOOL_DEFINITIONS = [
   },
   {
     type: "function",
+    name: "set_nutrition_goal",
+    description:
+      "Update the user's daily nutrition targets. Provide only the fields they want to change.",
+    parameters: {
+      type: "object",
+      properties: {
+        calorieTarget: { type: "number" },
+        proteinTargetG: { type: "number" },
+        carbsTargetG: { type: "number" },
+        fatTargetG: { type: "number" },
+        waterTargetOz: { type: "number" }
+      }
+    }
+  },
+  {
+    type: "function",
+    name: "set_health_goal",
+    description:
+      "Update the user's health targets (weight goal, blood-pressure target, fasting-glucose target, sleep target). Provide only the fields they want to change.",
+    parameters: {
+      type: "object",
+      properties: {
+        weightTargetLbs: { type: "number" },
+        bpSystolicTarget: { type: "number" },
+        bpDiastolicTarget: { type: "number" },
+        fastingGlucoseTarget: { type: "number" },
+        sleepHoursTarget: { type: "number" }
+      }
+    }
+  },
+  {
+    type: "function",
     name: "navigate",
     description: "Open a screen in the app.",
     parameters: {
@@ -456,6 +492,38 @@ function addJournalEntry(args: Record<string, unknown>): VoiceToolResult {
   return { ok: true, message: "Saved a journal entry." };
 }
 
+function setNutritionGoal(args: Record<string, unknown>): VoiceToolResult {
+  const edits: Record<string, number> = {};
+  for (const field of ["calorieTarget", "proteinTargetG", "carbsTargetG", "fatTargetG", "waterTargetOz"]) {
+    const value = asNumber(args[field]);
+    if (value !== undefined && value > 0) edits[field] = value;
+  }
+  if (Object.keys(edits).length === 0) {
+    return { ok: false, message: "Tell me which nutrition target to set (e.g. calories)." };
+  }
+  saveNutritionGoals(store(), withNutritionGoalEdits(loadNutritionGoals(store()), edits));
+  return { ok: true, message: `Updated nutrition goals: ${Object.keys(edits).join(", ")}.` };
+}
+
+function setHealthGoal(args: Record<string, unknown>): VoiceToolResult {
+  const edits: Record<string, number> = {};
+  for (const field of [
+    "weightTargetLbs",
+    "bpSystolicTarget",
+    "bpDiastolicTarget",
+    "fastingGlucoseTarget",
+    "sleepHoursTarget"
+  ]) {
+    const value = asNumber(args[field]);
+    if (value !== undefined && value > 0) edits[field] = value;
+  }
+  if (Object.keys(edits).length === 0) {
+    return { ok: false, message: "Tell me which health target to set (e.g. weight or blood pressure)." };
+  }
+  saveHealthGoals(store(), withGoalEdits(loadHealthGoals(store()), edits));
+  return { ok: true, message: `Updated health goals: ${Object.keys(edits).join(", ")}.` };
+}
+
 function navigate(args: Record<string, unknown>): VoiceToolResult {
   const page = asText(args.page);
   const path = PAGE_PATHS[page];
@@ -620,6 +688,8 @@ const HANDLERS: Record<string, (args: Record<string, unknown>) => VoiceToolResul
   remember,
   forget,
   read_memory: readMemory,
+  set_nutrition_goal: setNutritionGoal,
+  set_health_goal: setHealthGoal,
   navigate
 };
 

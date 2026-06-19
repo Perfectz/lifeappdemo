@@ -17,6 +17,7 @@ import { readProfile } from "@/client/profile";
 import { loadStoredAppData } from "@/client/storedAppData";
 import { useHeroName } from "@/client/useHeroName";
 import { executeVoiceTool } from "@/client/voiceTools";
+import { isCoachActionTool } from "@/domain/coachActions";
 import { parseVisionResult, type VisionProposal } from "@/domain/visionUpdates";
 import { OfflineBoundary, aiNetworkRequiredMessage, useNetworkStatus } from "@/components/OfflineBoundary";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
@@ -122,6 +123,12 @@ function proposalDetails(proposal: AIToolProposal): string {
   if (proposal.toolName === "save_memory") {
     return [payload.key, payload.content].filter(Boolean).join(": ");
   }
+  if (isCoachActionTool(proposal.toolName)) {
+    return Object.entries(payload)
+      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(" · ");
+  }
   return "";
 }
 
@@ -129,6 +136,9 @@ export function AICoachPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage()]);
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [threadSearch, setThreadSearch] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -213,6 +223,29 @@ export function AICoachPanel() {
     setThreads([]);
     newChat();
   }
+
+  function renameThread(id: string, title: string) {
+    const cleaned = title.trim();
+    setRenamingId(null);
+    if (!cleaned) return;
+    const repo = createLocalChatThreadRepository(window.localStorage);
+    const existing = repo.load().find((thread) => thread.id === id);
+    if (!existing) return;
+    repo.save(
+      upsertThread(repo.load(), { ...existing, title: cleaned.slice(0, 80), updatedAt: new Date().toISOString() })
+    );
+    setThreads(sortThreadsByRecent(repo.load()));
+  }
+
+  const filteredThreads = (() => {
+    const query = threadSearch.trim().toLowerCase();
+    if (!query) return threads;
+    return threads.filter(
+      (thread) =>
+        thread.title.toLowerCase().includes(query) ||
+        thread.messages.some((message) => message.content.toLowerCase().includes(query))
+    );
+  })();
 
   function historyFor(): { role: "user" | "assistant"; content: string }[] {
     return messages
@@ -402,6 +435,20 @@ export function AICoachPanel() {
     return true;
   }
 
+  function applyCoachAction(messageId: string, proposal: AIToolProposal) {
+    const args =
+      proposal.payload && typeof proposal.payload === "object"
+        ? (proposal.payload as Record<string, unknown>)
+        : {};
+    const outcome = executeVoiceTool(proposal.toolName, args);
+    setProposalStatus(messageId, proposal.id, outcome.ok ? "applied" : "failed");
+    setMessages((current) => [
+      ...current,
+      { id: createMessageId("coach"), role: "coach", content: outcome.ok ? `✓ ${outcome.message}` : outcome.message }
+    ]);
+    if (!outcome.ok) setError(outcome.message);
+  }
+
   async function confirmProposal(messageId: string, proposal: AIToolProposal) {
     setProposalStatus(messageId, proposal.id, "confirmed");
     setError(null);
@@ -409,6 +456,13 @@ export function AICoachPanel() {
     // Memory writes are local — apply directly, no server round-trip.
     if (proposal.toolName === "save_memory") {
       applyMemoryProposal(messageId, proposal);
+      return;
+    }
+
+    // Nutrition / workout / note / goal actions run client-side via the shared
+    // voice-tool layer (same as the voice agent) — no server round-trip.
+    if (isCoachActionTool(proposal.toolName)) {
+      applyCoachAction(messageId, proposal);
       return;
     }
 
@@ -500,31 +554,68 @@ export function AICoachPanel() {
             <p className="reminders-help">No saved conversations yet.</p>
           ) : (
             <>
-              <ul className="chat-history-list">
-                {threads.map((thread) => (
-                  <li
-                    key={thread.id}
-                    className={
-                      thread.id === activeIdRef.current
-                        ? "chat-history-item chat-history-item-active"
-                        : "chat-history-item"
-                    }
-                  >
-                    <button type="button" className="chat-history-open" onClick={() => openThread(thread)}>
-                      <span className="chat-history-title">{thread.title}</span>
-                      <span className="chat-history-date">{thread.updatedAt.slice(0, 10)}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="chat-history-delete"
-                      aria-label={`Delete conversation "${thread.title}"`}
-                      onClick={() => deleteThread(thread.id)}
+              <input
+                className="fitness-input chat-history-search"
+                placeholder="Search conversations…"
+                value={threadSearch}
+                onChange={(event) => setThreadSearch(event.target.value)}
+                aria-label="Search conversations"
+              />
+              {filteredThreads.length === 0 ? (
+                <p className="reminders-help">No conversations match &ldquo;{threadSearch}&rdquo;.</p>
+              ) : (
+                <ul className="chat-history-list">
+                  {filteredThreads.map((thread) => (
+                    <li
+                      key={thread.id}
+                      className={
+                        thread.id === activeIdRef.current
+                          ? "chat-history-item chat-history-item-active"
+                          : "chat-history-item"
+                      }
                     >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                      {renamingId === thread.id ? (
+                        <input
+                          className="fitness-input chat-history-rename"
+                          value={renameDraft}
+                          autoFocus
+                          aria-label="Rename conversation"
+                          onChange={(event) => setRenameDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") renameThread(thread.id, renameDraft);
+                            if (event.key === "Escape") setRenamingId(null);
+                          }}
+                          onBlur={() => renameThread(thread.id, renameDraft)}
+                        />
+                      ) : (
+                        <button type="button" className="chat-history-open" onClick={() => openThread(thread)}>
+                          <span className="chat-history-title">{thread.title}</span>
+                          <span className="chat-history-date">{thread.updatedAt.slice(0, 10)}</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="chat-history-icon"
+                        aria-label={`Rename conversation "${thread.title}"`}
+                        onClick={() => {
+                          setRenamingId(thread.id);
+                          setRenameDraft(thread.title);
+                        }}
+                      >
+                        ✎
+                      </button>
+                      <button
+                        type="button"
+                        className="chat-history-icon chat-history-delete"
+                        aria-label={`Delete conversation "${thread.title}"`}
+                        onClick={() => deleteThread(thread.id)}
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <button type="button" className="chat-history-clear" onClick={clearAllThreads}>
                 Clear all conversations
               </button>
