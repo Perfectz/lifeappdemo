@@ -23,6 +23,8 @@ import { createFoodEntry, mealTypes } from "@/domain/nutrition";
 import { createNote, getRecentNotes, searchNotes } from "@/domain/notes";
 import { loadWiki } from "@/data/wikiRepository";
 import { formatWikiForPrompt } from "@/domain/personalWiki";
+import { createLocalMemoryRepository } from "@/data/memoryRepository";
+import { findMemory, removeMemory, upsertMemory } from "@/domain/memory";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import type { JournalEntryType, TaskPriority, TaskTag } from "@/domain";
 
@@ -233,6 +235,40 @@ export const VOICE_TOOL_DEFINITIONS = [
     description:
       "Read the user's personal profile — health, goals, training, nutrition, preferences, people, constraints. Use it to ground advice in who they are.",
     parameters: { type: "object", properties: {} }
+  },
+  {
+    type: "function",
+    name: "remember",
+    description:
+      "Store a durable fact about the user in long-term memory so you (and the app) recall it in future sessions — e.g. their resume, favorite workouts, schedule, preferences, anything they ask you to remember. Re-using the same key overwrites that memory.",
+    parameters: {
+      type: "object",
+      properties: {
+        key: { type: "string", description: "Short topic/title, e.g. 'resume' or 'favorite workouts'." },
+        content: { type: "string", description: "What to remember." }
+      },
+      required: ["key", "content"]
+    }
+  },
+  {
+    type: "function",
+    name: "forget",
+    description: "Delete a stored memory by its key.",
+    parameters: {
+      type: "object",
+      properties: { key: { type: "string" } },
+      required: ["key"]
+    }
+  },
+  {
+    type: "function",
+    name: "read_memory",
+    description:
+      "Recall the user's stored long-term memories, optionally filtered by a query. Call this early to ground yourself in what you've saved about them.",
+    parameters: {
+      type: "object",
+      properties: { query: { type: "string", description: "Optional text to filter memories." } }
+    }
   },
   {
     type: "function",
@@ -532,6 +568,40 @@ function readAboutMe(): VoiceToolResult {
   };
 }
 
+function remember(args: Record<string, unknown>): VoiceToolResult {
+  const key = asText(args.key);
+  const content = asText(args.content);
+  if (!key || !content) return { ok: false, message: "I need a key and something to remember." };
+  const repo = createLocalMemoryRepository(store());
+  repo.save(upsertMemory(repo.load(), { key, content, source: "agent" }));
+  return { ok: true, message: `Got it — I'll remember "${key}".` };
+}
+
+function forget(args: Record<string, unknown>): VoiceToolResult {
+  const key = asText(args.key);
+  if (!key) return { ok: false, message: "Which memory should I forget?" };
+  const repo = createLocalMemoryRepository(store());
+  const before = repo.load();
+  const after = removeMemory(before, key);
+  if (after.length === before.length) return { ok: false, message: `I don't have a memory called "${key}".` };
+  repo.save(after);
+  return { ok: true, message: `Forgot "${key}".` };
+}
+
+function readMemory(args: Record<string, unknown>): VoiceToolResult {
+  const query = asText(args.query);
+  const all = createLocalMemoryRepository(store()).load();
+  const found = query ? findMemory(all, query) : all;
+  if (!found.length) {
+    return { ok: true, silent: true, message: query ? `No memories match "${query}".` : "No saved memories yet." };
+  }
+  const summary = found
+    .slice(0, 12)
+    .map((entry) => `${entry.key}: ${entry.content}`)
+    .join(" | ");
+  return { ok: true, silent: true, message: summary };
+}
+
 const HANDLERS: Record<string, (args: Record<string, unknown>) => VoiceToolResult> = {
   create_quest: createQuest,
   complete_quest: completeQuest,
@@ -547,6 +617,9 @@ const HANDLERS: Record<string, (args: Record<string, unknown>) => VoiceToolResul
   list_recent_workouts: listRecentWorkouts,
   read_notes: readNotes,
   read_about_me: readAboutMe,
+  remember,
+  forget,
+  read_memory: readMemory,
   navigate
 };
 
