@@ -34,6 +34,14 @@ function levelTitle(level: number, maxLevel: number): string {
   return "Final form incoming";
 }
 
+/** True when the user just crossed into a higher level (fire the fanfare once). */
+export function shouldCelebrateLevelUp(
+  previousLevel: number | null,
+  currentLevel: number
+): boolean {
+  return previousLevel !== null && currentLevel > previousLevel;
+}
+
 export function levelFromJourney(journeyPercent: number): LevelInfo {
   const jp = clamp(journeyPercent);
   const span = MAX_LEVEL - 1;

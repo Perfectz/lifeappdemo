@@ -7,6 +7,7 @@ import { PlaceholderPage } from "@/components/PlaceholderPage";
 import { InstallReadinessPanel } from "@/components/InstallReadinessPanel";
 import { ProfilePanel } from "@/components/ProfilePanel";
 import { RemindersPanel } from "@/components/RemindersPanel";
+import { SoundPanel } from "@/components/SoundPanel";
 import { ThemePicker } from "@/components/ThemePicker";
 
 export default function SettingsPage() {
@@ -31,6 +32,10 @@ export default function SettingsPage() {
         <section className="dashboard-section">
           <h2>Menu Theme</h2>
           <ThemePicker />
+        </section>
+        <section className="dashboard-section">
+          <h2>Game Sound</h2>
+          <SoundPanel />
         </section>
         <section className="dashboard-section">
           <h2>Cloud Sync</h2>

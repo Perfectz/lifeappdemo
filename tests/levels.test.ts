@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_LEVEL, levelFromJourney } from "@/domain/levels";
+import { MAX_LEVEL, levelFromJourney, shouldCelebrateLevelUp } from "@/domain/levels";
 
 describe("transformation levels", () => {
   it("starts at level 1 on day one (0% journey)", () => {
@@ -35,5 +35,12 @@ describe("transformation levels", () => {
     const info = levelFromJourney(37);
     expect(info.percentIntoLevel).toBeGreaterThanOrEqual(0);
     expect(info.percentIntoLevel).toBeLessThanOrEqual(100);
+  });
+
+  it("celebrates only a genuine level increase (not first load or a drop)", () => {
+    expect(shouldCelebrateLevelUp(null, 5)).toBe(false); // first load: set baseline, don't celebrate
+    expect(shouldCelebrateLevelUp(4, 5)).toBe(true);
+    expect(shouldCelebrateLevelUp(5, 5)).toBe(false);
+    expect(shouldCelebrateLevelUp(6, 5)).toBe(false);
   });
 });

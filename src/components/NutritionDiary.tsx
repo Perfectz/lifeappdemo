@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { playDing } from "@/client/sfx";
 import { FoodSearch } from "@/components/FoodSearch";
 import { MealPhotoLogger } from "@/components/MealPhotoLogger";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -117,6 +118,7 @@ export function NutritionDiary() {
       setAddingMeal(null);
       setForm({ ...EMPTY_FORM });
       setError(null);
+      playDing();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Couldn't save that food.");
     }

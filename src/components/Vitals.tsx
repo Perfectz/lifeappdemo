@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { playDing } from "@/client/sfx";
 import { SectionHeader } from "@/components/SectionHeader";
 import { VitalsAlertBanner } from "@/components/VitalsAlertBanner";
 import { dataChangedEventName } from "@/data/createLocalRepository";
@@ -89,6 +90,7 @@ export function Vitals() {
       setDiastolic("");
       setWeight("");
       setStatus({ tone: "ok", text: "Logged today's vitals." });
+      playDing();
     } catch (error) {
       setStatus({ tone: "error", text: error instanceof Error ? error.message : "Couldn't save vitals." });
     }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { playDing } from "@/client/sfx";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import {
@@ -89,7 +90,10 @@ export function DailyFitness() {
   }, []);
 
   const addWorkout = useCallback(
-    (workout: Workout) => persist([workout, ...workouts]),
+    (workout: Workout) => {
+      persist([workout, ...workouts]);
+      playDing();
+    },
     [persist, workouts]
   );
 
