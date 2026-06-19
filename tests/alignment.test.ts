@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { computeDailyAlignment } from "@/domain/alignment";
 import { defaultHealthGoals } from "@/domain/healthGoals";
+import { defaultNutritionGoals, withNutritionGoalEdits } from "@/domain/nutritionGoals";
+import { createFoodEntry } from "@/domain/nutrition";
 import type { MetricEntry, Workout } from "@/domain";
 
 const today = "2026-06-18";
@@ -34,12 +36,12 @@ function workout(type: Workout["type"]): Workout {
 }
 
 describe("daily alignment", () => {
-  it("scores zero with nothing logged", () => {
+  it("scores zero with nothing logged (no calorie budget set)", () => {
     const result = computeDailyAlignment({ today, metrics: [], workouts: [], goals });
     expect(result.score).toBe(0);
     expect(result.percent).toBe(0);
     expect(result.level).toBe("not_started");
-    expect(result.max).toBe(100);
+    expect(result.max).toBe(115); // calorie_budget only counts once a target is set
   });
 
   it("awards points for in-range vitals and all three sessions", () => {
@@ -54,9 +56,31 @@ describe("daily alignment", () => {
     ];
     const workouts = [workout("strength"), workout("cardio"), workout("martial_arts")];
     const result = computeDailyAlignment({ today, metrics, workouts, goals });
+    // 50 vitals + 50 sessions = 100; no sleep/food logged.
     expect(result.score).toBe(100);
-    expect(result.percent).toBe(100);
     expect(result.level).toBe("strongly_aligned");
+  });
+
+  it("counts sleep, food logging, and calorie budget when provided", () => {
+    const metrics = [
+      metric({
+        bloodGlucoseMgDl: 95,
+        glucoseContext: "fasting",
+        bloodPressureSystolic: 122,
+        bloodPressureDiastolic: 78,
+        weightLbs: 220,
+        sleepHours: 8
+      })
+    ];
+    const workouts = [workout("strength"), workout("cardio"), workout("martial_arts")];
+    const foods = [
+      createFoodEntry({ date: today, mealType: "lunch", description: "bowl", macros: { calories: 500 } })
+    ];
+    const nutritionGoals = withNutritionGoalEdits(defaultNutritionGoals(), { calorieTarget: 2000 });
+    const result = computeDailyAlignment({ today, metrics, workouts, goals, foods, nutritionGoals });
+    expect(result.max).toBe(125);
+    expect(result.score).toBe(125);
+    expect(result.percent).toBe(100);
   });
 
   it("gives logging credit but withholds in-range points when vitals are high", () => {
@@ -70,7 +94,6 @@ describe("daily alignment", () => {
       })
     ];
     const result = computeDailyAlignment({ today, metrics, workouts: [], goals });
-    // glucose+bp+weight logged (30), but neither in range, no workouts.
     expect(result.score).toBe(30);
     expect(result.contributions.find((c) => c.key === "bp_in_range")?.earned).toBe(0);
     expect(result.contributions.find((c) => c.key === "glucose_in_range")?.earned).toBe(0);

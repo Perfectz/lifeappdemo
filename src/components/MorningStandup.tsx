@@ -6,6 +6,7 @@ import { useHeroName } from "@/client/useHeroName";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { CommandButton } from "@/components/CommandButton";
 import { SectionHeader } from "@/components/SectionHeader";
+import { VitalsAlertBanner } from "@/components/VitalsAlertBanner";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
@@ -158,6 +159,8 @@ export function MorningStandup() {
           <CharacterSprite className="page-sprite" pose="walkFrontOne" />
         </div>
       </header>
+
+      <VitalsAlertBanner />
 
       {status ? (
         <p

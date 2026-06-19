@@ -18,6 +18,8 @@ type EditableItem = {
   carbsG?: number;
   fatG?: number;
   fiberG?: number;
+  sugarG?: number;
+  sodiumMg?: number;
 };
 
 const MEAL_LABEL: Record<MealType, string> = {
@@ -132,7 +134,9 @@ export function MealPhotoLogger({ date }: { date: string }) {
           proteinG: item.proteinG,
           carbsG: item.carbsG,
           fatG: item.fatG,
-          fiberG: item.fiberG
+          fiberG: item.fiberG,
+          sugarG: item.sugarG,
+          sodiumMg: item.sodiumMg
         },
         estimateSource: "photo_ai",
         confidence:

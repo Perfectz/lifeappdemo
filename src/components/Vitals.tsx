@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { SectionHeader } from "@/components/SectionHeader";
+import { VitalsAlertBanner } from "@/components/VitalsAlertBanner";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { toLocalIsoDate } from "@/domain/dates";
@@ -101,6 +102,7 @@ export function Vitals() {
 
   return (
     <section className="dashboard-section vitals-panel" aria-label="Daily vitals">
+      <VitalsAlertBanner />
       <SectionHeader eyebrow="Vitals" title="Glucose, blood pressure & weight" />
       <p className="reminders-help">
         Log today&apos;s glucose, blood pressure, and body weight. Readings from voice, photo

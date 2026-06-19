@@ -2375,8 +2375,22 @@ textarea {
 
 .nutri-add-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.4rem;
+}
+
+.nutri-micros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0.7rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.nutri-micros strong {
+  color: var(--text, #fff);
+  font-variant-numeric: tabular-nums;
 }
 
 .nutri-add-actions {
@@ -6739,4 +6753,49 @@ html[data-theme="amber"] .quest-card {
   font-size: 0.82rem;
   padding: 0.05rem 0.3rem;
   word-break: break-all;
+}
+
+/* Vitals safety alerts */
+.vitals-alerts {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.vitals-alert {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.7rem;
+  border: 1px solid;
+}
+
+.vitals-alert strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.vitals-alert p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.vitals-alert-icon {
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.vitals-alert-critical {
+  border-color: var(--danger, #f87171);
+  background: color-mix(in srgb, var(--danger, #f87171) 16%, transparent);
+  color: var(--text, #fff);
+}
+
+.vitals-alert-warning {
+  border-color: var(--warning, #fbbf24);
+  background: color-mix(in srgb, var(--warning, #fbbf24) 14%, transparent);
+  color: var(--text, #fff);
 }

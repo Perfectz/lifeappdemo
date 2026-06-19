@@ -12,6 +12,7 @@ import type { JrpgIconName } from "@/components/JrpgIcon";
 import { NorthStarCard } from "@/components/NorthStarCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatusPanel } from "@/components/StatusPanel";
+import { VitalsAlertBanner } from "@/components/VitalsAlertBanner";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
@@ -193,6 +194,8 @@ export function Dashboard() {
           <CharacterSprite className="page-sprite" pose="victory" />
         </div>
       </header>
+
+      <VitalsAlertBanner />
 
       {brief ? (
         <section
