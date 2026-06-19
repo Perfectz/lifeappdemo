@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CommandButton } from "@/components/CommandButton";
+import { MealPhotoLogger } from "@/components/MealPhotoLogger";
 import { SectionHeader } from "@/components/SectionHeader";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
@@ -310,14 +310,7 @@ export function NutritionDiary() {
         );
       })}
 
-      <div className="nutri-ai-hint">
-        <p className="reminders-help">
-          Tip: snap a meal photo and the AI estimates the calories and macros for you to confirm.
-        </p>
-        <CommandButton href="/capture" icon="healthImport">
-          Snap a meal photo
-        </CommandButton>
-      </div>
+      <MealPhotoLogger date={viewDate} />
     </section>
   );
 }

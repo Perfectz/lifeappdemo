@@ -13,7 +13,7 @@ describe("NutritionDiary", () => {
 
   it("logs a food to a meal and updates totals", async () => {
     render(<NutritionDiary />);
-    await waitFor(() => expect(screen.getByText("Breakfast")).toBeVisible());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Breakfast" })).toBeVisible());
 
     const breakfast = screen.getByLabelText("Breakfast");
     fireEvent.click(within(breakfast).getByRole("button", { name: "+ Add" }));
