@@ -3,17 +3,31 @@ import type {
   AIChatMode,
   DailyPlan,
   DailyReport,
+  FoodEntry,
   IsoDate,
   JournalEntry,
   MetricEntry,
-  Task
+  Task,
+  Workout
 } from "@/domain/types";
 import { isDailyPlan } from "@/domain/dailyPlans";
+import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import { getInsightHighlights } from "@/domain/insights";
 import { isJournalEntry } from "@/domain/journal";
 import { isMetricEntry } from "@/domain/metrics";
+import {
+  caloriesRemaining,
+  getFoodEntriesForDate,
+  groupEntriesByMeal,
+  isFoodEntry,
+  mealTypes,
+  netCarbs,
+  sumMacros
+} from "@/domain/nutrition";
+import { isNutritionGoals, type NutritionGoals } from "@/domain/nutritionGoals";
 import { isDailyReport } from "@/domain/reports";
 import { isTask } from "@/domain/tasks";
+import { isWorkout } from "@/domain/workouts";
 
 export const aiChatModes: AIChatMode[] = ["general", "morning", "evening", "report"];
 
@@ -23,6 +37,9 @@ export type AIStoredAppData = {
   metricEntries?: MetricEntry[];
   journalEntries?: JournalEntry[];
   dailyReports?: DailyReport[];
+  workouts?: Workout[];
+  foodEntries?: FoodEntry[];
+  nutritionGoals?: NutritionGoals;
 };
 
 export type CoachHistoryTurn = { role: "user" | "assistant"; content: string };
@@ -64,7 +81,10 @@ function normalizeStoredAppData(value: unknown): AIStoredAppData | undefined {
       : undefined,
     dailyReports: Array.isArray(value.dailyReports)
       ? value.dailyReports.filter(isDailyReport)
-      : undefined
+      : undefined,
+    workouts: Array.isArray(value.workouts) ? value.workouts.filter(isWorkout) : undefined,
+    foodEntries: Array.isArray(value.foodEntries) ? value.foodEntries.filter(isFoodEntry) : undefined,
+    nutritionGoals: isNutritionGoals(value.nutritionGoals) ? value.nutritionGoals : undefined
   };
 }
 
@@ -167,8 +187,72 @@ export function buildAIAppContext(
     recentMetrics,
     recentJournalEntries,
     latestReport,
-    insightHighlights
+    insightHighlights,
+    todaysNutrition: buildNutritionSummary(
+      asArray(data.foodEntries),
+      data.nutritionGoals,
+      today
+    ),
+    todaysTraining: buildTrainingSummary(asArray(data.workouts), today)
   };
+}
+
+function round(value: number): number {
+  return Math.round(value);
+}
+
+function buildNutritionSummary(
+  foods: FoodEntry[],
+  goals: NutritionGoals | undefined,
+  today: IsoDate
+): string {
+  const todayFoods = getFoodEntriesForDate(foods, today);
+  const totals = sumMacros(todayFoods);
+  const remaining = caloriesRemaining(goals?.calorieTarget, totals.calories);
+
+  const budgetLine = goals?.calorieTarget
+    ? `Calories: ${round(totals.calories)} eaten of ${goals.calorieTarget} target — ${remaining} remaining.`
+    : `Calories eaten today: ${round(totals.calories)} (no calorie goal set).`;
+
+  const macroLine = `Macros today: protein ${round(totals.proteinG)}g${
+    goals?.proteinTargetG ? `/${goals.proteinTargetG}g` : ""
+  }, carbs ${round(totals.carbsG)}g (net ${netCarbs(totals)}g), fat ${round(totals.fatG)}g, sugar ${round(
+    totals.sugarG
+  )}g, sodium ${round(totals.sodiumMg)}mg.`;
+
+  const byMeal = groupEntriesByMeal(todayFoods);
+  const mealLines = mealTypes
+    .map((meal) => {
+      const items = byMeal[meal];
+      if (items.length === 0) return undefined;
+      const names = items
+        .map((item) => `${item.description}${item.macros.calories ? ` (${round(item.macros.calories)} cal)` : ""}`)
+        .join(", ");
+      return `  ${meal}: ${names}`;
+    })
+    .filter(Boolean);
+
+  return [
+    budgetLine,
+    macroLine,
+    mealLines.length > 0 ? `Logged today:\n${mealLines.join("\n")}` : "No food logged yet today."
+  ].join("\n");
+}
+
+function buildTrainingSummary(workouts: Workout[], today: IsoDate): string {
+  const status = getDailyFitnessStatus(workouts, today);
+  const todayLine = `Training today ${status.completedCount}/3 — strength ${
+    status.byType.strength ? "done" : "to do"
+  }, cardio ${status.byType.cardio ? "done" : "to do"}, martial arts ${
+    status.byType.martial_arts ? "done" : "to do"
+  }.`;
+  const recent = [...workouts]
+    .sort((left, right) => timestamp(right.recordedAt) - timestamp(left.recordedAt))
+    .slice(0, 5)
+    .map((workout) => `- ${workout.date} ${workout.type}: ${workout.title ?? workout.type}`);
+  return [todayLine, recent.length > 0 ? `Recent workouts:\n${recent.join("\n")}` : "No workouts logged yet."].join(
+    "\n"
+  );
 }
 
 export function summarizeAIAppContext(context: AIAppContext) {
@@ -215,8 +299,12 @@ export function formatAIContextForPrompt(context: AIAppContext): string {
     context.todaysPlan
       ? `- Status ${context.todaysPlan.status}; intention: ${context.todaysPlan.intention ?? "none"}`
       : "- Not logged",
-    "Recent metrics:",
+    "Recent metrics (vitals):",
     metricLines.length > 0 ? metricLines.join("\n") : "- None",
+    "Nutrition today:",
+    context.todaysNutrition ?? "- Not available",
+    "Training today:",
+    context.todaysTraining ?? "- Not available",
     "Recent journal entries:",
     journalLines.length > 0 ? journalLines.join("\n") : "- None",
     "Behavioral patterns (derived):",

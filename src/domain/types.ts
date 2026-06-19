@@ -105,6 +105,10 @@ export type AIAppContext = {
   latestReport?: DailyReport;
   /** Derived behavioral patterns so the coach can reference real history. */
   insightHighlights: string[];
+  /** Today's nutrition summary (calorie budget, macros, logged foods). */
+  todaysNutrition?: string;
+  /** Today's training status + recent workouts. */
+  todaysTraining?: string;
 };
 
 export type AIToolProposalStatus = "pending" | "confirmed" | "rejected" | "applied" | "failed";

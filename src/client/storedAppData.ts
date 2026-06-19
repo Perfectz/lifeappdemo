@@ -3,6 +3,9 @@ import { createLocalDailyReportRepository } from "@/data/dailyReportRepository";
 import { createLocalJournalRepository } from "@/data/journalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
+import { createLocalWorkoutRepository } from "@/data/workoutRepository";
+import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
+import { loadNutritionGoals } from "@/data/nutritionGoalsRepository";
 import type { AIStoredAppData } from "@/domain";
 
 export function loadStoredAppData(storage: Storage): AIStoredAppData {
@@ -11,6 +14,9 @@ export function loadStoredAppData(storage: Storage): AIStoredAppData {
     dailyPlans: createLocalDailyPlanRepository(storage).load(),
     metricEntries: createLocalMetricRepository(storage).load(),
     journalEntries: createLocalJournalRepository(storage).load(),
-    dailyReports: createLocalDailyReportRepository(storage).load()
+    dailyReports: createLocalDailyReportRepository(storage).load(),
+    workouts: createLocalWorkoutRepository(storage).load(),
+    foodEntries: createLocalFoodEntryRepository(storage).load(),
+    nutritionGoals: loadNutritionGoals(storage)
   };
 }

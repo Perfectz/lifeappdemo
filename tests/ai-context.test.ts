@@ -130,6 +130,50 @@ describe("AI context", () => {
     expect(prompt).not.toContain("OPENAI_API_KEY");
   });
 
+  it("gives the coach today's nutrition and training so it can advise on food", () => {
+    const foodNow = `${today}T08:00:00.000Z`;
+    const context = buildAIAppContext(
+      {
+        foodEntries: [
+          {
+            id: "food-1",
+            date: today,
+            mealType: "breakfast",
+            description: "Oatmeal with berries",
+            macros: { calories: 320, proteinG: 12, carbsG: 54, fiberG: 8, sugarG: 14, sodiumMg: 120 },
+            estimateSource: "manual",
+            recordedAt: foodNow,
+            createdAt: foodNow,
+            updatedAt: foodNow
+          }
+        ],
+        nutritionGoals: { calorieTarget: 1800, proteinTargetG: 160, waterTargetOz: 64, updatedAt: now },
+        workouts: [
+          {
+            id: "w-1",
+            date: today,
+            type: "cardio",
+            title: "Morning walk",
+            recordedAt: foodNow,
+            createdAt: foodNow,
+            updatedAt: foodNow
+          }
+        ]
+      },
+      today
+    );
+
+    expect(context.todaysNutrition).toContain("320");
+    expect(context.todaysNutrition).toContain("1800");
+    expect(context.todaysNutrition).toContain("Oatmeal with berries");
+
+    const prompt = formatAIContextForPrompt(context);
+    expect(prompt).toContain("Nutrition today:");
+    expect(prompt).toContain("1480 remaining"); // 1800 - 320
+    expect(prompt).toContain("Training today:");
+    expect(prompt).toContain("cardio done");
+  });
+
   it("includes derived behavioral patterns so the coach is history-aware", () => {
     const context = buildAIAppContext(
       {
