@@ -12,6 +12,7 @@ import type { JrpgIconName } from "@/components/JrpgIcon";
 import { NorthStarCard } from "@/components/NorthStarCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatusPanel } from "@/components/StatusPanel";
+import { SetupPrompt } from "@/components/SetupPrompt";
 import { VitalsAlertBanner } from "@/components/VitalsAlertBanner";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
@@ -196,6 +197,7 @@ export function Dashboard() {
       </header>
 
       <VitalsAlertBanner />
+      <SetupPrompt />
 
       {brief ? (
         <section

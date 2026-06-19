@@ -6799,3 +6799,60 @@ html[data-theme="amber"] .quest-card {
   background: color-mix(in srgb, var(--warning, #fbbf24) 14%, transparent);
   color: var(--text, #fff);
 }
+
+/* First-run setup */
+.setup-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid var(--accent, #6366f1);
+  background: color-mix(in srgb, var(--accent, #6366f1) 12%, transparent);
+  color: inherit;
+  text-decoration: none;
+}
+
+.setup-prompt strong {
+  display: block;
+}
+
+.setup-prompt p {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.setup-prompt span {
+  font-size: 1.3rem;
+}
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  margin: 0.6rem 0;
+}
+
+.setup-activity {
+  grid-column: 1 / -1;
+}
+
+.setup-budget {
+  margin: 0.8rem 0;
+  padding: 0.8rem;
+  border-radius: 0.7rem;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.14));
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.setup-budget p {
+  margin: 0 0 0.3rem;
+}
+
+.setup-finish {
+  width: 100%;
+  margin-top: 0.4rem;
+}
