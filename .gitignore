@@ -21,3 +21,6 @@ coverage
 /portfolio-v16-*.png
 /nav-icons-sidebar-check.png
 /tmp-next-*.log
+
+# Test coverage output
+/coverage
