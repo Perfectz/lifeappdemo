@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { CharacterSprite } from "@/components/CharacterSprite";
+import { NutritionTrends } from "@/components/NutritionTrends";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
@@ -170,6 +171,8 @@ export function TrendsView() {
               ))}
             </ul>
           </section>
+
+          <NutritionTrends />
         </div>
       )}
     </section>

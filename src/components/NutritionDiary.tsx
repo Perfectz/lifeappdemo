@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { FoodSearch } from "@/components/FoodSearch";
 import { MealPhotoLogger } from "@/components/MealPhotoLogger";
 import { SectionHeader } from "@/components/SectionHeader";
 import { dataChangedEventName } from "@/data/createLocalRepository";
@@ -329,6 +330,7 @@ export function NutritionDiary() {
         );
       })}
 
+      <FoodSearch date={viewDate} />
       <MealPhotoLogger date={viewDate} />
     </section>
   );
