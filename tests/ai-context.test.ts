@@ -154,6 +154,7 @@ describe("AI context", () => {
             date: today,
             type: "cardio",
             title: "Morning walk",
+            source: "manual",
             recordedAt: foodNow,
             createdAt: foodNow,
             updatedAt: foodNow

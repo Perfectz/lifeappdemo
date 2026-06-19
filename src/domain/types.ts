@@ -109,6 +109,10 @@ export type AIAppContext = {
   todaysNutrition?: string;
   /** Today's training status + recent workouts. */
   todaysTraining?: string;
+  /** Derived health status from latest vitals (BP category, glucose band, weight). */
+  healthStatus?: string;
+  /** The user's health targets (BP, glucose, weight, sleep). */
+  goalsSummary?: string;
 };
 
 export type AIToolProposalStatus = "pending" | "confirmed" | "rejected" | "applied" | "failed";

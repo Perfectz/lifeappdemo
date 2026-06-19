@@ -25,6 +25,14 @@ import {
   sumMacros
 } from "@/domain/nutrition";
 import { isNutritionGoals, type NutritionGoals } from "@/domain/nutritionGoals";
+import { isHealthGoals, weightGoalProgressPercent, type HealthGoals } from "@/domain/healthGoals";
+import {
+  bloodPressureCategoryLabel,
+  glucoseBandLabel,
+  latestBloodPressure,
+  latestGlucose,
+  latestWeight
+} from "@/domain/vitals";
 import { isDailyReport } from "@/domain/reports";
 import { isTask } from "@/domain/tasks";
 import { isWorkout } from "@/domain/workouts";
@@ -40,6 +48,7 @@ export type AIStoredAppData = {
   workouts?: Workout[];
   foodEntries?: FoodEntry[];
   nutritionGoals?: NutritionGoals;
+  healthGoals?: HealthGoals;
 };
 
 export type CoachHistoryTurn = { role: "user" | "assistant"; content: string };
@@ -84,7 +93,8 @@ function normalizeStoredAppData(value: unknown): AIStoredAppData | undefined {
       : undefined,
     workouts: Array.isArray(value.workouts) ? value.workouts.filter(isWorkout) : undefined,
     foodEntries: Array.isArray(value.foodEntries) ? value.foodEntries.filter(isFoodEntry) : undefined,
-    nutritionGoals: isNutritionGoals(value.nutritionGoals) ? value.nutritionGoals : undefined
+    nutritionGoals: isNutritionGoals(value.nutritionGoals) ? value.nutritionGoals : undefined,
+    healthGoals: isHealthGoals(value.healthGoals) ? value.healthGoals : undefined
   };
 }
 
@@ -193,8 +203,46 @@ export function buildAIAppContext(
       data.nutritionGoals,
       today
     ),
-    todaysTraining: buildTrainingSummary(asArray(data.workouts), today)
+    todaysTraining: buildTrainingSummary(asArray(data.workouts), today),
+    healthStatus: buildHealthStatus(asArray(data.metricEntries), data.healthGoals),
+    goalsSummary: buildGoalsSummary(data.healthGoals)
   };
+}
+
+function buildHealthStatus(metrics: MetricEntry[], goals: HealthGoals | undefined): string {
+  const bp = latestBloodPressure(metrics);
+  const glucose = latestGlucose(metrics);
+  const weight = latestWeight(metrics);
+  const lines = [
+    bp
+      ? `Blood pressure: latest ${bp.systolic}/${bp.diastolic} — ${bloodPressureCategoryLabel[bp.category]} (${bp.recordedAt.slice(0, 10)}).`
+      : "Blood pressure: none logged yet.",
+    glucose
+      ? `Blood glucose: latest ${glucose.mgDl} mg/dL${glucose.band ? ` — ${glucoseBandLabel[glucose.band]} (fasting)` : ""}.`
+      : "Blood glucose: none logged yet.",
+    weight
+      ? `Weight: ${weight.weightLbs} lb${
+          goals?.weightTargetLbs
+            ? ` (goal ${goals.weightTargetLbs} lb, ${weightGoalProgressPercent(goals, weight.weightLbs) ?? 0}% there)`
+            : ""
+        }.`
+      : "Weight: none logged yet."
+  ];
+  return lines.join("\n");
+}
+
+function buildGoalsSummary(goals: HealthGoals | undefined): string {
+  if (!goals) {
+    return "Targets not set (using standard defaults: BP <130/80, fasting glucose <100, sleep 7.5h).";
+  }
+  return [
+    `Blood pressure target: ≤ ${goals.bpSystolicTarget}/${goals.bpDiastolicTarget}.`,
+    `Fasting glucose target: ≤ ${goals.fastingGlucoseTarget} mg/dL.`,
+    goals.weightTargetLbs
+      ? `Weight goal: ${goals.weightTargetLbs} lb${goals.weightStartLbs ? ` (from ${goals.weightStartLbs} lb).` : "."}`
+      : "Weight goal: not set.",
+    `Sleep target: ${goals.sleepHoursTarget}h. Training: ${goals.dailyWorkoutsTarget} sessions/day.`
+  ].join("\n");
 }
 
 function round(value: number): number {
@@ -293,6 +341,10 @@ export function formatAIContextForPrompt(context: AIAppContext): string {
 
   return [
     `Today: ${context.today}`,
+    "Health status (derived from logged vitals):",
+    context.healthStatus ?? "- Not available",
+    "Your health goals / targets:",
+    context.goalsSummary ?? "- Not available",
     "Open tasks:",
     taskLines.length > 0 ? taskLines.join("\n") : "- None",
     "Today's plan:",
