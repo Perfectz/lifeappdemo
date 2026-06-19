@@ -20,6 +20,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { JrpgIcon } from "@/components/JrpgIcon";
 import { OnboardingWelcome } from "@/components/OnboardingWelcome";
 import { QuickAddQuest } from "@/components/QuickAddQuest";
+import { LevelUpToast } from "@/components/LevelUpToast";
 import { ReminderManager } from "@/components/ReminderManager";
 import { StorageErrorToast } from "@/components/StorageErrorToast";
 import { ThemeBootstrap } from "@/components/ThemeBootstrap";
@@ -545,6 +546,7 @@ export function AppShell({ children }: AppShellProps) {
       <ReminderManager />
       <StorageErrorToast />
       <CelebrationOverlay />
+      <LevelUpToast />
       <CloudSyncBootstrap />
       <VoiceAgent />
     </div>

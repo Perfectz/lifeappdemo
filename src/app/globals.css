@@ -7246,3 +7246,197 @@ button,
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ---------- Character sheet (stats + bosses) ---------- */
+.character-screen {
+  display: grid;
+  gap: 1rem;
+}
+
+.stat-sheet {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr 2.4rem;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.stat-key {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.stat-bar {
+  height: 0.6rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.stat-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong, #f6c768));
+  transition: width 0.5s ease;
+}
+
+.stat-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: right;
+}
+
+.boss-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.boss-card {
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.14));
+  border-radius: 0.7rem;
+  padding: 0.7rem 0.8rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.boss-card-defeated {
+  border-color: var(--accent, #6ee7b7);
+  background: color-mix(in srgb, var(--accent, #6ee7b7) 10%, transparent);
+}
+
+.boss-card-locked {
+  opacity: 0.6;
+}
+
+.boss-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.boss-head strong {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.boss-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--danger, #ff6b7a);
+  color: var(--danger, #ff6b7a);
+  white-space: nowrap;
+}
+
+.boss-badge-down {
+  border-color: var(--accent, #6ee7b7);
+  color: var(--accent, #6ee7b7);
+}
+
+.boss-badge-locked {
+  border-color: var(--muted);
+  color: var(--muted);
+}
+
+.boss-flavor {
+  margin: 0.2rem 0 0.5rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.boss-hp {
+  height: 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.boss-hp-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--danger, #ff6b7a);
+  transition: width 0.5s ease;
+}
+
+.boss-hp-fill-down {
+  background: var(--accent, #6ee7b7);
+}
+
+.boss-detail {
+  margin-top: 0.4rem;
+}
+
+/* ---------- Level-up celebration ---------- */
+.levelup-toast {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+
+.levelup-card {
+  text-align: center;
+  padding: 1.6rem 2rem;
+  border-radius: 1rem;
+  border: 2px solid var(--accent-strong, #f6c768);
+  background: var(--surface, #121824);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--accent-strong, #f6c768) 55%, transparent);
+  animation: levelup-pop 0.4s ease;
+}
+
+@keyframes levelup-pop {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.levelup-sprite {
+  width: 88px;
+  height: 88px;
+  image-rendering: pixelated;
+  margin: 0 auto;
+}
+
+.levelup-kicker {
+  margin: 0.4rem 0 0;
+  font-family: var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-strong, #f6c768);
+}
+
+.levelup-level {
+  margin: 0.1rem 0 0.2rem;
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .levelup-card {
+    animation: none;
+  }
+}

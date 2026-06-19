@@ -68,6 +68,13 @@ export const navigationGroups: NavigationGroup[] = [
     caption: "Progress",
     items: [
       {
+        label: "Character Sheet",
+        href: "/character",
+        description: "Level, stats & boss battles",
+        icon: "trends",
+        shortLabel: "Character"
+      },
+      {
         label: "Progress Photos",
         href: "/progress",
         description: "Front, profile & face — track the change",
