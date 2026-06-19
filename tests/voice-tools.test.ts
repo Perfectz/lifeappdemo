@@ -32,8 +32,24 @@ describe("voice tool dispatcher", () => {
       "remember",
       "forget",
       "read_memory",
+      "set_nutrition_goal",
+      "set_health_goal",
       "navigate"
     ]);
+  });
+
+  it("sets nutrition and health goals", () => {
+    expect(executeVoiceTool("set_nutrition_goal", { calorieTarget: 1800, proteinTargetG: 160 }).ok).toBe(true);
+    const nutrition = JSON.parse(window.localStorage.getItem("lifequest.nutritionGoals.v1") ?? "{}");
+    expect(nutrition.calorieTarget).toBe(1800);
+    expect(nutrition.proteinTargetG).toBe(160);
+
+    expect(executeVoiceTool("set_health_goal", { weightTargetLbs: 195, bpSystolicTarget: 120 }).ok).toBe(true);
+    const health = JSON.parse(window.localStorage.getItem("lifequest.healthGoals.v1") ?? "{}");
+    expect(health.weightTargetLbs).toBe(195);
+    expect(health.bpSystolicTarget).toBe(120);
+
+    expect(executeVoiceTool("set_nutrition_goal", {}).ok).toBe(false);
   });
 
   it("remembers and recalls a durable fact, then forgets it", () => {

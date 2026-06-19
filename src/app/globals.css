@@ -1918,14 +1918,23 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
-.chat-history-delete {
+.chat-history-icon {
   flex: 0 0 auto;
   border: none;
   background: transparent;
   color: var(--muted);
   font-size: 0.9rem;
   cursor: pointer;
-  padding: 0.4rem 0.55rem;
+  padding: 0.4rem 0.5rem;
+}
+
+.chat-history-search {
+  width: 100%;
+}
+
+.chat-history-rename {
+  flex: 1;
+  margin: 0.2rem;
 }
 
 .chat-history-clear {

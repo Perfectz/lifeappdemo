@@ -1,3 +1,5 @@
+import type { CoachActionToolName } from "@/domain/coachActions";
+
 export type EntityId = string;
 export type IsoDateTime = string;
 export type IsoDate = string;
@@ -130,7 +132,7 @@ export type AITaskToolName =
   | "save_memory";
 
 export type AIToolProposal = TimestampedEntity & {
-  toolName: AITaskToolName;
+  toolName: AITaskToolName | CoachActionToolName;
   summary: string;
   payload: unknown;
   status: AIToolProposalStatus;

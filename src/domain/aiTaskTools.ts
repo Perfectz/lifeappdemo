@@ -14,6 +14,7 @@ import type {
   TaskPriority,
   TaskTag
 } from "@/domain/types";
+import { isCoachActionTool } from "@/domain/coachActions";
 import type { DailyPlanInput } from "@/domain/dailyPlans";
 import type { JournalEntryInput } from "@/domain/journal";
 import type { TaskInput } from "@/domain/tasks";
@@ -346,7 +347,10 @@ export function validateAIToolProposalInput(
   const toolName = value.toolName;
   const summary = optionalText(value.summary);
 
-  if (typeof toolName !== "string" || !aiTaskToolNames.includes(toolName as AITaskToolName)) {
+  if (
+    typeof toolName !== "string" ||
+    (!aiTaskToolNames.includes(toolName as AITaskToolName) && !isCoachActionTool(toolName))
+  ) {
     return { ok: false, message: "Tool name is not supported." };
   }
 
@@ -354,7 +358,11 @@ export function validateAIToolProposalInput(
     return { ok: false, message: "Tool proposal summary is required." };
   }
 
-  const payload = sanitizePayload(toolName as AITaskToolName, value.payload);
+  // Coach action tools are executed client-side via executeVoiceTool, which does
+  // its own validation — accept the payload object as-is here.
+  const payload = isCoachActionTool(toolName)
+    ? (isRecord(value.payload) ? value.payload : {})
+    : sanitizePayload(toolName as AITaskToolName, value.payload);
 
   if (!payload) {
     return { ok: false, message: "Tool proposal payload is invalid." };
@@ -364,7 +372,7 @@ export function validateAIToolProposalInput(
     ok: true,
     value: {
       id: optionalText(value.id) ?? globalThis.crypto?.randomUUID?.() ?? `proposal-${now}`,
-      toolName: toolName as AITaskToolName,
+      toolName: toolName as AIToolProposal["toolName"],
       summary,
       payload,
       status: "pending",
