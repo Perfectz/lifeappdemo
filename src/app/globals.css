@@ -2375,8 +2375,22 @@ textarea {
 
 .nutri-add-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.4rem;
+}
+
+.nutri-micros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0.7rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.nutri-micros strong {
+  color: var(--text, #fff);
+  font-variant-numeric: tabular-nums;
 }
 
 .nutri-add-actions {
@@ -6739,4 +6753,199 @@ html[data-theme="amber"] .quest-card {
   font-size: 0.82rem;
   padding: 0.05rem 0.3rem;
   word-break: break-all;
+}
+
+/* Vitals safety alerts */
+.vitals-alerts {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.vitals-alert {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.7rem;
+  border: 1px solid;
+}
+
+.vitals-alert strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.vitals-alert p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.vitals-alert-icon {
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.vitals-alert-critical {
+  border-color: var(--danger, #f87171);
+  background: color-mix(in srgb, var(--danger, #f87171) 16%, transparent);
+  color: var(--text, #fff);
+}
+
+.vitals-alert-warning {
+  border-color: var(--warning, #fbbf24);
+  background: color-mix(in srgb, var(--warning, #fbbf24) 14%, transparent);
+  color: var(--text, #fff);
+}
+
+/* First-run setup */
+.setup-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid var(--accent, #6366f1);
+  background: color-mix(in srgb, var(--accent, #6366f1) 12%, transparent);
+  color: inherit;
+  text-decoration: none;
+}
+
+.setup-prompt strong {
+  display: block;
+}
+
+.setup-prompt p {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.setup-prompt span {
+  font-size: 1.3rem;
+}
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  margin: 0.6rem 0;
+}
+
+.setup-activity {
+  grid-column: 1 / -1;
+}
+
+.setup-budget {
+  margin: 0.8rem 0;
+  padding: 0.8rem;
+  border-radius: 0.7rem;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.14));
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.setup-budget p {
+  margin: 0 0 0.3rem;
+}
+
+.setup-finish {
+  width: 100%;
+  margin-top: 0.4rem;
+}
+
+/* Progress compare */
+.progress-compare {
+  margin-top: 1rem;
+}
+
+.progress-compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.progress-compare-item {
+  margin: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.progress-compare-item figcaption {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.fitness-repeat-btn {
+  margin-top: 0.6rem;
+  border: 1px solid var(--accent, #6366f1);
+  color: var(--accent, #6366f1);
+  background: transparent;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Patrick 2.0 transformation avatar */
+.north-star-avatar {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem 0.8rem;
+  margin-bottom: 0.9rem;
+  border-radius: 0.8rem;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.north-star-avatar-frame {
+  flex: 0 0 auto;
+  width: 4.4rem;
+  height: 4.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.north-star-avatar-sprite {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  /* Sprite "sharpens" (brighter, more saturated) as the stage climbs. */
+  filter: grayscale(0.55) brightness(0.85);
+  transition: filter 0.4s ease;
+}
+
+.north-star-avatar-stage-2 .north-star-avatar-sprite {
+  filter: grayscale(0.4) brightness(0.9);
+}
+
+.north-star-avatar-stage-3 .north-star-avatar-sprite {
+  filter: grayscale(0.2) brightness(0.97);
+}
+
+.north-star-avatar-stage-4 .north-star-avatar-sprite {
+  filter: grayscale(0) saturate(1.1);
+}
+
+.north-star-avatar-stage-5 .north-star-avatar-sprite {
+  filter: grayscale(0) saturate(1.25) drop-shadow(0 0 6px var(--accent, #4ade80));
+}
+
+.north-star-avatar-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.north-star-avatar-stage {
+  margin: 0 0 0.4rem;
+  font-weight: 700;
 }

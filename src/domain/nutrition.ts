@@ -46,7 +46,9 @@ function normalizeMacros(macros: Macros | undefined): Macros {
     proteinG: optionalNonNegative(macros?.proteinG),
     carbsG: optionalNonNegative(macros?.carbsG),
     fatG: optionalNonNegative(macros?.fatG),
-    fiberG: optionalNonNegative(macros?.fiberG)
+    fiberG: optionalNonNegative(macros?.fiberG),
+    sugarG: optionalNonNegative(macros?.sugarG),
+    sodiumMg: optionalNonNegative(macros?.sodiumMg)
   };
 }
 
@@ -124,10 +126,17 @@ export function sumMacros(entries: FoodEntry[]): Required<Macros> {
       proteinG: total.proteinG + (entry.macros.proteinG ?? 0),
       carbsG: total.carbsG + (entry.macros.carbsG ?? 0),
       fatG: total.fatG + (entry.macros.fatG ?? 0),
-      fiberG: total.fiberG + (entry.macros.fiberG ?? 0)
+      fiberG: total.fiberG + (entry.macros.fiberG ?? 0),
+      sugarG: total.sugarG + (entry.macros.sugarG ?? 0),
+      sodiumMg: total.sodiumMg + (entry.macros.sodiumMg ?? 0)
     }),
-    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, fiberG: 0 }
+    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, fiberG: 0, sugarG: 0, sodiumMg: 0 }
   );
+}
+
+/** Net carbs = carbs − fiber (floored at 0). Relevant for glucose management. */
+export function netCarbs(macros: Macros): number {
+  return Math.max(0, (macros.carbsG ?? 0) - (macros.fiberG ?? 0));
 }
 
 /** A single day's food entries, newest first. */

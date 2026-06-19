@@ -57,6 +57,15 @@ export function ProgressPhotos() {
     () => groupPhotosByDate(photos).filter((day) => day.date !== today),
     [photos, today]
   );
+  const compare = useMemo(() => {
+    const fronts = photos
+      .filter((photo) => photo.angle === "front")
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+    if (fronts.length < 2 || fronts[0].date === fronts[fronts.length - 1].date) {
+      return null;
+    }
+    return { first: fronts[0], latest: fronts[fronts.length - 1] };
+  }, [photos]);
 
   async function handleFile(angle: ProgressPhotoAngle, file: File) {
     setError(null);
@@ -219,6 +228,24 @@ export function ProgressPhotos() {
           {assessment.encouragement ? (
             <p className="progress-assessment-encouragement">{assessment.encouragement}</p>
           ) : null}
+        </div>
+      ) : null}
+
+      {compare ? (
+        <div className="progress-compare">
+          <h3 className="progress-history-title">Then vs. now (front)</h3>
+          <div className="progress-compare-row">
+            <figure className="progress-compare-item">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="progress-photo-thumb" src={compare.first.dataUrl} alt={`Front progress photo from ${compare.first.date}`} />
+              <figcaption>{compare.first.date}</figcaption>
+            </figure>
+            <figure className="progress-compare-item">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="progress-photo-thumb" src={compare.latest.dataUrl} alt={`Front progress photo from ${compare.latest.date}`} />
+              <figcaption>{compare.latest.date}</figcaption>
+            </figure>
+          </div>
         </div>
       ) : null}
 

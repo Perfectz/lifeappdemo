@@ -14,6 +14,8 @@ export type MealEstimateItem = {
   carbsG?: number;
   fatG?: number;
   fiberG?: number;
+  sugarG?: number;
+  sodiumMg?: number;
 };
 
 export type MealEstimate = {
@@ -48,7 +50,9 @@ function parseItem(value: unknown): MealEstimateItem | null {
     proteinG: asPositive(record.proteinG),
     carbsG: asPositive(record.carbsG),
     fatG: asPositive(record.fatG),
-    fiberG: asPositive(record.fiberG)
+    fiberG: asPositive(record.fiberG),
+    sugarG: asPositive(record.sugarG),
+    sodiumMg: asPositive(record.sodiumMg)
   };
 }
 

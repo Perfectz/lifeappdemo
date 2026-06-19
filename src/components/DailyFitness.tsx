@@ -98,6 +98,36 @@ export function DailyFitness() {
     [persist, workouts]
   );
 
+  // Most recent prior day that has workouts — powers "repeat" templating.
+  const previousDay = useMemo(() => {
+    const dates = [...new Set(workouts.filter((w) => w.date < viewed).map((w) => w.date))].sort(
+      (a, b) => (a < b ? 1 : -1)
+    );
+    const date = dates[0];
+    return date ? { date, workouts: workouts.filter((w) => w.date === date) } : null;
+  }, [workouts, viewed]);
+
+  const repeatPreviousDay = useCallback(() => {
+    if (!previousDay) return;
+    const now = new Date().toISOString();
+    const existingTypes = new Set(
+      workouts.filter((w) => w.date === viewed).map((w) => w.type)
+    );
+    const clones = previousDay.workouts
+      .filter((w) => !existingTypes.has(w.type))
+      .map((w, index) => ({
+        ...w,
+        id: globalThis.crypto?.randomUUID?.() ?? `workout-${now}-${index}`,
+        date: viewed,
+        recordedAt: now,
+        createdAt: now,
+        updatedAt: now
+      }));
+    if (clones.length > 0) {
+      persist([...clones, ...workouts]);
+    }
+  }, [previousDay, persist, workouts, viewed]);
+
   const selectedStrength =
     strengthWorkouts.find((w) => w.id === strengthDayId) ?? strengthWorkouts[0];
 
@@ -206,6 +236,11 @@ export function DailyFitness() {
         </div>
         {status.isComplete ? (
           <p className="fitness-complete">✓ Day complete — all three sessions logged.</p>
+        ) : null}
+        {!status.isComplete && previousDay ? (
+          <button type="button" className="fitness-repeat-btn" onClick={repeatPreviousDay}>
+            ↻ Repeat {prettyIso(previousDay.date)}&apos;s training
+          </button>
         ) : null}
       </header>
 

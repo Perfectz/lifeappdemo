@@ -31,55 +31,42 @@ export const navigationGroups: NavigationGroup[] = [
         primaryMobile: true
       },
       {
-        label: "Fitness",
-        href: "/fitness",
-        description: "Daily training sessions",
-        icon: "metrics",
-        shortLabel: "Train",
-        primaryMobile: true
-      },
-      {
-        label: "Quest Log",
-        href: "/tasks",
-        description: "Capture and clear quests",
-        icon: "tasks",
-        shortLabel: "Quests",
-        primaryMobile: true
-      },
-      {
         label: "Morning Stand-Up",
         href: "/standup/morning",
-        description: "Plan the day",
+        description: "Vitals, training & intention",
         icon: "morning",
-        shortLabel: "Morning",
-        primaryMobile: true
-      }
-    ]
-  },
-  {
-    id: "reflect",
-    caption: "Reflect",
-    items: [
-      {
-        label: "Metrics",
-        href: "/metrics",
-        description: "Energy check-in",
-        icon: "metrics"
+        shortLabel: "Morning"
       },
       {
         label: "Vitals",
         href: "/vitals",
         description: "Glucose, BP & weight",
         icon: "metrics",
-        shortLabel: "Vitals"
+        shortLabel: "Vitals",
+        primaryMobile: true
       },
       {
         label: "Nutrition",
         href: "/nutrition",
         description: "Food diary — calories & macros",
         icon: "metrics",
-        shortLabel: "Food"
+        shortLabel: "Food",
+        primaryMobile: true
       },
+      {
+        label: "Fitness",
+        href: "/fitness",
+        description: "Daily training sessions",
+        icon: "metrics",
+        shortLabel: "Train",
+        primaryMobile: true
+      }
+    ]
+  },
+  {
+    id: "progress",
+    caption: "Progress",
+    items: [
       {
         label: "Progress Photos",
         href: "/progress",
@@ -88,17 +75,61 @@ export const navigationGroups: NavigationGroup[] = [
         shortLabel: "Progress"
       },
       {
+        label: "Metrics",
+        href: "/metrics",
+        description: "Energy & mood check-in",
+        icon: "metrics"
+      },
+      {
+        label: "Trends",
+        href: "/trends",
+        description: "Patterns over time",
+        icon: "trends"
+      },
+      {
         label: "Health Import",
         href: "/health-import",
-        description: "Samsung export alpha",
+        description: "Sleep & device data",
         icon: "healthImport",
         shortLabel: "Health"
+      }
+    ]
+  },
+  {
+    id: "coach",
+    caption: "Coach",
+    items: [
+      {
+        label: "AI Coach",
+        href: "/coach",
+        description: "Chat, photo & voice coaching",
+        icon: "coach",
+        shortLabel: "Coach"
+      },
+      {
+        label: "Capture",
+        href: "/capture",
+        description: "Log from a photo",
+        icon: "healthImport"
       },
       {
         label: "About Me",
         href: "/profile",
         description: "Personal context for the AI",
         icon: "journal"
+      }
+    ]
+  },
+  {
+    id: "more",
+    caption: "More",
+    items: [
+      {
+        label: "Quest Log",
+        href: "/tasks",
+        description: "Capture and clear quests",
+        icon: "tasks",
+        shortLabel: "Quests"
       },
       {
         label: "Journal",
@@ -113,35 +144,10 @@ export const navigationGroups: NavigationGroup[] = [
         icon: "journal"
       },
       {
-        label: "Trends",
-        href: "/trends",
-        description: "Patterns over time",
-        icon: "trends"
-      }
-    ]
-  },
-  {
-    id: "tools",
-    caption: "Tools",
-    items: [
-      {
         label: "Reports",
         href: "/reports",
         description: "Daily report export",
         icon: "reports"
-      },
-      {
-        label: "AI Coach",
-        href: "/coach",
-        description: "Read-only coach mode",
-        icon: "coach",
-        shortLabel: "Coach"
-      },
-      {
-        label: "Capture",
-        href: "/capture",
-        description: "Log from a photo",
-        icon: "healthImport"
       }
     ]
   }

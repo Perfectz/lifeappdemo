@@ -1,6 +1,8 @@
-import type { IsoDate, MetricEntry, Workout } from "@/domain/types";
+import type { FoodEntry, IsoDate, MetricEntry, Workout } from "@/domain/types";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import type { HealthGoals } from "@/domain/healthGoals";
+import type { NutritionGoals } from "@/domain/nutritionGoals";
+import { getFoodEntriesForDate, sumMacros } from "@/domain/nutrition";
 import { latestBloodPressure, latestGlucose, latestWeight } from "@/domain/vitals";
 
 /**
@@ -46,8 +48,10 @@ export function computeDailyAlignment(input: {
   metrics: MetricEntry[];
   workouts: Workout[];
   goals: HealthGoals;
+  foods?: FoodEntry[];
+  nutritionGoals?: NutritionGoals;
 }): DailyAlignment {
-  const { today, metrics, workouts, goals } = input;
+  const { today, metrics, workouts, goals, foods = [], nutritionGoals } = input;
   const todayMetrics = metrics.filter((entry) => entry.date === today);
   const bp = latestBloodPressure(todayMetrics);
   const glucose = latestGlucose(todayMetrics);
@@ -60,12 +64,29 @@ export function computeDailyAlignment(input: {
     glucose !== undefined &&
     glucose.mgDl <= (glucose.context === "fasting" ? goals.fastingGlucoseTarget : 160);
 
+  const sleepHours = todayMetrics
+    .filter((entry) => entry.sleepHours !== undefined)
+    .sort((a, b) => Date.parse(b.recordedAt) - Date.parse(a.recordedAt))[0]?.sleepHours;
+  const sleptEnough = sleepHours !== undefined && sleepHours >= goals.sleepHoursTarget;
+
+  const todayFoods = getFoodEntriesForDate(foods, today);
+  const consumedCalories = sumMacros(todayFoods).calories;
+  const calorieTarget = nutritionGoals?.calorieTarget;
+  const withinBudget = calorieTarget !== undefined && consumedCalories <= calorieTarget;
+
   const contributions: AlignmentContribution[] = [
     { key: "glucose_logged", label: "Logged glucose", points: 10, earned: glucose ? 10 : 0 },
     { key: "bp_logged", label: "Logged blood pressure", points: 10, earned: bp ? 10 : 0 },
     { key: "weight_logged", label: "Logged weight", points: 10, earned: weight ? 10 : 0 },
     { key: "bp_in_range", label: "Blood pressure in range", points: 10, earned: bpInRange ? 10 : 0 },
     { key: "glucose_in_range", label: "Glucose in range", points: 10, earned: glucoseInRange ? 10 : 0 },
+    { key: "sleep", label: "Slept enough", points: 10, earned: sleptEnough ? 10 : 0 },
+    {
+      key: "nutrition_logged",
+      label: "Logged food",
+      points: 5,
+      earned: todayFoods.length > 0 ? 5 : 0
+    },
     {
       key: "strength",
       label: "Strength session",
@@ -80,6 +101,16 @@ export function computeDailyAlignment(input: {
       earned: fitness.byType.martial_arts ? 20 : 0
     }
   ];
+
+  // Only score the calorie budget once the user has set one.
+  if (calorieTarget !== undefined) {
+    contributions.push({
+      key: "calorie_budget",
+      label: "Within calorie budget",
+      points: 10,
+      earned: withinBudget ? 10 : 0
+    });
+  }
 
   const max = contributions.reduce((sum, item) => sum + item.points, 0);
   const score = contributions.reduce((sum, item) => sum + item.earned, 0);

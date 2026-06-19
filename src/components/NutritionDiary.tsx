@@ -37,7 +37,16 @@ function shiftIsoDate(deltaDays: number): string {
   return toLocalIsoDate(date);
 }
 
-const EMPTY_FORM = { description: "", calories: "", proteinG: "", carbsG: "", fatG: "", fiberG: "" };
+const EMPTY_FORM = {
+  description: "",
+  calories: "",
+  proteinG: "",
+  carbsG: "",
+  fatG: "",
+  fiberG: "",
+  sugarG: "",
+  sodiumMg: ""
+};
 
 export function NutritionDiary() {
   const [foods, setFoods] = useState<FoodEntry[]>([]);
@@ -95,7 +104,9 @@ export function NutritionDiary() {
           proteinG: num(form.proteinG),
           carbsG: num(form.carbsG),
           fatG: num(form.fatG),
-          fiberG: num(form.fiberG)
+          fiberG: num(form.fiberG),
+          sugarG: num(form.sugarG),
+          sodiumMg: num(form.sodiumMg)
         },
         estimateSource: "manual"
       });
@@ -214,6 +225,12 @@ export function NutritionDiary() {
           {macroBar("Fat", totals.fatG, goals.fatTargetG)}
         </div>
 
+        <p className="nutri-micros">
+          <span>Net carbs <strong>{Math.round(Math.max(0, totals.carbsG - totals.fiberG))}g</strong></span>
+          <span>Sugar <strong>{Math.round(totals.sugarG)}g</strong></span>
+          <span>Sodium <strong>{Math.round(totals.sodiumMg)}mg</strong></span>
+        </p>
+
         {editingGoals ? (
           <div className="nutri-goal-editor">
             <label className="fitness-label">
@@ -291,6 +308,8 @@ export function NutritionDiary() {
                   <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="protein" value={form.proteinG} onChange={(e) => setForm({ ...form, proteinG: e.target.value })} />
                   <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="carbs" value={form.carbsG} onChange={(e) => setForm({ ...form, carbsG: e.target.value })} />
                   <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="fat" value={form.fatG} onChange={(e) => setForm({ ...form, fatG: e.target.value })} />
+                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="sugar" value={form.sugarG} onChange={(e) => setForm({ ...form, sugarG: e.target.value })} />
+                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="sodium(mg)" value={form.sodiumMg} onChange={(e) => setForm({ ...form, sodiumMg: e.target.value })} />
                 </div>
                 <div className="nutri-add-actions">
                   <button type="button" className="login-submit" onClick={() => saveFood(meal)}>

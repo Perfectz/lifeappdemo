@@ -161,6 +161,8 @@ export const VOICE_TOOL_DEFINITIONS = [
         carbsG: { type: "number" },
         fatG: { type: "number" },
         fiberG: { type: "number" },
+        sugarG: { type: "number" },
+        sodiumMg: { type: "number" },
         confidence: { type: "string", enum: ["low", "medium", "high"] }
       },
       required: ["description"]
@@ -391,7 +393,9 @@ function logFood(args: Record<string, unknown>): VoiceToolResult {
       proteinG: asNumber(args.proteinG),
       carbsG: asNumber(args.carbsG),
       fatG: asNumber(args.fatG),
-      fiberG: asNumber(args.fiberG)
+      fiberG: asNumber(args.fiberG),
+      sugarG: asNumber(args.sugarG),
+      sodiumMg: asNumber(args.sodiumMg)
     },
     estimateSource: "photo_ai",
     confidence

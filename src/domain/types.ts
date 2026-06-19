@@ -254,6 +254,8 @@ export type Macros = {
   carbsG?: number;
   fatG?: number;
   fiberG?: number;
+  sugarG?: number;
+  sodiumMg?: number;
 };
 
 export type FoodEntry = TimestampedEntity & {

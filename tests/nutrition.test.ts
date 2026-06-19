@@ -43,7 +43,7 @@ describe("nutrition domain", () => {
   it("sums macros across entries", () => {
     const a = createFoodEntry({ date: "2026-06-15", mealType: "breakfast", description: "a", macros: { calories: 300, proteinG: 20 } }, now);
     const b = createFoodEntry({ date: "2026-06-15", mealType: "dinner", description: "b", macros: { calories: 700, proteinG: 50, carbsG: 60 } }, now);
-    expect(sumMacros([a, b])).toEqual({ calories: 1000, proteinG: 70, carbsG: 60, fatG: 0, fiberG: 0 });
+    expect(sumMacros([a, b])).toEqual({ calories: 1000, proteinG: 70, carbsG: 60, fatG: 0, fiberG: 0, sugarG: 0, sodiumMg: 0 });
   });
 
   it("guards food-entry shape", () => {
