@@ -1,18 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { CommandButton } from "@/components/CommandButton";
 import { SectionHeader } from "@/components/SectionHeader";
+import { fileToDownscaledDataUrl } from "@/client/imageDownscale";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 import { loadHealthGoals, saveHealthGoals } from "@/data/healthGoalsRepository";
 import { loadNutritionGoals } from "@/data/nutritionGoalsRepository";
+import { goalImageChangedEvent, loadGoalImage, saveGoalImage } from "@/data/goalImageStore";
 import { computeDailyAlignment } from "@/domain/alignment";
 import { getTransformation, type TransformationStage } from "@/domain/transformation";
+import { levelFromJourney } from "@/domain/levels";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import { toLocalIsoDate } from "@/domain/dates";
 import { weightGoalProgressPercent, withGoalEdits, type HealthGoals } from "@/domain/healthGoals";
@@ -47,6 +50,8 @@ export function NorthStarCard() {
   const [nutritionGoals, setNutritionGoals] = useState<NutritionGoals | null>(null);
   const [editingWeight, setEditingWeight] = useState(false);
   const [weightTargetDraft, setWeightTargetDraft] = useState("");
+  const [goalImage, setGoalImage] = useState<string | null>(null);
+  const goalInputRef = useRef<HTMLInputElement | null>(null);
 
   const today = toLocalIsoDate();
 
@@ -64,6 +69,23 @@ export function NorthStarCard() {
     window.addEventListener(dataChangedEventName, reload);
     return () => window.removeEventListener(dataChangedEventName, reload);
   }, [reload]);
+
+  useEffect(() => {
+    const refresh = () => void loadGoalImage().then(setGoalImage);
+    refresh();
+    window.addEventListener(goalImageChangedEvent, refresh);
+    return () => window.removeEventListener(goalImageChangedEvent, refresh);
+  }, []);
+
+  async function handleGoalImage(file: File) {
+    try {
+      const dataUrl = await fileToDownscaledDataUrl(file, 768);
+      await saveGoalImage(dataUrl);
+      setGoalImage(dataUrl);
+    } catch {
+      // non-fatal
+    }
+  }
 
   const todayMetrics = useMemo(() => metrics.filter((entry) => entry.date === today), [metrics, today]);
   const bp = latestBloodPressure(todayMetrics) ?? latestBloodPressure(metrics);
@@ -101,6 +123,7 @@ export function NorthStarCard() {
     weightProgressPercent: weightPercent,
     alignmentPercent: alignment.percent
   });
+  const levelInfo = levelFromJourney(transformation.progressPercent);
 
   function saveWeightGoal(current: HealthGoals) {
     const target = num(weightTargetDraft);
@@ -122,16 +145,71 @@ export function NorthStarCard() {
     <section className="dashboard-section north-star" aria-label="North Star progress">
       <SectionHeader eyebrow="North Star" title="Becoming your future self" />
 
-      <div className={`north-star-avatar north-star-avatar-stage-${transformation.stage}`}>
-        <div className="north-star-avatar-frame" aria-hidden="true">
-          <CharacterSprite className="north-star-avatar-sprite" pose={STAGE_POSE[transformation.stage]} />
+      <div className={`level-card level-card-stage-${transformation.stage}`}>
+        <div className="level-evolution">
+          <figure className="level-form level-form-current">
+            <div className={`north-star-avatar-frame north-star-avatar-stage-${transformation.stage}`} aria-hidden="true">
+              <CharacterSprite className="north-star-avatar-sprite" pose={STAGE_POSE[transformation.stage]} />
+            </div>
+            <figcaption>Lv {levelInfo.level} — now</figcaption>
+          </figure>
+
+          <div className="level-arrow" aria-hidden="true">▸</div>
+
+          <figure className="level-form level-form-goal">
+            <div className={levelInfo.isMaxLevel ? "level-goal-frame level-goal-frame-unlocked" : "level-goal-frame"}>
+              {goalImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="level-goal-img" src={goalImage} alt="Your goal / final form" />
+              ) : (
+                <button
+                  type="button"
+                  className="level-goal-empty"
+                  onClick={() => goalInputRef.current?.click()}
+                >
+                  + Set goal image
+                </button>
+              )}
+            </div>
+            <figcaption>Lv {levelInfo.maxLevel} — Patrick 2.0</figcaption>
+          </figure>
+          <input
+            ref={goalInputRef}
+            type="file"
+            accept="image/*"
+            className="visually-hidden"
+            aria-label="Set your goal image"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void handleGoalImage(file);
+              event.target.value = "";
+            }}
+          />
         </div>
-        <div className="north-star-avatar-text">
-          <p className="north-star-avatar-stage">Stage {transformation.stage} · {transformation.label}</p>
-          <div className="north-star-meter" aria-label={`Transformation ${transformation.progressPercent} percent`}>
-            <span style={{ width: `${transformation.progressPercent}%` }} />
+
+        <div className="level-meter-block">
+          <p className="level-headline">
+            <strong>Lv {levelInfo.level}</strong>
+            <span>/ {levelInfo.maxLevel}</span>
+            <em>{levelInfo.title}</em>
+          </p>
+          <div className="north-star-meter level-xp" aria-label={`${levelInfo.percentIntoLevel}% to next level`}>
+            <span style={{ width: `${levelInfo.isMaxLevel ? 100 : levelInfo.percentIntoLevel}%` }} />
           </div>
-          <p className="reminders-help">{transformation.progressPercent}% toward your future self.</p>
+          <p className="reminders-help">
+            {levelInfo.isMaxLevel
+              ? "Max level — you're living as Patrick 2.0."
+              : `${levelInfo.percentIntoLevel}% to Lv ${levelInfo.level + 1} · ${transformation.progressPercent}% of the whole journey`}
+            {goalImage ? (
+              <>
+                {" "}
+                ·{" "}
+                <button type="button" className="level-change-goal" onClick={() => goalInputRef.current?.click()}>
+                  change goal image
+                </button>
+              </>
+            ) : null}
+          </p>
         </div>
       </div>
 
