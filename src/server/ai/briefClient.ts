@@ -12,6 +12,8 @@ export type BriefFacts = {
   heroName?: string;
   allClear: boolean;
   items: string[];
+  /** The user's profile + saved memories, for a personalized nudge. */
+  aboutMe?: string;
 };
 
 export type BriefGenerator = (facts: BriefFacts) => Promise<string>;
@@ -27,6 +29,7 @@ const SYSTEM_PROMPT = [
   "Given today's status, write ONE short spoken-style briefing of 1-2 sentences.",
   "Address them by name if given, reference the open items naturally, and nudge action with warmth.",
   "If everything is done, give brief, genuine encouragement.",
+  "If a profile/memory of the user is provided, ground the nudge in it — their name, stated top health priorities, and goals — but keep it to 1-2 sentences.",
   "No markdown, no bullet lists, no emojis — just the sentence(s)."
 ].join(" ");
 
@@ -54,7 +57,8 @@ export async function generateCoachBrief(facts: BriefFacts): Promise<string> {
     facts.heroName ? `Name: ${facts.heroName}.` : "",
     facts.allClear
       ? "Everything for today is handled."
-      : `Open items: ${facts.items.join("; ")}.`
+      : `Open items: ${facts.items.join("; ")}.`,
+    facts.aboutMe?.trim() ? `\n\nAbout the user (profile + memory):\n${facts.aboutMe.trim()}` : ""
   ]
     .filter(Boolean)
     .join(" ");
