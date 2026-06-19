@@ -11,7 +11,7 @@ import { fileToDownscaledDataUrl } from "@/client/imageDownscale";
 import { loadWiki } from "@/data/wikiRepository";
 import { formatWikiForPrompt } from "@/domain/personalWiki";
 import { createLocalMemoryRepository } from "@/data/memoryRepository";
-import { formatMemoriesForPrompt } from "@/domain/memory";
+import { formatMemoriesForPrompt, upsertMemory } from "@/domain/memory";
 import { persistAIToolResult } from "@/client/persistAIToolResult";
 import { readProfile } from "@/client/profile";
 import { loadStoredAppData } from "@/client/storedAppData";
@@ -98,6 +98,9 @@ function proposalDetails(proposal: AIToolProposal): string {
   }
   if (proposal.toolName === "generate_daily_report") {
     return [payload.date, payload.style].filter(Boolean).join(" · ");
+  }
+  if (proposal.toolName === "save_memory") {
+    return [payload.key, payload.content].filter(Boolean).join(": ");
   }
   return "";
 }
@@ -295,9 +298,35 @@ export function AICoachPanel() {
     setProposalStatus(messageId, proposal.id, "rejected");
   }
 
+  function applyMemoryProposal(messageId: string, proposal: AIToolProposal): boolean {
+    const payload = proposal.payload as { key?: unknown; content?: unknown };
+    const key = typeof payload.key === "string" ? payload.key : "";
+    const content = typeof payload.content === "string" ? payload.content : "";
+    if (!key || !content) {
+      setProposalStatus(messageId, proposal.id, "failed");
+      setError("That memory was missing a key or content.");
+      return true;
+    }
+    const repo = createLocalMemoryRepository(window.localStorage);
+    repo.save(upsertMemory(repo.load(), { key, content, source: "agent" }));
+    setProposalStatus(messageId, proposal.id, "applied");
+    setMessages((current) => [
+      ...current,
+      { id: createMessageId("coach"), role: "coach", content: `✓ Remembered "${key}".` }
+    ]);
+    return true;
+  }
+
   async function confirmProposal(messageId: string, proposal: AIToolProposal) {
     setProposalStatus(messageId, proposal.id, "confirmed");
     setError(null);
+
+    // Memory writes are local — apply directly, no server round-trip.
+    if (proposal.toolName === "save_memory") {
+      applyMemoryProposal(messageId, proposal);
+      return;
+    }
+
     try {
       const storage = window.localStorage;
       const payload = await confirmAIToolProposal({

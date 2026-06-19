@@ -118,7 +118,8 @@ export type AITaskToolName =
   | "log_metric"
   | "create_journal_entry"
   | "propose_daily_plan"
-  | "generate_daily_report";
+  | "generate_daily_report"
+  | "save_memory";
 
 export type AIToolProposal = TimestampedEntity & {
   toolName: AITaskToolName;
