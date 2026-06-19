@@ -24,6 +24,15 @@ import { createLocalDailyReportRepository } from "@/data/dailyReportRepository";
 import { createLocalJournalRepository } from "@/data/journalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
+import { createLocalChatThreadRepository } from "@/data/chatThreadRepository";
+import {
+  deriveThreadTitle,
+  removeThread,
+  sortThreadsByRecent,
+  upsertThread,
+  type ChatMessageRecord,
+  type ChatThread
+} from "@/domain/chat";
 import type { AIToolProposal } from "@/domain";
 
 type ChatMessage = {
@@ -41,9 +50,20 @@ type VisionProposalCard = VisionProposal & {
 };
 
 const WELCOME_ID = "coach-welcome";
+const WELCOME_TEXT =
+  "Hey — I'm your coach. Ask me anything, talk it through, or share a photo (a meal, a BP reading, your steps). I can also log things for you — I'll show the change and you confirm before it saves.";
+
+function welcomeMessage(): ChatMessage {
+  return { id: WELCOME_ID, role: "coach", content: WELCOME_TEXT };
+}
 
 function createMessageId(role: ChatMessage["role"]): string {
   return createClientId(role);
+}
+
+/** Restore a saved thread's text records into renderable chat messages. */
+function messagesFromThread(thread: ChatThread): ChatMessage[] {
+  return [welcomeMessage(), ...thread.messages.map((record) => ({ ...record }))];
 }
 
 type SpeechRecognitionLike = {
@@ -106,14 +126,9 @@ function proposalDetails(proposal: AIToolProposal): string {
 }
 
 export function AICoachPanel() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: WELCOME_ID,
-      role: "coach",
-      content:
-        "Hey — I'm your coach. Ask me anything, talk it through, or share a photo (a meal, a BP reading, your steps). I can also log things for you — I'll show the change and you confirm before it saves."
-    }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage()]);
+  const [threads, setThreads] = useState<ChatThread[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -121,13 +136,83 @@ export function AICoachPanel() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const activeIdRef = useRef<string | null>(null);
+  const createdAtRef = useRef<string | null>(null);
   const isOnline = useNetworkStatus();
   const heroName = useHeroName();
   const speechSupported = useMemo(() => getSpeechRecognitionCtor() !== null, []);
 
+  // Load saved threads on mount and reopen the most recent conversation.
+  useEffect(() => {
+    const saved = sortThreadsByRecent(
+      createLocalChatThreadRepository(window.localStorage).load()
+    );
+    setThreads(saved);
+    if (saved.length > 0) {
+      activeIdRef.current = saved[0].id;
+      createdAtRef.current = saved[0].createdAt;
+      setMessages(messagesFromThread(saved[0]));
+    }
+  }, []);
+
+  // Auto-persist the active conversation whenever its turns change.
+  useEffect(() => {
+    const records: ChatMessageRecord[] = messages
+      .filter((message) => message.id !== WELCOME_ID && message.content.trim())
+      .map((message) => ({ id: message.id, role: message.role, content: message.content }));
+    if (!records.some((record) => record.role === "user")) {
+      return; // nothing worth saving yet
+    }
+    const now = new Date().toISOString();
+    if (!activeIdRef.current) activeIdRef.current = createClientId("thread");
+    if (!createdAtRef.current) createdAtRef.current = now;
+    const thread: ChatThread = {
+      id: activeIdRef.current,
+      title: deriveThreadTitle(records),
+      messages: records,
+      createdAt: createdAtRef.current,
+      updatedAt: now
+    };
+    const repo = createLocalChatThreadRepository(window.localStorage);
+    repo.save(upsertThread(repo.load(), thread));
+    setThreads(sortThreadsByRecent(repo.load()));
+  }, [messages]);
+
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ behavior: "smooth", block: "end" });
   }, [messages, isSending]);
+
+  function newChat() {
+    activeIdRef.current = null;
+    createdAtRef.current = null;
+    setMessages([welcomeMessage()]);
+    setError(null);
+    setShowHistory(false);
+  }
+
+  function openThread(thread: ChatThread) {
+    activeIdRef.current = thread.id;
+    createdAtRef.current = thread.createdAt;
+    setMessages(messagesFromThread(thread));
+    setError(null);
+    setShowHistory(false);
+  }
+
+  function deleteThread(id: string) {
+    const repo = createLocalChatThreadRepository(window.localStorage);
+    repo.save(removeThread(repo.load(), id));
+    const remaining = sortThreadsByRecent(repo.load());
+    setThreads(remaining);
+    if (activeIdRef.current === id) {
+      newChat();
+    }
+  }
+
+  function clearAllThreads() {
+    createLocalChatThreadRepository(window.localStorage).save([]);
+    setThreads([]);
+    newChat();
+  }
 
   function historyFor(): { role: "user" | "assistant"; content: string }[] {
     return messages
@@ -394,7 +479,59 @@ export function AICoachPanel() {
           <h1 id="coach-title">AI Coach</h1>
           <p>Chat, talk, or share a photo. Changes need your confirm.</p>
         </div>
+        <div className="chat-topbar-actions">
+          <button type="button" className="chat-topbar-btn" onClick={newChat}>
+            ＋ New chat
+          </button>
+          <button
+            type="button"
+            className={showHistory ? "chat-topbar-btn chat-topbar-btn-on" : "chat-topbar-btn"}
+            aria-expanded={showHistory}
+            onClick={() => setShowHistory((open) => !open)}
+          >
+            History ({threads.length})
+          </button>
+        </div>
       </header>
+
+      {showHistory ? (
+        <div className="chat-history" aria-label="Saved conversations">
+          {threads.length === 0 ? (
+            <p className="reminders-help">No saved conversations yet.</p>
+          ) : (
+            <>
+              <ul className="chat-history-list">
+                {threads.map((thread) => (
+                  <li
+                    key={thread.id}
+                    className={
+                      thread.id === activeIdRef.current
+                        ? "chat-history-item chat-history-item-active"
+                        : "chat-history-item"
+                    }
+                  >
+                    <button type="button" className="chat-history-open" onClick={() => openThread(thread)}>
+                      <span className="chat-history-title">{thread.title}</span>
+                      <span className="chat-history-date">{thread.updatedAt.slice(0, 10)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="chat-history-delete"
+                      aria-label={`Delete conversation "${thread.title}"`}
+                      onClick={() => deleteThread(thread.id)}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" className="chat-history-clear" onClick={clearAllThreads}>
+                Clear all conversations
+              </button>
+            </>
+          )}
+        </div>
+      ) : null}
 
       {!isOnline ? <OfflineBoundary featureName="AI Coach" /> : null}
 
