@@ -29,8 +29,20 @@ describe("voice tool dispatcher", () => {
       "list_recent_workouts",
       "read_notes",
       "read_about_me",
+      "remember",
+      "forget",
+      "read_memory",
       "navigate"
     ]);
+  });
+
+  it("remembers and recalls a durable fact, then forgets it", () => {
+    expect(executeVoiceTool("remember", { key: "favorite workouts", content: "Shidokan + kettlebell" }).ok).toBe(true);
+    const recalled = executeVoiceTool("read_memory", { query: "favorite" });
+    expect(recalled).toMatchObject({ ok: true, silent: true });
+    expect(recalled.message).toContain("Shidokan");
+    expect(executeVoiceTool("forget", { key: "favorite workouts" }).ok).toBe(true);
+    expect(executeVoiceTool("read_memory", {}).message).toContain("No saved memories");
   });
 
   it("saves a note the user can read later", () => {
