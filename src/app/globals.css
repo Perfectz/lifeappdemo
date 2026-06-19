@@ -2045,6 +2045,139 @@ textarea {
   cursor: not-allowed;
 }
 
+/* North Star card */
+.north-star-score {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+.north-star-dial {
+  flex: 0 0 auto;
+  width: 4.6rem;
+  height: 4.6rem;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--border, rgba(255, 255, 255, 0.2));
+  line-height: 1;
+}
+
+.north-star-dial strong {
+  font-size: 1.5rem;
+}
+
+.north-star-dial span {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.north-star-dial-strongly_aligned {
+  border-color: var(--accent, #4ade80);
+  color: var(--accent, #4ade80);
+}
+
+.north-star-dial-on_track {
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.north-star-dial-getting_started {
+  border-color: var(--warning, #fbbf24);
+  color: var(--warning, #fbbf24);
+}
+
+.north-star-score-text {
+  min-width: 0;
+}
+
+.north-star-level {
+  margin: 0;
+  font-weight: 700;
+}
+
+.north-star-meter {
+  margin-top: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.north-star-meter span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #4ade80);
+}
+
+.north-star-rows {
+  list-style: none;
+  margin: 0 0 0.9rem;
+  padding: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.north-star-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.07));
+}
+
+.north-star-row:last-child {
+  border-bottom: none;
+}
+
+.north-star-row-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.north-star-row-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.north-star-row-target {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: right;
+}
+
+.north-star-weight-edit {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.north-star-weight-edit .fitness-input {
+  width: 5.5rem;
+}
+
+.north-star-mini-btn {
+  border: 1px solid var(--accent, #6366f1);
+  color: var(--accent, #6366f1);
+  background: transparent;
+  border-radius: 0.45rem;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.north-star-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .progress-photo-actions {
   display: flex;
   gap: 0.35rem;

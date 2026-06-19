@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -138,7 +138,9 @@ describe("Dashboard", () => {
     });
     expect(screen.getByText("5/5")).toBeVisible();
     expect(screen.getByText("3/5")).toBeVisible();
-    expect(screen.getByText("7h")).toBeVisible();
+    // Sleep "7h" appears in both the snapshot and the North Star card — scope to the snapshot.
+    const snapshot = document.querySelector(".metric-snapshot") as HTMLElement;
+    expect(within(snapshot).getByText("7h")).toBeVisible();
     expect(screen.getByText("6500")).toBeVisible();
   });
 });
