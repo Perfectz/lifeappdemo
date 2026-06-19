@@ -54,6 +54,27 @@ describe("AI task tools", () => {
     }
   });
 
+  it("validates a save_memory proposal and rejects an incomplete one", () => {
+    const ok = validateAIToolProposalInput(
+      makeProposal({
+        toolName: "save_memory",
+        summary: "Remember the user's resume.",
+        payload: { key: "resume", content: "Head AI Architect at OTR." }
+      }),
+      now
+    );
+    expect(ok.ok).toBe(true);
+    if (ok.ok) {
+      expect(ok.value.payload).toMatchObject({ key: "resume", content: "Head AI Architect at OTR." });
+    }
+
+    const bad = validateAIToolProposalInput(
+      makeProposal({ toolName: "save_memory", summary: "x", payload: { key: "resume" } }),
+      now
+    );
+    expect(bad.ok).toBe(false);
+  });
+
   it("rejects unknown tool names and malformed payloads", () => {
     expect(
       validateAIToolProposalInput({

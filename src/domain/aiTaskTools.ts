@@ -44,8 +44,26 @@ export const aiTaskToolNames: AITaskToolName[] = [
   "log_metric",
   "create_journal_entry",
   "propose_daily_plan",
-  "generate_daily_report"
+  "generate_daily_report",
+  "save_memory"
 ];
+
+export type SaveMemoryPayload = {
+  key: string;
+  content: string;
+};
+
+function validateSaveMemoryPayload(payload: unknown): SaveMemoryPayload | undefined {
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+  const key = optionalText(payload.key);
+  const content = optionalText(payload.content);
+  if (!key || !content) {
+    return undefined;
+  }
+  return { key: key.slice(0, 80), content: content.slice(0, 4000) };
+}
 
 type CreateTaskPayload = TaskInput;
 
@@ -437,6 +455,10 @@ function sanitizePayload(toolName: AITaskToolName, payload: unknown): unknown {
   if (toolName === "generate_daily_report") {
     const validation = validateGenerateDailyReportPayload(payload);
     return validation.ok ? validation.value : undefined;
+  }
+
+  if (toolName === "save_memory") {
+    return validateSaveMemoryPayload(payload);
   }
 
   return undefined;
