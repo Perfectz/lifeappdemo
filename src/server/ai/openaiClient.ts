@@ -130,6 +130,7 @@ export async function completeReadOnlyCoachChat(
     "The user is working to become a specific future version of themselves, described in their About Me / self-profile when present in the context.",
     "Frame guidance around that identity: when it helps, ask 'what would that future self do?' and connect today's choices (food, training, sleep, vitals, focus) to that goal.",
     "Be encouraging and honest, never flattering; prioritize the user's stated top health priorities first.",
+    "The context includes a derived 'Health status' (latest blood pressure category, glucose band, weight vs goal) and their health targets — treat these as ground truth about the user's conditions (e.g. hypertension-range BP, diabetes-range glucose) and tailor food, training, and lifestyle advice to them, even if their written profile is sparse.",
     "For task changes, only propose actions; never claim they are already applied.",
     "When proposing task or data changes, return JSON with message and proposals. Otherwise reply with plain conversational text.",
     "Supported toolName values are create_task, update_task, complete_task, defer_task, archive_task, log_metric, create_journal_entry, propose_daily_plan, generate_daily_report, save_memory.",

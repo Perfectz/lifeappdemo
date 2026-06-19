@@ -6,6 +6,7 @@ import { createLocalTaskRepository } from "@/data/taskRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 import { loadNutritionGoals } from "@/data/nutritionGoalsRepository";
+import { loadHealthGoals } from "@/data/healthGoalsRepository";
 import type { AIStoredAppData } from "@/domain";
 
 export function loadStoredAppData(storage: Storage): AIStoredAppData {
@@ -17,6 +18,7 @@ export function loadStoredAppData(storage: Storage): AIStoredAppData {
     dailyReports: createLocalDailyReportRepository(storage).load(),
     workouts: createLocalWorkoutRepository(storage).load(),
     foodEntries: createLocalFoodEntryRepository(storage).load(),
-    nutritionGoals: loadNutritionGoals(storage)
+    nutritionGoals: loadNutritionGoals(storage),
+    healthGoals: loadHealthGoals(storage)
   };
 }

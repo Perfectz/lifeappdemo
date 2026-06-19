@@ -2,6 +2,11 @@ node_modules
 .next
 out
 .claude
+
+# Promo/demo media + scripts — may contain personal data; never commit
+*.mp4
+*.mov
+/lifequest-mobile-*.md
 playwright-report
 test-results
 coverage
