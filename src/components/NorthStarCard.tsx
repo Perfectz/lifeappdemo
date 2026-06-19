@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { CharacterSprite } from "@/components/CharacterSprite";
 import { CommandButton } from "@/components/CommandButton";
 import { SectionHeader } from "@/components/SectionHeader";
 import { dataChangedEventName } from "@/data/createLocalRepository";
@@ -11,6 +12,7 @@ import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 import { loadHealthGoals, saveHealthGoals } from "@/data/healthGoalsRepository";
 import { loadNutritionGoals } from "@/data/nutritionGoalsRepository";
 import { computeDailyAlignment } from "@/domain/alignment";
+import { getTransformation, type TransformationStage } from "@/domain/transformation";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import { toLocalIsoDate } from "@/domain/dates";
 import { weightGoalProgressPercent, withGoalEdits, type HealthGoals } from "@/domain/healthGoals";
@@ -28,6 +30,14 @@ function num(value: string): number | undefined {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
+
+const STAGE_POSE: Record<TransformationStage, "lowEnergy" | "thinking" | "walkFrontOne" | "idleFront" | "victory"> = {
+  1: "lowEnergy",
+  2: "thinking",
+  3: "walkFrontOne",
+  4: "idleFront",
+  5: "victory"
+};
 
 export function NorthStarCard() {
   const [metrics, setMetrics] = useState<MetricEntry[]>([]);
@@ -87,6 +97,10 @@ export function NorthStarCard() {
   }
 
   const weightPercent = weightGoalProgressPercent(goals, weight?.weightLbs);
+  const transformation = getTransformation({
+    weightProgressPercent: weightPercent,
+    alignmentPercent: alignment.percent
+  });
 
   function saveWeightGoal(current: HealthGoals) {
     const target = num(weightTargetDraft);
@@ -107,6 +121,19 @@ export function NorthStarCard() {
   return (
     <section className="dashboard-section north-star" aria-label="North Star progress">
       <SectionHeader eyebrow="North Star" title="Becoming your future self" />
+
+      <div className={`north-star-avatar north-star-avatar-stage-${transformation.stage}`}>
+        <div className="north-star-avatar-frame" aria-hidden="true">
+          <CharacterSprite className="north-star-avatar-sprite" pose={STAGE_POSE[transformation.stage]} />
+        </div>
+        <div className="north-star-avatar-text">
+          <p className="north-star-avatar-stage">Stage {transformation.stage} · {transformation.label}</p>
+          <div className="north-star-meter" aria-label={`Transformation ${transformation.progressPercent} percent`}>
+            <span style={{ width: `${transformation.progressPercent}%` }} />
+          </div>
+          <p className="reminders-help">{transformation.progressPercent}% toward your future self.</p>
+        </div>
+      </div>
 
       <div className="north-star-score">
         <div

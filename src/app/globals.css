@@ -6856,3 +6856,96 @@ html[data-theme="amber"] .quest-card {
   width: 100%;
   margin-top: 0.4rem;
 }
+
+/* Progress compare */
+.progress-compare {
+  margin-top: 1rem;
+}
+
+.progress-compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.progress-compare-item {
+  margin: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.progress-compare-item figcaption {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.fitness-repeat-btn {
+  margin-top: 0.6rem;
+  border: 1px solid var(--accent, #6366f1);
+  color: var(--accent, #6366f1);
+  background: transparent;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Patrick 2.0 transformation avatar */
+.north-star-avatar {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem 0.8rem;
+  margin-bottom: 0.9rem;
+  border-radius: 0.8rem;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.north-star-avatar-frame {
+  flex: 0 0 auto;
+  width: 4.4rem;
+  height: 4.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.north-star-avatar-sprite {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  /* Sprite "sharpens" (brighter, more saturated) as the stage climbs. */
+  filter: grayscale(0.55) brightness(0.85);
+  transition: filter 0.4s ease;
+}
+
+.north-star-avatar-stage-2 .north-star-avatar-sprite {
+  filter: grayscale(0.4) brightness(0.9);
+}
+
+.north-star-avatar-stage-3 .north-star-avatar-sprite {
+  filter: grayscale(0.2) brightness(0.97);
+}
+
+.north-star-avatar-stage-4 .north-star-avatar-sprite {
+  filter: grayscale(0) saturate(1.1);
+}
+
+.north-star-avatar-stage-5 .north-star-avatar-sprite {
+  filter: grayscale(0) saturate(1.25) drop-shadow(0 0 6px var(--accent, #4ade80));
+}
+
+.north-star-avatar-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.north-star-avatar-stage {
+  margin: 0 0 0.4rem;
+  font-weight: 700;
+}
