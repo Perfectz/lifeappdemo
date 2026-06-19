@@ -81,6 +81,37 @@ describe("AICoachPanel", () => {
     ]);
   });
 
+  it("persists the conversation and restores it on remount, and 'New chat' starts fresh", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: "Eat eggs.", mode: "general" }) })
+    );
+
+    const first = render(<AICoachPanel />);
+    fireEvent.change(screen.getByLabelText("Message"), {
+      target: { value: "What should I eat for breakfast?" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(screen.getByText("Eat eggs.")).toBeVisible());
+    first.unmount();
+
+    // Remount: the thread should be reloaded from storage.
+    render(<AICoachPanel />);
+    await waitFor(() =>
+      expect(screen.getByText("What should I eat for breakfast?")).toBeVisible()
+    );
+    expect(screen.getByText("Eat eggs.")).toBeVisible();
+    // It appears in History.
+    expect(screen.getByRole("button", { name: /History \(1\)/ })).toBeVisible();
+
+    // New chat clears the transcript but keeps the saved thread.
+    fireEvent.click(screen.getByRole("button", { name: "＋ New chat" }));
+    await waitFor(() =>
+      expect(screen.queryByText("What should I eat for breakfast?")).not.toBeInTheDocument()
+    );
+    expect(screen.getByRole("button", { name: /History \(1\)/ })).toBeVisible();
+  });
+
   it("shows a safe error when the chat request fails", async () => {
     vi.stubGlobal(
       "fetch",
