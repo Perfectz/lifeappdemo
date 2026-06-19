@@ -73,8 +73,10 @@ export function normalizeOpenFoodFactsProduct(raw: unknown): FoodSearchItem | nu
   const hasAnyMacro = Object.values(per100g).some((value) => value !== undefined);
   if (!hasAnyMacro) return null;
 
-  const brand =
-    typeof product.brands === "string" && product.brands.trim()
+  // Legacy/v2 give brands as a comma string; Search-a-licious gives an array.
+  const brand = Array.isArray(product.brands)
+    ? (product.brands.map(String).find((b) => b.trim())?.trim() ?? undefined)
+    : typeof product.brands === "string" && product.brands.trim()
       ? product.brands.split(",")[0].trim()
       : undefined;
 

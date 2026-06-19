@@ -22,9 +22,10 @@ export async function GET(request: Request) {
   try {
     const items = await searchFoods(query.slice(0, 100));
     return NextResponse.json({ items });
-  } catch {
+  } catch (error) {
+    const reason = error instanceof Error ? ` (${error.message})` : "";
     return NextResponse.json(
-      { error: "The food database is unavailable right now. Try again or add the food manually." },
+      { error: `The food database is unavailable right now${reason}. Try again or add the food manually.` },
       { status: 502 }
     );
   }
