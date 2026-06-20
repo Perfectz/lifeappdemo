@@ -49,13 +49,24 @@ through their pure domain layers; the thin IO wrappers are covered by e2e.
 
 ## CI
 
-`.github/workflows/ci.yml` runs `typecheck → lint → test:coverage → build` on
-every push and pull request, and uploads the coverage report as an artifact.
-(`deploy-pages.yml` separately runs the same checks before deploying.)
+`.github/workflows/ci.yml` has two jobs on every push and pull request:
+
+- **verify** — `typecheck → lint → test:coverage → build` (uploads coverage).
+- **e2e** — installs Playwright + Chromium and runs the smoke suite.
+
+Both must pass. (`deploy-pages.yml` separately runs the unit checks before deploying.)
 
 ## End-to-end (Playwright)
 
-`e2e/` holds browser specs (`chromium` + `mobile-chrome` projects) that boot the
-dev server and drive real flows. Run locally with `npm run test:e2e`. These are
-not yet wired into CI and lag behind recent feature changes — they need a
-refresh pass before being made a required gate.
+`e2e/smoke.spec.ts` is a resilient smoke suite that boots the dev server and
+verifies every core screen loads (dashboard, vitals, nutrition, fitness,
+character, progress, coach, morning) and that the core daily flows persist (log
+vitals, log a food). It runs on `chromium` + `mobile-chrome`. Run locally with
+`npm run test:e2e`.
+
+The login gate (`AuthGate`) is bypassed for tests via `NEXT_PUBLIC_E2E=1`, which
+the Playwright `webServer` sets — it is never enabled in production builds, and
+the real protection is Supabase RLS, not the client gate.
+
+The older per-feature specs were removed once they fell behind major feature
+changes; rebuild targeted specs on top of the smoke suite as flows stabilize.
