@@ -13,7 +13,8 @@ export default defineConfig({
     command: "npm run dev",
     url: "http://127.0.0.1:3000/dashboard",
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000
+    timeout: 120_000,
+    env: { NEXT_PUBLIC_E2E: "1" }
   },
   projects: [
     {

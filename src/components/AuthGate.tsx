@@ -21,7 +21,11 @@ type GateState =
  * lock the user out entirely.
  */
 export function AuthGate({ children }: { children: ReactNode }) {
-  const configured = isCloudSyncConfigured();
+  // e2e bypass: only active when the test webserver sets NEXT_PUBLIC_E2E=1.
+  // The gate is a UX boundary (real protection is Supabase RLS on cloud data),
+  // so skipping it for browser tests is safe and never enabled in production.
+  const e2eBypass = process.env.NEXT_PUBLIC_E2E === "1";
+  const configured = isCloudSyncConfigured() && !e2eBypass;
   const [state, setState] = useState<GateState>(
     configured ? { phase: "loading" } : { phase: "in", user: { id: "local", email: null } }
   );
