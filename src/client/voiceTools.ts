@@ -168,9 +168,41 @@ export const VOICE_TOOL_DEFINITIONS = [
         fatG: { type: "number" },
         fiberG: { type: "number" },
         sugarG: { type: "number" },
-        sodiumMg: { type: "number" },
+        sodiumMg: { type: "number", description: "Sodium in milligrams (mg), e.g. 600 — never grams." },
         confidence: { type: "string", enum: ["low", "medium", "high"] }
       },
+      required: ["description"]
+    }
+  },
+  {
+    type: "function",
+    name: "update_food",
+    description:
+      "Update an already-logged food entry, matched by part of its description. Provide only the fields to change (calories/macros, mealType, or newDescription). Sodium is in mg.",
+    parameters: {
+      type: "object",
+      properties: {
+        description: { type: "string", description: "Part of the existing food's name to match." },
+        newDescription: { type: "string" },
+        mealType: { type: "string", enum: mealTypes },
+        calories: { type: "number" },
+        proteinG: { type: "number" },
+        carbsG: { type: "number" },
+        fatG: { type: "number" },
+        fiberG: { type: "number" },
+        sugarG: { type: "number" },
+        sodiumMg: { type: "number", description: "Sodium in milligrams (mg)." }
+      },
+      required: ["description"]
+    }
+  },
+  {
+    type: "function",
+    name: "remove_food",
+    description: "Delete a logged food entry, matched by part of its description.",
+    parameters: {
+      type: "object",
+      properties: { description: { type: "string" } },
       required: ["description"]
     }
   },
@@ -480,6 +512,48 @@ function logFood(args: Record<string, unknown>): VoiceToolResult {
   };
 }
 
+/** Most recent food entry whose description contains the query (today first). */
+function findFoodMatch(query: string) {
+  const q = query.trim().toLowerCase();
+  const all = createLocalFoodEntryRepository(store()).load();
+  const matches = all
+    .filter((entry) => entry.description.toLowerCase().includes(q))
+    .sort((a, b) => (b.recordedAt > a.recordedAt ? 1 : -1));
+  // Prefer today's entries, else the most recent overall.
+  return matches.find((entry) => entry.date === today()) ?? matches[0];
+}
+
+function updateFood(args: Record<string, unknown>): VoiceToolResult {
+  const query = asText(args.description);
+  if (!query) return { ok: false, message: "Which food should I update? Name part of it." };
+  const repo = createLocalFoodEntryRepository(store());
+  const match = findFoodMatch(query);
+  if (!match) return { ok: false, message: `I couldn't find a logged food matching "${query}".` };
+
+  const macros = { ...match.macros };
+  for (const field of ["calories", "proteinG", "carbsG", "fatG", "fiberG", "sugarG", "sodiumMg"] as const) {
+    const value = asNumber(args[field]);
+    if (value !== undefined) macros[field] = value;
+  }
+  const mealType = mealTypes.includes(args.mealType as (typeof mealTypes)[number])
+    ? (args.mealType as (typeof mealTypes)[number])
+    : match.mealType;
+  const description = asText(args.newDescription) || match.description;
+  const updated = { ...match, description, mealType, macros, updatedAt: new Date().toISOString() };
+  repo.save(repo.load().map((entry) => (entry.id === match.id ? updated : entry)));
+  return { ok: true, message: `Updated ${updated.description}.` };
+}
+
+function removeFood(args: Record<string, unknown>): VoiceToolResult {
+  const query = asText(args.description);
+  if (!query) return { ok: false, message: "Which food should I remove? Name part of it." };
+  const repo = createLocalFoodEntryRepository(store());
+  const match = findFoodMatch(query);
+  if (!match) return { ok: false, message: `I couldn't find a logged food matching "${query}".` };
+  repo.save(repo.load().filter((entry) => entry.id !== match.id));
+  return { ok: true, message: `Removed ${match.description}.` };
+}
+
 function addJournalEntry(args: Record<string, unknown>): VoiceToolResult {
   const content = asText(args.content);
   if (!content) return { ok: false, message: "What should I write in the journal?" };
@@ -678,6 +752,8 @@ const HANDLERS: Record<string, (args: Record<string, unknown>) => VoiceToolResul
   log_martial_arts: logMartialArts,
   log_metric: logMetric,
   log_food: logFood,
+  update_food: updateFood,
+  remove_food: removeFood,
   add_journal_entry: addJournalEntry,
   save_note: saveNote,
   get_context: getContext,
