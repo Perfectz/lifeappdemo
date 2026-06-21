@@ -22,6 +22,8 @@ describe("voice tool dispatcher", () => {
       "log_martial_arts",
       "log_metric",
       "log_food",
+      "update_food",
+      "remove_food",
       "add_journal_entry",
       "save_note",
       "get_context",
@@ -174,6 +176,24 @@ describe("voice tool dispatcher", () => {
       estimateSource: "photo_ai"
     });
     expect(foods[0].macros.calories).toBe(620);
+  });
+
+  it("updates a logged food matched by description", () => {
+    executeVoiceTool("log_food", { description: "Chicken and rice bowl", mealType: "lunch", calories: 620, sodiumMg: 300 });
+    const result = executeVoiceTool("update_food", { description: "chicken", calories: 700, sodiumMg: 800 });
+    expect(result.ok).toBe(true);
+    const food = createLocalFoodEntryRepository(window.localStorage).load()[0];
+    expect(food.macros.calories).toBe(700);
+    expect(food.macros.sodiumMg).toBe(800);
+    // Untouched fields are preserved.
+    expect(food.mealType).toBe("lunch");
+  });
+
+  it("removes a logged food matched by description", () => {
+    executeVoiceTool("log_food", { description: "Donut", mealType: "snack", calories: 250 });
+    expect(executeVoiceTool("remove_food", { description: "donut" }).ok).toBe(true);
+    expect(createLocalFoodEntryRepository(window.localStorage).load()).toHaveLength(0);
+    expect(executeVoiceTool("update_food", { description: "nothing", calories: 1 }).ok).toBe(false);
   });
 
   it("rejects a food log without a description", () => {

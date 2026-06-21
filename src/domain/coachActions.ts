@@ -12,6 +12,8 @@
 
 export const COACH_ACTION_TOOL_NAMES = [
   "log_food",
+  "update_food",
+  "remove_food",
   "log_cardio",
   "log_strength",
   "log_martial_arts",
@@ -29,7 +31,9 @@ export function isCoachActionTool(name: string): name is CoachActionToolName {
 /** Schema documentation injected into the coach system prompt. */
 export const COACH_ACTIONS_PROMPT = [
   "You can ALSO propose these actions to modify any part of the app (user confirms each). Payload shapes:",
-  "- log_food { description, mealType?: breakfast|lunch|dinner|snack, calories?, proteinG?, carbsG?, fatG?, fiberG?, sugarG?, sodiumMg? } — log a meal/food; estimate macros when not given.",
+  "- log_food { description, mealType?: breakfast|lunch|dinner|snack, calories?, proteinG?, carbsG?, fatG?, fiberG?, sugarG?, sodiumMg? } — log a meal/food; estimate macros when not given. sodiumMg is in MILLIGRAMS (e.g. a slice of bread ~150, a fast-food meal ~1000-1500); never grams.",
+  "- update_food { description (part of an existing food's name to match), newDescription?, mealType?, calories?, proteinG?, carbsG?, fatG?, fiberG?, sugarG?, sodiumMg? } — change an already-logged food. Use when the user asks to fix/adjust a meal.",
+  "- remove_food { description } — delete a logged food.",
   "- log_cardio { activity: walk|run|jog|ddr|bike-vest, minutes?, distanceMiles?, weightVestLbs? }",
   "- log_strength { day: 1-5, variant?: Free Weight|Machine|Kettlebell }",
   "- log_martial_arts { session: bas-beginner|bas-advanced|shidokan-kickboxing|shidokan-karate, minutes? }",
