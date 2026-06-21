@@ -33,6 +33,21 @@ export type PushResult = { ok: true; at: string } | { ok: false; message: string
 
 export const isCloudSyncConfigured = isSupabaseConfigured;
 
+/**
+ * Whether two timestamps refer to the same instant. Critical for the push
+ * conflict check: we store `new Date().toISOString()` ("…Z") but Postgres/
+ * PostgREST returns the same value formatted differently ("…+00:00"). A naive
+ * string compare treats those as different and triggers a phantom conflict on
+ * every save — which then pulls the cloud snapshot and reverts the local edit.
+ */
+export function sameInstant(a: string | null, b: string | null): boolean {
+  if (!a || !b) return false;
+  const left = Date.parse(a);
+  const right = Date.parse(b);
+  if (Number.isNaN(left) || Number.isNaN(right)) return false;
+  return left === right;
+}
+
 /** Last user observed by the auth subscription — avoids a network call per save. */
 let cachedUser: CloudUser | null = null;
 
@@ -211,7 +226,10 @@ export async function pushSnapshot(): Promise<PushResult> {
   const expected = getLastSyncedAt();
   if (expected) {
     const remote = await readRemoteUpdatedAt(user.id);
-    if (remote.exists && remote.updatedAt && remote.updatedAt !== expected) {
+    // Compare by instant, not string: the cloud row formats the timestamp
+    // differently ("+00:00") than our stored "Z", so a string compare would
+    // flag a phantom conflict on every save and revert the local edit.
+    if (remote.exists && remote.updatedAt && !sameInstant(remote.updatedAt, expected)) {
       return {
         ok: false,
         conflict: true,
