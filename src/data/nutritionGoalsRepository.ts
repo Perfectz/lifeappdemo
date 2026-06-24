@@ -1,31 +1,16 @@
-import { dataChangedEventName, emitStorageError } from "@/data/createLocalRepository";
+import { createDocumentStore } from "@/data/createDocumentStore";
 import {
   defaultNutritionGoals,
   isNutritionGoals,
   type NutritionGoals
 } from "@/domain/nutritionGoals";
 
-const storageKey = "lifequest.nutritionGoals.v1";
-export const nutritionGoalsStorageKey = storageKey;
+const store = createDocumentStore<NutritionGoals>(
+  "lifequest.nutritionGoals.v1",
+  isNutritionGoals,
+  defaultNutritionGoals
+);
 
-export function loadNutritionGoals(storage: Storage): NutritionGoals {
-  try {
-    const raw = storage.getItem(storageKey);
-    if (!raw) return defaultNutritionGoals();
-    const parsed: unknown = JSON.parse(raw);
-    return isNutritionGoals(parsed) ? parsed : defaultNutritionGoals();
-  } catch {
-    return defaultNutritionGoals();
-  }
-}
-
-export function saveNutritionGoals(storage: Storage, goals: NutritionGoals): void {
-  try {
-    storage.setItem(storageKey, JSON.stringify(goals));
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent(dataChangedEventName, { detail: { storageKey } }));
-    }
-  } catch (error) {
-    emitStorageError(storageKey, error);
-  }
-}
+export const nutritionGoalsStorageKey = store.storageKey;
+export const loadNutritionGoals = store.load;
+export const saveNutritionGoals = store.save;
