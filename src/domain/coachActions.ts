@@ -14,9 +14,13 @@ export const COACH_ACTION_TOOL_NAMES = [
   "log_food",
   "update_food",
   "remove_food",
+  "log_metric",
   "log_cardio",
   "log_strength",
   "log_martial_arts",
+  "create_quest",
+  "complete_quest",
+  "add_journal_entry",
   "save_note",
   "set_nutrition_goal",
   "set_health_goal"
@@ -28,17 +32,13 @@ export function isCoachActionTool(name: string): name is CoachActionToolName {
   return (COACH_ACTION_TOOL_NAMES as readonly string[]).includes(name);
 }
 
-/** Schema documentation injected into the coach system prompt. */
+/**
+ * Short behavioral guidance for the coach. The actual tool schemas are supplied
+ * via OpenAI tool-calling (COACH_TOOL_DEFINITIONS), so this no longer documents
+ * payload shapes — it just tells the model to actually CALL the tools.
+ */
 export const COACH_ACTIONS_PROMPT = [
-  "You can ALSO propose these actions to modify any part of the app (user confirms each). Payload shapes:",
-  "- log_food { description, mealType?: breakfast|lunch|dinner|snack, calories?, proteinG?, carbsG?, fatG?, fiberG?, sugarG?, sodiumMg? } — log a meal/food; estimate macros when not given. sodiumMg is in MILLIGRAMS (e.g. a slice of bread ~150, a fast-food meal ~1000-1500); never grams.",
-  "- update_food { description (part of an existing food's name to match), newDescription?, mealType?, calories?, proteinG?, carbsG?, fatG?, fiberG?, sugarG?, sodiumMg? } — change an already-logged food. Use when the user asks to fix/adjust a meal.",
-  "- remove_food { description } — delete a logged food.",
-  "- log_cardio { activity: walk|run|jog|ddr|bike-vest, minutes?, distanceMiles?, weightVestLbs? }",
-  "- log_strength { day: 1-5, variant?: Free Weight|Machine|Kettlebell }",
-  "- log_martial_arts { session: bas-beginner|bas-advanced|shidokan-kickboxing|shidokan-karate, minutes? }",
-  "- save_note { title?, content, tags? }",
-  "- set_nutrition_goal { calorieTarget?, proteinTargetG?, carbsTargetG?, fatTargetG?, waterTargetOz? }",
-  "- set_health_goal { weightTargetLbs?, bpSystolicTarget?, bpDiastolicTarget?, fastingGlucoseTarget?, sleepHoursTarget? }",
-  "When the user asks to add a meal, log a workout, take a note, or change a goal/target, propose the matching action — don't say you can't."
-].join("\n");
+  "You can modify any part of the app by CALLING the provided tools — log/update/remove food, log workouts (cardio/strength/martial arts), log vitals, create/complete quests, add journal entries, save notes, set nutrition/health goals, and save memory.",
+  "When the user asks you to do, add, change, fix, or remove something, CALL the matching tool. Never just say 'I've added it' or 'I can't' without calling the tool. The user confirms each tool call before it applies.",
+  "Sodium is always in milligrams (mg), never grams — a label's 0.6 g of sodium is 600 mg."
+].join(" ");

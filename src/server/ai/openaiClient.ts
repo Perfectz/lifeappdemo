@@ -1,7 +1,8 @@
 import type { AIToolProposal } from "@/domain";
 import { COACH_MODEL, isReasoningModel } from "@/config/ai";
-import { validateAIToolProposals } from "@/domain/aiTaskTools";
+import { validateAIToolProposalInput, validateAIToolProposals } from "@/domain/aiTaskTools";
 import { COACH_ACTIONS_PROMPT } from "@/domain/coachActions";
+import { COACH_TOOL_DEFINITIONS } from "@/domain/coachToolDefinitions";
 
 export type CoachHistoryTurn = { role: "user" | "assistant"; content: string };
 
@@ -62,6 +63,7 @@ export function chatCompletionBody(opts: {
   maxCompletionTokens: number;
   temperature?: number;
   responseFormat?: { type: "json_object" };
+  tools?: unknown[];
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {
     model: opts.model,
@@ -75,6 +77,10 @@ export function chatCompletionBody(opts: {
   }
   if (opts.responseFormat) {
     body.response_format = opts.responseFormat;
+  }
+  if (opts.tools && opts.tools.length > 0) {
+    body.tools = opts.tools;
+    body.tool_choice = "auto";
   }
   return body;
 }
@@ -174,7 +180,8 @@ export async function completeReadOnlyCoachChat(
         model: COACH_MODEL,
         messages,
         maxCompletionTokens: maxTokens,
-        temperature: 0.4
+        temperature: 0.4,
+        tools: COACH_TOOL_DEFINITIONS
       })
     )
     });
@@ -199,17 +206,87 @@ export async function completeReadOnlyCoachChat(
     "choices" in payload &&
     Array.isArray(payload.choices)
   ) {
-    const firstChoice = payload.choices[0] as
-      | { message?: { content?: unknown } }
-      | undefined;
-    const content = firstChoice?.message?.content;
+    const message = (payload.choices[0] as { message?: { content?: unknown; tool_calls?: unknown } })?.message;
+    const content = typeof message?.content === "string" ? message.content.trim() : "";
+    const proposals = toolCallsToProposals(message?.tool_calls);
 
-    if (typeof content === "string" && content.trim()) {
-      return normalizeCoachResult(content.trim());
+    if (proposals.length > 0) {
+      return {
+        message: content || "Here's the change — confirm below.",
+        proposals
+      };
+    }
+    if (content) {
+      return normalizeCoachResult(content);
     }
   }
 
   throw new Error("OpenAI response was empty.");
+}
+
+type RawToolCall = { function?: { name?: unknown; arguments?: unknown } };
+
+function summarizeToolCall(name: string, args: Record<string, unknown>): string {
+  const text = (value: unknown) => (typeof value === "string" ? value : String(value ?? ""));
+  switch (name) {
+    case "log_food":
+      return `Log ${text(args.mealType) || "food"}: ${text(args.description)}`;
+    case "update_food":
+      return `Update food: ${text(args.description)}`;
+    case "remove_food":
+      return `Remove food: ${text(args.description)}`;
+    case "log_metric":
+      return "Log a vitals check-in";
+    case "log_cardio":
+      return `Log cardio: ${text(args.activity)}`;
+    case "log_strength":
+      return `Log strength — day ${text(args.day)}`;
+    case "log_martial_arts":
+      return `Log martial arts: ${text(args.session)}`;
+    case "create_quest":
+      return `Add quest: ${text(args.title)}`;
+    case "complete_quest":
+      return `Complete quest: ${text(args.title)}`;
+    case "add_journal_entry":
+      return "Add a journal entry";
+    case "save_note":
+      return `Save note${args.title ? `: ${text(args.title)}` : ""}`;
+    case "set_nutrition_goal":
+      return "Update nutrition goals";
+    case "set_health_goal":
+      return "Update health goals";
+    case "save_memory":
+      return `Remember: ${text(args.key)}`;
+    default:
+      return name.replace(/_/g, " ");
+  }
+}
+
+/** Convert OpenAI tool_calls into validated coach proposals. */
+export function toolCallsToProposals(toolCalls: unknown): AIToolProposal[] {
+  if (!Array.isArray(toolCalls)) return [];
+  const proposals: AIToolProposal[] = [];
+  for (const call of toolCalls as RawToolCall[]) {
+    const name = typeof call?.function?.name === "string" ? call.function.name : "";
+    if (!name) continue;
+    let args: Record<string, unknown> = {};
+    try {
+      const raw = call.function?.arguments;
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        args = parsed as Record<string, unknown>;
+      }
+    } catch {
+      // ignore malformed args; validation below will reject if needed
+    }
+    const validation = validateAIToolProposalInput({
+      toolName: name,
+      summary: summarizeToolCall(name, args),
+      payload: args
+    });
+    if (validation.ok) proposals.push(validation.value);
+  }
+  return proposals;
 }
 
 function normalizeCoachResult(result: string | OpenAICoachResult): OpenAICoachResult {

@@ -92,13 +92,15 @@ describe("AI task tools", () => {
       })
     ).toMatchObject({ ok: false, message: "Tool proposal payload is invalid." });
 
+    // log_metric is a coach action now: proposals validate leniently (payload
+    // passed through like the voice agent); the value is checked when applied.
     expect(
       validateAIToolProposalInput({
         toolName: "log_metric",
-        summary: "Invalid energy metric",
-        payload: { date: "2026-05-04", checkInType: "freeform", energyLevel: 9 }
+        summary: "Energy check",
+        payload: { energyLevel: 9 }
       })
-    ).toMatchObject({ ok: false, message: "Tool proposal payload is invalid." });
+    ).toMatchObject({ ok: true });
   });
 
   it("applies create, update, complete, defer, and archive task proposals", () => {
