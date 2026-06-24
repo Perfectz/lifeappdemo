@@ -159,8 +159,11 @@ describe("/api/ai/tools/confirm", () => {
     );
     const payload = await response.json();
 
+    // Invalid value is still rejected and no metric is stored — now caught at
+    // apply time with a clearer message (validation passes the payload through).
     expect(response.status).toBe(400);
-    expect(payload).toEqual({ error: "Tool proposal payload is invalid." });
+    expect(payload.error).toContain("Energy level");
+    expect(payload.metricEntries).toBeUndefined();
   });
 
   it("applies a confirmed DailyPlan proposal", async () => {
