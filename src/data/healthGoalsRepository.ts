@@ -1,27 +1,12 @@
-import { dataChangedEventName, emitStorageError } from "@/data/createLocalRepository";
+import { createDocumentStore } from "@/data/createDocumentStore";
 import { defaultHealthGoals, isHealthGoals, type HealthGoals } from "@/domain/healthGoals";
 
-const storageKey = "lifequest.healthGoals.v1";
-export const healthGoalsStorageKey = storageKey;
+const store = createDocumentStore<HealthGoals>(
+  "lifequest.healthGoals.v1",
+  isHealthGoals,
+  defaultHealthGoals
+);
 
-export function loadHealthGoals(storage: Storage): HealthGoals {
-  try {
-    const raw = storage.getItem(storageKey);
-    if (!raw) return defaultHealthGoals();
-    const parsed: unknown = JSON.parse(raw);
-    return isHealthGoals(parsed) ? parsed : defaultHealthGoals();
-  } catch {
-    return defaultHealthGoals();
-  }
-}
-
-export function saveHealthGoals(storage: Storage, goals: HealthGoals): void {
-  try {
-    storage.setItem(storageKey, JSON.stringify(goals));
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent(dataChangedEventName, { detail: { storageKey } }));
-    }
-  } catch (error) {
-    emitStorageError(storageKey, error);
-  }
-}
+export const healthGoalsStorageKey = store.storageKey;
+export const loadHealthGoals = store.load;
+export const saveHealthGoals = store.save;

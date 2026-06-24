@@ -13,14 +13,55 @@
 
 Scripts (from `package.json`): `dev`, `build`, `start`, `typecheck`, `lint`, `test` (`vitest run`), `test:e2e` (`playwright test`), plus `build:pages` for static export.
 
+## Capability pattern & APIE
+
+Every feature is the **same three files**, so a capability is always easy to find
+and reuse. It's functional TypeScript, but it applies the four OOP principles
+(APIE) through modules + factories rather than class hierarchies:
+
+| Layer | File | Responsibility |
+|-------|------|----------------|
+| **Domain** | `src/domain/<x>.ts` | Pure logic: entity type, `Input` type, `validate*` → `ValidationResult`, `create*`/`update*` builders, `is<X>` guard. No I/O. |
+| **Repository** | `src/data/<x>Repository.ts` | Persistence only — one line via a shared factory; exposes a typed store, never raw `localStorage`. |
+| **Component** | `src/components/<X>.tsx` | UI; reads/writes through the repository, re-renders on `data-changed`. |
+| **Server (if AI/network)** | `src/server/...` + `src/app/api/...` | A client with a `set*ForTests` hook + a thin route. |
+
+**APIE mapping of the storage layer:** *Abstraction* — callers depend on
+`LocalRepository<T>` / `DocumentStore<T>`, not on `localStorage`/IndexedDB.
+*Polymorphism* — every store shares one interface, so cross-cutting code
+(`exportAllData`, cloud sync, migrations) treats them uniformly. *Inheritance*
+(by composition) — a concrete store *is* the base factory bound to a key + guard
++ default; shared behavior is inherited, not copied. *Encapsulation* —
+parse/guard/dispatch/error live in exactly one place per pattern.
+
+### Ready for data growth — storage roadmap
+
+Because domain and UI only touch the repository interface, the backend can be
+swapped without touching them:
+
+1. **Now** — `localStorage` collections + documents; cloud sync mirrors a full
+   snapshot to Supabase per user.
+2. **Phase 2** — unify the two IndexedDB media stores behind one helper.
+3. **Phase 3** — back large, ever-growing collections (food, workouts, metrics)
+   with an IndexedDB implementation of `LocalRepository<T>` — no domain/UI change.
+4. **Phase 4** — a server-API adapter implementing the same interface, for
+   pagination/querying once a single snapshot is too large to sync wholesale.
+
 ## Local-first storage model
 
 The **browser is the source of truth.** Data is read instantly and works offline. Three storage tiers:
 
 ### 1. localStorage repositories (`src/data/`)
-Most entities are stored as JSON arrays in `localStorage` behind a generic factory, `createLocalRepository<T>(storage, storageKey, guard, migrations?)` ([`src/data/createLocalRepository.ts`](../src/data/createLocalRepository.ts)):
 
-- Every repository has a versioned key like `lifequest.tasks.v1`, `lifequest.metricEntries.v1`, `lifequest.workouts.v1`, `lifequest.journalEntries.v1`, `lifequest.notes.v1`, `lifequest.dailyPlans.v1`, `lifequest.dailyReports.v1`, `lifequest.wiki.v1`, `lifequest.healthGoals.v1`.
+There are **two** shared persistence factories so no capability re-implements
+load/validate/fallback/dispatch/error handling:
+
+- **Collections** — JSON arrays via `createLocalRepository<T>(storage, key, guard, migrations?)` ([`src/data/createLocalRepository.ts`](../src/data/createLocalRepository.ts)). Used by tasks, metric entries, food entries, workouts, notes, journal, daily plans/reports, memory, chat threads.
+- **Documents** (single object) — via `createDocumentStore<T>(key, guard, fallback)` ([`src/data/createDocumentStore.ts`](../src/data/createDocumentStore.ts)). Used by the personal wiki, health goals, nutrition goals, and body profile. A concrete document store is one line: the factory bound to a key + guard + default.
+
+Both share the same behavior:
+
+- Every store has a versioned key like `lifequest.tasks.v1`, `lifequest.metricEntries.v1`, `lifequest.foodEntries.v1`, `lifequest.workouts.v1`, `lifequest.wiki.v1`, `lifequest.healthGoals.v1`, `lifequest.nutritionGoals.v1`, `lifequest.bodyProfile.v1`.
 - `load()` filters stored records through the entity's **type guard**, warns (does not silently drop) on unreadable records, and runs **lazy migrations** from legacy keys when the current key is empty.
 - `save()` writes JSON and then dispatches a `lifequest:data-changed` (`dataChangedEventName`) window `CustomEvent`. The native `storage` event only fires cross-tab, so this custom event is how **same-tab** consumers (hero card, nav status, cloud sync) stay live after a write.
 - Write failures don't throw into UI handlers; they call `emitStorageError`, which logs and dispatches `lifequest:storage-error` so a single listener (`StorageErrorToast`) can show a banner (e.g. quota-exceeded guidance).
