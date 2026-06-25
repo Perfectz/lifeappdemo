@@ -1,3 +1,16 @@
+import {
+  Agent,
+  assistant,
+  run,
+  setDefaultOpenAIKey,
+  tool,
+  user,
+  type AgentInputItem,
+  type ModelSettings,
+  type RunToolApprovalItem,
+  type Tool
+} from "@openai/agents";
+
 import type { AIToolProposal } from "@/domain";
 import { COACH_MODEL, isReasoningModel } from "@/config/ai";
 import { validateAIToolProposalInput, validateAIToolProposals } from "@/domain/aiTaskTools";
@@ -112,6 +125,68 @@ function intFromEnv(name: string, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+/**
+ * The coach's action tools, expressed for the OpenAI Agents SDK.
+ *
+ * We reuse the exact JSON Schemas from COACH_TOOL_DEFINITIONS (non-strict) so
+ * the tool surface stays identical to the previous hand-rolled tool-calling.
+ * Every tool is `needsApproval: true`: the Agents SDK pauses the run and
+ * surfaces the call as an interruption instead of executing it — which is
+ * precisely our propose-then-confirm flow (the real mutation runs client-side
+ * via executeVoiceTool after the user confirms). So `execute` never runs on the
+ * server; it exists only to satisfy the tool contract.
+ */
+const COACH_AGENT_TOOLS: Tool[] = COACH_TOOL_DEFINITIONS.map((def) => {
+  // Normalize the existing Chat-Completions JSON Schema into the Agents SDK's
+  // non-strict shape (it requires `required` + `additionalProperties: true`).
+  // Non-strict keeps the lenient validation the app already relies on — the
+  // real validation happens client-side on confirm.
+  const params = {
+    type: "object" as const,
+    properties: def.function.parameters.properties,
+    required: def.function.parameters.required ?? [],
+    additionalProperties: true as const
+  };
+  return tool({
+    name: def.function.name,
+    description: def.function.description,
+    parameters: params,
+    strict: false,
+    needsApproval: true,
+    execute: async () => "Proposed — awaiting user confirmation."
+  } as unknown as Parameters<typeof tool>[0]);
+});
+
+let coachKeyConfigured = false;
+
+/** Point the Agents SDK at our key once (it otherwise reads OPENAI_API_KEY). */
+function ensureCoachKeyConfigured(apiKey: string) {
+  if (!coachKeyConfigured) {
+    setDefaultOpenAIKey(apiKey);
+    coachKeyConfigured = true;
+  }
+}
+
+/**
+ * Reasoning models (gpt-5 / o-series) reject a custom temperature and take a
+ * reasoning-effort hint; classic chat models want temperature. Mirror the prior
+ * request-builder behavior through the SDK's ModelSettings.
+ */
+function coachModelSettings(maxTokens: number): ModelSettings {
+  return isReasoningModel(COACH_MODEL)
+    ? { reasoning: { effort: "low" }, maxTokens }
+    : { temperature: 0.4, maxTokens };
+}
+
+/** Convert Agents SDK approval interruptions into validated coach proposals. */
+function interruptionsToProposals(interruptions: RunToolApprovalItem[]): AIToolProposal[] {
+  const asToolCalls = interruptions.map((item) => {
+    const raw = item.rawItem as { name?: unknown; arguments?: unknown } | undefined;
+    return { function: { name: raw?.name, arguments: raw?.arguments } };
+  });
+  return toolCallsToProposals(asToolCalls);
+}
+
 export async function completeReadOnlyCoachChat(
   input: OpenAIChatCompletionInput
 ): Promise<OpenAICoachResult> {
@@ -124,6 +199,8 @@ export async function completeReadOnlyCoachChat(
   if (!apiKey) {
     throw new AINotConfiguredError();
   }
+
+  ensureCoachKeyConfigured(apiKey);
 
   // Cost + safety guards: cap output tokens and abort hung requests.
   const maxTokens = intFromEnv("OPENAI_MAX_TOKENS", 1_200);
@@ -150,78 +227,80 @@ export async function completeReadOnlyCoachChat(
     "If data is missing, say so directly."
   ].join(" ");
 
-  const history = (input.history ?? [])
-    .filter((turn) => turn.content.trim())
-    .slice(-10)
-    .map((turn) => ({ role: turn.role, content: turn.content }));
-
-  const messages: ChatMessage[] = [
-    { role: "system", content: systemPrompt },
-    ...history,
-    {
-      role: "user",
-      content: `Mode: ${input.mode}\n\nApp context:\n${input.context}\n\n${
+  // The system prompt becomes the agent's instructions; prior turns + the
+  // current question become the run input. Tool calls are gated behind
+  // `needsApproval`, so the run pauses and returns them as interruptions
+  // instead of executing — which we surface to the client as proposals.
+  const inputItems: AgentInputItem[] = [
+    ...(input.history ?? [])
+      .filter((turn) => turn.content.trim())
+      .slice(-10)
+      .map((turn) => (turn.role === "user" ? user(turn.content) : assistant(turn.content))),
+    user(
+      `Mode: ${input.mode}\n\nApp context:\n${input.context}\n\n${
         input.heroName?.trim() || "The user"
       } asks:\n${input.message}`
-    }
+    )
   ];
 
-  let response: Response;
+  const coachAgent = new Agent({
+    name: "LifeQuest Coach",
+    instructions: systemPrompt,
+    model: COACH_MODEL,
+    modelSettings: coachModelSettings(maxTokens),
+    tools: COACH_AGENT_TOOLS
+  });
+
+  let result;
   try {
-    response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    signal: controller.signal,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(
-      chatCompletionBody({
-        model: COACH_MODEL,
-        messages,
-        maxCompletionTokens: maxTokens,
-        temperature: 0.4,
-        tools: COACH_TOOL_DEFINITIONS
-      })
-    )
+    result = await run(coachAgent, inputItems, {
+      signal: controller.signal,
+      maxTurns: 4
     });
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
+    if (error instanceof Error && (error.name === "AbortError" || /abort/i.test(error.message))) {
       throw new Error("OpenAI request timed out.");
     }
-    throw error;
+    throw toOpenAIRequestError(error);
   } finally {
     clearTimeout(timeout);
   }
 
-  if (!response.ok) {
-    throw await buildOpenAIError(response, "OpenAI request");
+  const proposals = interruptionsToProposals(result.interruptions ?? []);
+  const content = typeof result.finalOutput === "string" ? result.finalOutput.trim() : "";
+
+  if (proposals.length > 0) {
+    return {
+      message: content || "Here's the change — confirm below.",
+      proposals
+    };
   }
-
-  const payload: unknown = await response.json();
-
-  if (
-    payload &&
-    typeof payload === "object" &&
-    "choices" in payload &&
-    Array.isArray(payload.choices)
-  ) {
-    const message = (payload.choices[0] as { message?: { content?: unknown; tool_calls?: unknown } })?.message;
-    const content = typeof message?.content === "string" ? message.content.trim() : "";
-    const proposals = toolCallsToProposals(message?.tool_calls);
-
-    if (proposals.length > 0) {
-      return {
-        message: content || "Here's the change — confirm below.",
-        proposals
-      };
-    }
-    if (content) {
-      return normalizeCoachResult(content);
-    }
+  if (content) {
+    return normalizeCoachResult(content);
   }
 
   throw new Error("OpenAI response was empty.");
+}
+
+/**
+ * Best-effort mapping of an Agents SDK / OpenAI error into our OpenAIRequestError
+ * so routes can surface an actionable message (bad key, quota, model id) rather
+ * than a generic failure. Falls back to a 502-style wrapper.
+ */
+function toOpenAIRequestError(error: unknown): OpenAIRequestError {
+  if (error instanceof OpenAIRequestError) return error;
+  const message = error instanceof Error ? error.message : String(error);
+  const statusMatch = /\b(401|403|429|400|404)\b/.exec(message);
+  const status = statusMatch ? Number(statusMatch[1]) : 502;
+  const base =
+    status === 401 || status === 403
+      ? "OpenAI rejected the API key — check OPENAI_API_KEY in your environment."
+      : status === 429
+        ? "OpenAI rate limit or quota reached — try again shortly."
+        : status === 400 || status === 404
+          ? "OpenAI rejected the request — the model id or parameters may be unsupported on your key."
+          : "OpenAI request failed.";
+  return new OpenAIRequestError(`${base} (${message})`, status);
 }
 
 type RawToolCall = { function?: { name?: unknown; arguments?: unknown } };

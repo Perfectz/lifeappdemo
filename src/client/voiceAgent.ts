@@ -1,24 +1,23 @@
+import { RealtimeAgent, RealtimeSession, tool } from "@openai/agents-realtime";
+
+import { REALTIME_VOICE_MODEL } from "@/config/ai";
 import { executeVoiceTool, VOICE_TOOL_DEFINITIONS } from "@/client/voiceTools";
 
 /**
- * Real-time voice agent over WebRTC against the OpenAI Realtime model.
+ * Real-time voice agent built on the OpenAI Agents SDK (`@openai/agents-realtime`).
  *
- * Flow: mint an ephemeral key from /api/realtime/session → open a WebRTC peer
- * connection (mic up, model audio down) + a data channel → configure the
- * session with our tool schema → when the model calls a tool, run it locally
- * (mutating the app via the repositories) and feed the result back so the
- * model can speak a confirmation.
+ * Flow: mint an ephemeral key from /api/realtime/session → create a
+ * `RealtimeAgent` (instructions + tools) and a `RealtimeSession` → `connect`
+ * with the ephemeral key. In the browser the session uses the WebRTC transport
+ * automatically (mic up, model audio down) — we no longer hand-roll the peer
+ * connection, data channel, or SDP exchange. When the model calls a tool the
+ * SDK invokes our `execute`, which runs the action locally (mutating the app
+ * via the repositories) and returns the result for the model to confirm.
  *
  * NOTE: the audio loop must be exercised on a real device with a mic and a
- * valid key — it can't be tested headlessly. The SDP endpoint + session config
- * follow the documented WebRTC pattern; adjust REALTIME_VOICE_MODEL in
+ * valid key — it can't be tested headlessly. Adjust REALTIME_VOICE_MODEL in
  * src/config/ai.ts if your account exposes a different realtime id.
  */
-
-// GA ("v2") Realtime WebRTC endpoint. The model is bound when the ephemeral
-// key is minted server-side (src/server/ai/realtimeClient.ts), so it is NOT a
-// query param here.
-const REALTIME_URL = "https://api.openai.com/v1/realtime/calls";
 
 const AGENT_INSTRUCTIONS = [
   "You are the user's LifeQuest assistant — their personal trainer, life coach, and personal assistant in one, speaking hands-free.",
@@ -45,21 +44,74 @@ export type VoiceAgentCallbacks = {
 
 export type VoiceAgentSession = { stop: () => void };
 
-type RealtimeEvent = {
-  type?: string;
-  name?: string;
-  call_id?: string;
-  arguments?: string;
-  transcript?: string;
-  error?: { message?: string };
-};
-
 export function isVoiceAgentSupported(): boolean {
   return (
     typeof window !== "undefined" &&
     typeof RTCPeerConnection !== "undefined" &&
     Boolean(navigator.mediaDevices?.getUserMedia)
   );
+}
+
+/**
+ * Wrap our existing JSON-Schema voice tools as OpenAI Agents SDK tools. The
+ * schema is reused verbatim (non-strict); the SDK runs `execute` when the model
+ * calls a tool, and our local executor applies the change + surfaces UI/nav
+ * callbacks. We return the tool result so the model can speak a confirmation.
+ */
+function buildRealtimeTools(callbacks: VoiceAgentCallbacks) {
+  return VOICE_TOOL_DEFINITIONS.map((def) => {
+    const schema = def.parameters as {
+      properties: Record<string, unknown>;
+      required?: readonly string[];
+    };
+    const params = {
+      type: "object" as const,
+      properties: schema.properties,
+      required: schema.required ?? [],
+      additionalProperties: true as const
+    };
+    return tool({
+      name: def.name,
+      description: def.description,
+      parameters: params,
+      strict: false,
+      execute: async (args: unknown) => {
+        const result = executeVoiceTool(
+          def.name,
+          args && typeof args === "object" ? (args as Record<string, unknown>) : {}
+        );
+        if (!result.silent) callbacks.onAction?.(result.message, result.ok);
+        if (result.navigateTo) callbacks.onNavigate?.(result.navigateTo);
+        return JSON.stringify(result);
+      }
+    } as unknown as Parameters<typeof tool>[0]);
+  });
+}
+
+/** Pull the most recent assistant transcript out of the realtime history. */
+function latestAssistantTranscript(history: unknown): string | undefined {
+  if (!Array.isArray(history)) return undefined;
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    const item = history[i] as {
+      type?: string;
+      role?: string;
+      content?: Array<{ transcript?: unknown; text?: unknown }>;
+    };
+    if (item?.type === "message" && item.role === "assistant" && Array.isArray(item.content)) {
+      const text = item.content
+        .map((part) =>
+          typeof part?.transcript === "string"
+            ? part.transcript
+            : typeof part?.text === "string"
+              ? part.text
+              : ""
+        )
+        .join(" ")
+        .trim();
+      if (text) return text;
+    }
+  }
+  return undefined;
 }
 
 export async function startVoiceAgent(callbacks: VoiceAgentCallbacks): Promise<VoiceAgentSession> {
@@ -75,121 +127,61 @@ export async function startVoiceAgent(callbacks: VoiceAgentCallbacks): Promise<V
     throw new Error(token.error ?? "Could not start the voice session.");
   }
 
-  const pc = new RTCPeerConnection();
-  const audioEl = document.createElement("audio");
-  audioEl.autoplay = true;
-  pc.ontrack = (event) => {
-    audioEl.srcObject = event.streams[0] ?? null;
-  };
-
-  const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
-  mic.getTracks().forEach((track) => pc.addTrack(track, mic));
-
-  const channel = pc.createDataChannel("oai-events");
-
-  const send = (payload: unknown) => {
-    if (channel.readyState === "open") channel.send(JSON.stringify(payload));
-  };
-
-  channel.addEventListener("open", () => {
-    // GA session shape: type "realtime", audio config nested under `audio`.
-    send({
-      type: "session.update",
-      session: {
-        type: "realtime",
-        instructions: AGENT_INSTRUCTIONS,
-        tools: VOICE_TOOL_DEFINITIONS,
-        tool_choice: "auto",
-        audio: { output: { voice: "marin" } }
-      }
-    });
-    callbacks.onStatus?.("listening");
+  const agent = new RealtimeAgent({
+    name: "LifeQuest Voice",
+    instructions: AGENT_INSTRUCTIONS,
+    voice: "marin",
+    tools: buildRealtimeTools(callbacks)
   });
 
-  channel.addEventListener("message", (event) => {
-    let parsed: RealtimeEvent;
-    try {
-      parsed = JSON.parse(event.data as string) as RealtimeEvent;
-    } catch {
-      return;
-    }
+  // In a browser the session defaults to the WebRTC transport, which manages
+  // the mic + model audio playback for us.
+  const session = new RealtimeSession(agent, { model: REALTIME_VOICE_MODEL });
 
-    if (parsed.type === "response.function_call_arguments.done") {
-      let args: Record<string, unknown> = {};
-      try {
-        args = parsed.arguments ? (JSON.parse(parsed.arguments) as Record<string, unknown>) : {};
-      } catch {
-        args = {};
-      }
-      const result = executeVoiceTool(parsed.name ?? "", args);
-      if (!result.silent) callbacks.onAction?.(result.message, result.ok);
-      if (result.navigateTo) callbacks.onNavigate?.(result.navigateTo);
-      send({
-        type: "conversation.item.create",
-        item: {
-          type: "function_call_output",
-          call_id: parsed.call_id,
-          output: JSON.stringify(result)
-        }
-      });
-      send({ type: "response.create" });
-      return;
-    }
-
-    if (parsed.type === "response.audio_transcript.done" && parsed.transcript) {
-      callbacks.onAssistant?.(parsed.transcript);
-      return;
-    }
-
-    if (parsed.type === "error") {
-      callbacks.onError?.(parsed.error?.message ?? "Voice session error.");
-    }
+  session.on("error", (event) => {
+    const message =
+      event && typeof event === "object" && "error" in event
+        ? extractErrorMessage((event as { error: unknown }).error)
+        : "Voice session error.";
+    callbacks.onError?.(message);
   });
 
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-
-  const sdpResponse = await fetch(REALTIME_URL, {
-    method: "POST",
-    body: offer.sdp ?? "",
-    headers: {
-      Authorization: `Bearer ${token.clientSecret}`,
-      "Content-Type": "application/sdp"
-    }
+  session.on("history_updated", (history) => {
+    const text = latestAssistantTranscript(history);
+    if (text) callbacks.onAssistant?.(text);
   });
-  if (!sdpResponse.ok) {
-    mic.getTracks().forEach((track) => track.stop());
-    pc.close();
-    throw new Error("The realtime voice service refused the connection.");
+
+  try {
+    await session.connect({ apiKey: token.clientSecret });
+  } catch (error) {
+    session.close();
+    throw new Error(
+      error instanceof Error ? error.message : "The realtime voice service refused the connection."
+    );
   }
-  const answerSdp = await sdpResponse.text();
-  await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+
+  callbacks.onStatus?.("listening");
 
   let stopped = false;
   const stop = () => {
     if (stopped) return;
     stopped = true;
     try {
-      channel.close();
+      session.close();
     } catch {
       /* ignore */
     }
-    mic.getTracks().forEach((track) => track.stop());
-    try {
-      pc.close();
-    } catch {
-      /* ignore */
-    }
-    audioEl.srcObject = null;
     callbacks.onStatus?.("ended");
   };
 
-  pc.addEventListener("connectionstatechange", () => {
-    if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
-      callbacks.onError?.("Voice connection lost.");
-      stop();
-    }
-  });
-
   return { stop };
+}
+
+function extractErrorMessage(error: unknown): string {
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return "Voice session error.";
 }
