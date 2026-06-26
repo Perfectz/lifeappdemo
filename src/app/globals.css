@@ -7630,3 +7630,82 @@ button,
   font-size: 0.9rem;
   cursor: pointer;
 }
+
+/* ---------- Supplements & medication ---------- */
+.vitals-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.supplement-slots {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.supplement-slot {
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.75rem;
+}
+
+.supplement-slot-title {
+  margin: 0 0 0.55rem;
+  font-size: 0.95rem;
+}
+
+.supplement-checklist {
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.supplement-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.supplement-item input {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  accent-color: var(--accent, #6ee7b7);
+}
+
+.supplement-item-taken {
+  background: color-mix(in srgb, var(--accent, #6ee7b7) 12%, transparent);
+}
+
+.supplement-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.supplement-dose {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.supplement-add {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.supplement-add .fitness-input {
+  flex: 1;
+  min-width: 7rem;
+}
+
+.supplement-dose-input {
+  max-width: 8rem;
+}
