@@ -8,6 +8,9 @@ out
 *.mov
 /lifequest-mobile-*.md
 /seedance-*.md
+/builders-journal-*
+/linkedin-*
+/output/
 /runway-*.json
 /reference images/
 playwright-report

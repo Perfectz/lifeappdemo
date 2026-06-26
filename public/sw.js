@@ -1,4 +1,4 @@
-const CACHE_VERSION = "lifequest-v40";
+const CACHE_VERSION = "lifequest-v41";
 const APP_SHELL_CACHE = `${CACHE_VERSION}-app-shell`;
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const SCOPE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, "");
