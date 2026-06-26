@@ -1,5 +1,11 @@
+import { SupplementLog } from "@/components/SupplementLog";
 import { Vitals } from "@/components/Vitals";
 
 export default function VitalsPage() {
-  return <Vitals />;
+  return (
+    <div className="vitals-page">
+      <Vitals />
+      <SupplementLog />
+    </div>
+  );
 }
