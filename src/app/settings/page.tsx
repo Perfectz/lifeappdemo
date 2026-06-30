@@ -5,6 +5,7 @@ import { PushNotificationsPanel } from "@/components/PushNotificationsPanel";
 import { pushNotificationsEnabled } from "@/config/features";
 import { PlaceholderPage } from "@/components/PlaceholderPage";
 import { InstallReadinessPanel } from "@/components/InstallReadinessPanel";
+import { MemberApprovalPanel } from "@/components/MemberApprovalPanel";
 import { ProfilePanel } from "@/components/ProfilePanel";
 import { RemindersPanel } from "@/components/RemindersPanel";
 import { SoundPanel } from "@/components/SoundPanel";
@@ -21,6 +22,7 @@ export default function SettingsPage() {
       statusText="PWA install and stale-safe offline shell. No product sync or offline AI is enabled."
     >
       <div className="settings-install-grid">
+        <MemberApprovalPanel />
         <section className="dashboard-section">
           <h2>Hero Profile</h2>
           <ProfilePanel />

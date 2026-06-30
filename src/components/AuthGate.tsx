@@ -8,22 +8,24 @@ import {
   subscribeAuthState,
   type CloudUser
 } from "@/client/cloudSync";
+import { resolveMembershipStatus } from "@/client/membership";
 import { LoginScreen } from "@/components/LoginScreen";
+import { PendingApprovalScreen } from "@/components/PendingApprovalScreen";
 
 type GateState =
   | { phase: "loading" }
   | { phase: "in"; user: CloudUser }
+  | { phase: "blocked"; status: "pending" | "denied"; user: CloudUser }
   | { phase: "out" };
 
 /**
- * Requires a signed-in session before rendering the app. When Supabase isn't
- * configured we fall through to the app (local-only) so a missing key can't
- * lock the user out entirely.
+ * Gates the app behind (1) a signed-in session and (2) creator approval. When
+ * Supabase isn't configured we fall through to local-only mode so a missing key
+ * can't lock the user out. Real enforcement of approval is Supabase RLS; this
+ * is the UX boundary.
  */
 export function AuthGate({ children }: { children: ReactNode }) {
   // e2e bypass: only active when the test webserver sets NEXT_PUBLIC_E2E=1.
-  // The gate is a UX boundary (real protection is Supabase RLS on cloud data),
-  // so skipping it for browser tests is safe and never enabled in production.
   const e2eBypass = process.env.NEXT_PUBLIC_E2E === "1";
   const configured = isCloudSyncConfigured() && !e2eBypass;
   const [state, setState] = useState<GateState>(
@@ -34,13 +36,22 @@ export function AuthGate({ children }: { children: ReactNode }) {
     if (!configured) return;
     let active = true;
 
-    void getCurrentCloudUser().then((user) => {
-      if (active) setState(user ? { phase: "in", user } : { phase: "out" });
-    });
+    async function resolve(user: CloudUser | null) {
+      if (!user) {
+        if (active) setState({ phase: "out" });
+        return;
+      }
+      const status = await resolveMembershipStatus(user);
+      if (!active) return;
+      if (status === "approved") {
+        setState({ phase: "in", user });
+      } else {
+        setState({ phase: "blocked", status: status === "denied" ? "denied" : "pending", user });
+      }
+    }
 
-    const unsubscribe = subscribeAuthState((user) => {
-      setState(user ? { phase: "in", user } : { phase: "out" });
-    });
+    void getCurrentCloudUser().then(resolve);
+    const unsubscribe = subscribeAuthState((user) => void resolve(user));
 
     return () => {
       active = false;
@@ -61,6 +72,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (state.phase === "out") {
     return <LoginScreen />;
+  }
+
+  if (state.phase === "blocked") {
+    return <PendingApprovalScreen status={state.status} email={state.user.email} />;
   }
 
   return <>{children}</>;
