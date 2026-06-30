@@ -82,6 +82,13 @@ export const navigationGroups: NavigationGroup[] = [
         shortLabel: "Progress"
       },
       {
+        label: "Timeline Mirror",
+        href: "/timeline-mirror",
+        description: "Ideal Self vs Shadow Self — RPG timeline read",
+        icon: "trends",
+        shortLabel: "Mirror"
+      },
+      {
         label: "Metrics",
         href: "/metrics",
         description: "Energy & mood check-in",
@@ -112,12 +119,6 @@ export const navigationGroups: NavigationGroup[] = [
         description: "Chat, photo & voice coaching",
         icon: "coach",
         shortLabel: "Coach"
-      },
-      {
-        label: "Capture",
-        href: "/capture",
-        description: "Log from a photo",
-        icon: "healthImport"
       },
       {
         label: "About Me",

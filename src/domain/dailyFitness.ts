@@ -7,7 +7,12 @@ export type DailyFitnessStatus = {
   date: IsoDate;
   byType: Record<WorkoutType, Workout | undefined>;
   completedCount: number;
+  /** All three sessions logged (the stretch goal). */
   isComplete: boolean;
+  /** A "good day" needs just ONE session; the rest are bonus. */
+  isGoodDay: boolean;
+  /** Sessions beyond the first — bonus credit. */
+  bonusCount: number;
 };
 
 /**
@@ -35,6 +40,8 @@ export function getDailyFitnessStatus(workouts: Workout[], date: IsoDate): Daily
     date,
     byType,
     completedCount,
-    isComplete: completedCount === requiredSessionTypes.length
+    isComplete: completedCount === requiredSessionTypes.length,
+    isGoodDay: completedCount >= 1,
+    bonusCount: Math.max(0, completedCount - 1)
   };
 }

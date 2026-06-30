@@ -2328,6 +2328,57 @@ textarea {
   font-weight: 700;
 }
 
+.nutri-target-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.7rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.nutri-target-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.nutri-target-ai {
+  color: #08130d;
+  background: var(--accent);
+  border-color: transparent;
+}
+.nutri-target-adaptive {
+  color: #08130d;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  border-color: transparent;
+}
+.nutri-target-computed {
+  color: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+.nutri-target-manual {
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
+.nutri-target-why {
+  flex: 1 1 200px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.nutri-target-recompute {
+  flex-shrink: 0;
+}
+
 .nutri-budget-head {
   display: flex;
   align-items: flex-start;
@@ -7572,6 +7623,30 @@ button,
   display: grid;
   gap: 0.5rem;
   margin-bottom: 0.9rem;
+}
+
+.memory-add-details {
+  margin-bottom: 0.9rem;
+}
+
+.memory-add-details > summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.memory-group {
+  margin-bottom: 0.9rem;
+}
+
+.memory-group-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0 0 0.4rem;
 }
 
 .memory-list {

@@ -121,15 +121,15 @@ describe("secret hygiene baseline", () => {
       join(root, "src", "server", "ai", "realtimeClient.ts"),
       "utf8"
     );
-    const voicePanel = readFileSync(
-      join(root, "src", "components", "VoiceSessionPanel.tsx"),
+    const voiceClient = readFileSync(
+      join(root, "src", "client", "voiceAgent.ts"),
       "utf8"
     );
 
     expect(realtimeClient).toContain("process.env.OPENAI_API_KEY");
     expect(realtimeClient).toContain("/v1/realtime/client_secrets");
-    expect(voicePanel).not.toContain("OPENAI_API_KEY");
-    expect(voicePanel).not.toContain("localStorage");
+    expect(voiceClient).not.toContain("OPENAI_API_KEY");
+    expect(voiceClient).not.toContain("localStorage");
   });
 
   it("does not place secrets in static offline assets", () => {

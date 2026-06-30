@@ -44,7 +44,7 @@ describe("agent memory", () => {
     ];
     expect(findMemory(entries, "architect")).toHaveLength(1);
     const prompt = formatMemoriesForPrompt(entries);
-    expect(prompt).toContain("## Saved memories");
+    expect(prompt).toContain("## What I know about you");
     expect(prompt).toContain("resume: Head AI Architect");
   });
 

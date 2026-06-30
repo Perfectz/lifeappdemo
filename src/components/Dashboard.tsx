@@ -13,6 +13,7 @@ import { NorthStarCard } from "@/components/NorthStarCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatusPanel } from "@/components/StatusPanel";
 import { SetupPrompt } from "@/components/SetupPrompt";
+import { TimelineMirrorCard } from "@/components/TimelineMirrorCard";
 import { VitalsAlertBanner } from "@/components/VitalsAlertBanner";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
@@ -251,6 +252,8 @@ export function Dashboard() {
       ) : null}
 
       {hasLoaded ? <NorthStarCard /> : null}
+
+      {hasLoaded ? <TimelineMirrorCard /> : null}
 
       <section className="dashboard-grid" aria-label="Today snapshot">
         <StatusPanel

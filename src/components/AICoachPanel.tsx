@@ -11,7 +11,7 @@ import { fileToDownscaledDataUrl } from "@/client/imageDownscale";
 import { loadWiki } from "@/data/wikiRepository";
 import { formatWikiForPrompt } from "@/domain/personalWiki";
 import { createLocalMemoryRepository } from "@/data/memoryRepository";
-import { formatMemoriesForPrompt, upsertMemory } from "@/domain/memory";
+import { formatMemoriesForPrompt, isMemoryCategory, upsertMemory } from "@/domain/memory";
 import { persistAIToolResult } from "@/client/persistAIToolResult";
 import { readProfile } from "@/client/profile";
 import { loadStoredAppData } from "@/client/storedAppData";
@@ -417,7 +417,7 @@ export function AICoachPanel() {
   }
 
   function applyMemoryProposal(messageId: string, proposal: AIToolProposal): boolean {
-    const payload = proposal.payload as { key?: unknown; content?: unknown };
+    const payload = proposal.payload as { key?: unknown; content?: unknown; category?: unknown };
     const key = typeof payload.key === "string" ? payload.key : "";
     const content = typeof payload.content === "string" ? payload.content : "";
     if (!key || !content) {
@@ -425,8 +425,9 @@ export function AICoachPanel() {
       setError("That memory was missing a key or content.");
       return true;
     }
+    const category = isMemoryCategory(payload.category) ? payload.category : undefined;
     const repo = createLocalMemoryRepository(window.localStorage);
-    repo.save(upsertMemory(repo.load(), { key, content, source: "agent" }));
+    repo.save(upsertMemory(repo.load(), { key, content, category, source: "agent" }));
     setProposalStatus(messageId, proposal.id, "applied");
     setMessages((current) => [
       ...current,

@@ -9,6 +9,15 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 import { loadNutritionGoals, saveNutritionGoals } from "@/data/nutritionGoalsRepository";
+import {
+  getOrComputeDailyTarget,
+  recomputeDailyTarget,
+  setManualDailyTarget
+} from "@/client/nutritionTarget";
+import {
+  nutritionTargetSourceLabel,
+  type DailyNutritionTarget
+} from "@/domain/dailyNutritionTarget";
 import { toLocalIsoDate } from "@/domain/dates";
 import {
   caloriesRemaining,
@@ -59,6 +68,8 @@ export function NutritionDiary() {
   const [editingGoals, setEditingGoals] = useState(false);
   const [goalDraft, setGoalDraft] = useState({ calorie: "", protein: "", carbs: "", fat: "" });
   const [error, setError] = useState<string | null>(null);
+  const [dailyTarget, setDailyTarget] = useState<DailyNutritionTarget | null>(null);
+  const [recomputing, setRecomputing] = useState(false);
 
   const viewDate = useMemo(() => shiftIsoDate(dayOffset), [dayOffset]);
   const isToday = dayOffset === 0;
@@ -69,16 +80,37 @@ export function NutritionDiary() {
     setGoals(loadNutritionGoals(storage));
   }, []);
 
+  const refreshTarget = useCallback(() => {
+    void getOrComputeDailyTarget().then(setDailyTarget);
+  }, []);
+
   useEffect(() => {
     reload();
+    refreshTarget();
     window.addEventListener(dataChangedEventName, reload);
     return () => window.removeEventListener(dataChangedEventName, reload);
-  }, [reload]);
+  }, [reload, refreshTarget]);
+
+  async function handleRecompute() {
+    setRecomputing(true);
+    try {
+      setDailyTarget(await recomputeDailyTarget());
+    } finally {
+      setRecomputing(false);
+    }
+  }
 
   const dayEntries = useMemo(() => getFoodEntriesForDate(foods, viewDate), [foods, viewDate]);
   const byMeal = useMemo(() => groupEntriesByMeal(dayEntries), [dayEntries]);
   const totals = useMemo(() => sumMacros(dayEntries), [dayEntries]);
-  const remaining = goals ? caloriesRemaining(goals.calorieTarget, totals.calories) : undefined;
+  // Today uses the metrics-driven daily target; past days fall back to the
+  // static goals (we don't recompute historical targets).
+  const useDaily = isToday ? dailyTarget : null;
+  const effCalorie = useDaily ? useDaily.calorieTarget : goals?.calorieTarget;
+  const effProtein = useDaily ? useDaily.proteinTargetG : goals?.proteinTargetG;
+  const effCarbs = useDaily ? useDaily.carbsTargetG : goals?.carbsTargetG;
+  const effFat = useDaily ? useDaily.fatTargetG : goals?.fatTargetG;
+  const remaining = effCalorie !== undefined ? caloriesRemaining(effCalorie, totals.calories) : undefined;
 
   if (!goals) {
     return null;
@@ -132,10 +164,10 @@ export function NutritionDiary() {
 
   function openGoals() {
     setGoalDraft({
-      calorie: goals?.calorieTarget?.toString() ?? "",
-      protein: goals?.proteinTargetG?.toString() ?? "",
-      carbs: goals?.carbsTargetG?.toString() ?? "",
-      fat: goals?.fatTargetG?.toString() ?? ""
+      calorie: (dailyTarget?.calorieTarget ?? goals?.calorieTarget)?.toString() ?? "",
+      protein: (dailyTarget?.proteinTargetG ?? goals?.proteinTargetG)?.toString() ?? "",
+      carbs: (dailyTarget?.carbsTargetG ?? goals?.carbsTargetG)?.toString() ?? "",
+      fat: (dailyTarget?.fatTargetG ?? goals?.fatTargetG)?.toString() ?? ""
     });
     setEditingGoals(true);
   }
@@ -149,6 +181,14 @@ export function NutritionDiary() {
     });
     saveNutritionGoals(window.localStorage, next);
     setGoals(next);
+    // A manual edit overrides today's auto target.
+    const manual = setManualDailyTarget(window.localStorage, {
+      calorieTarget: num(goalDraft.calorie) || undefined,
+      proteinTargetG: num(goalDraft.protein) || undefined,
+      carbsTargetG: num(goalDraft.carbs) || undefined,
+      fatTargetG: num(goalDraft.fat) || undefined
+    });
+    if (manual) setDailyTarget(manual);
     setEditingGoals(false);
   }
 
@@ -187,11 +227,30 @@ export function NutritionDiary() {
       </div>
 
       <section className="dashboard-section nutri-budget" aria-label="Calorie budget">
+        {isToday && dailyTarget ? (
+          <div className="nutri-target-meta">
+            <span className={`nutri-target-badge nutri-target-${dailyTarget.source}`}>
+              {nutritionTargetSourceLabel[dailyTarget.source]} target
+            </span>
+            {dailyTarget.rationale ? (
+              <span className="nutri-target-why">{dailyTarget.rationale}</span>
+            ) : null}
+            <button
+              type="button"
+              className="nutri-mini-btn nutri-target-recompute"
+              onClick={() => void handleRecompute()}
+              disabled={recomputing}
+            >
+              {recomputing ? "Recomputing…" : "↻ Recalculate"}
+            </button>
+          </div>
+        ) : null}
+
         <div className="nutri-budget-head">
-          {goals.calorieTarget ? (
+          {effCalorie ? (
             <div className="nutri-budget-equation">
               <div>
-                <strong>{goals.calorieTarget}</strong>
+                <strong>{effCalorie}</strong>
                 <span>goal</span>
               </div>
               <span className="nutri-op">−</span>
@@ -215,17 +274,17 @@ export function NutritionDiary() {
               </button>
             </div>
           )}
-          {goals.calorieTarget ? (
+          {effCalorie ? (
             <button type="button" className="nutri-edit-goals" onClick={openGoals}>
-              Edit goals
+              Adjust
             </button>
           ) : null}
         </div>
 
         <div className="nutri-macros">
-          {macroBar("Protein", totals.proteinG, goals.proteinTargetG)}
-          {macroBar("Carbs", totals.carbsG, goals.carbsTargetG)}
-          {macroBar("Fat", totals.fatG, goals.fatTargetG)}
+          {macroBar("Protein", totals.proteinG, effProtein)}
+          {macroBar("Carbs", totals.carbsG, effCarbs)}
+          {macroBar("Fat", totals.fatG, effFat)}
         </div>
 
         <p className="nutri-micros">

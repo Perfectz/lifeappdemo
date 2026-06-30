@@ -581,7 +581,11 @@ export const cardioOptions: CardioOption[] = [
   { id: "run", label: "Run" },
   { id: "jog", label: "Jog" },
   { id: "ddr", label: "DDR" },
-  { id: "bike-vest", label: "Exercise bike + weight vest" }
+  { id: "bike-vest", label: "Exercise bike + weight vest" },
+  { id: "ruck", label: "Rucking (weighted walk)" },
+  { id: "jump-rope", label: "Jump rope intervals" },
+  { id: "stairs", label: "Stair climb" },
+  { id: "incline-walk", label: "Incline treadmill walk" }
 ];
 
 export type MartialArtsOption = { id: string; label: string };
@@ -589,5 +593,8 @@ export const martialArtsOptions: MartialArtsOption[] = [
   { id: "bas-beginner", label: "Bas Rutten Boxing — Beginner (audio)" },
   { id: "bas-advanced", label: "Bas Rutten Boxing — Advanced (audio)" },
   { id: "shidokan-kickboxing", label: "Shidokan Atlanta — Kickboxing class" },
-  { id: "shidokan-karate", label: "Shidokan Atlanta — Karate class" }
+  { id: "shidokan-karate", label: "Shidokan Atlanta — Karate class" },
+  { id: "shadowboxing", label: "Shadowboxing rounds" },
+  { id: "heavy-bag", label: "Heavy bag rounds" },
+  { id: "forms-kata", label: "Forms / kata practice" }
 ];

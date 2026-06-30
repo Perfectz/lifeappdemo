@@ -15,6 +15,7 @@ import type {
   TaskTag
 } from "@/domain/types";
 import { isCoachActionTool } from "@/domain/coachActions";
+import { isMemoryCategory, type MemoryCategory } from "@/domain/memory";
 import type { DailyPlanInput } from "@/domain/dailyPlans";
 import type { JournalEntryInput } from "@/domain/journal";
 import type { TaskInput } from "@/domain/tasks";
@@ -52,6 +53,7 @@ export const aiTaskToolNames: AITaskToolName[] = [
 export type SaveMemoryPayload = {
   key: string;
   content: string;
+  category?: MemoryCategory;
 };
 
 function validateSaveMemoryPayload(payload: unknown): SaveMemoryPayload | undefined {
@@ -63,7 +65,8 @@ function validateSaveMemoryPayload(payload: unknown): SaveMemoryPayload | undefi
   if (!key || !content) {
     return undefined;
   }
-  return { key: key.slice(0, 80), content: content.slice(0, 4000) };
+  const category = isMemoryCategory(payload.category) ? payload.category : undefined;
+  return { key: key.slice(0, 80), content: content.slice(0, 4000), category };
 }
 
 type CreateTaskPayload = TaskInput;

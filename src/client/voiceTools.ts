@@ -28,7 +28,7 @@ import { createNote, getRecentNotes, searchNotes } from "@/domain/notes";
 import { loadWiki } from "@/data/wikiRepository";
 import { formatWikiForPrompt } from "@/domain/personalWiki";
 import { createLocalMemoryRepository } from "@/data/memoryRepository";
-import { findMemory, removeMemory, upsertMemory } from "@/domain/memory";
+import { findMemory, isMemoryCategory, removeMemory, upsertMemory } from "@/domain/memory";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import type { JournalEntryType, TaskPriority, TaskTag } from "@/domain";
 
@@ -276,12 +276,28 @@ export const VOICE_TOOL_DEFINITIONS = [
     type: "function",
     name: "remember",
     description:
-      "Store a durable fact about the user in long-term memory so you (and the app) recall it in future sessions — e.g. their resume, favorite workouts, schedule, preferences, anything they ask you to remember. Re-using the same key overwrites that memory.",
+      "Store a durable coaching fact about the user in long-term memory so you (and the app) recall it in future sessions — injuries, medications, conditions, equipment, schedule, food likes/dislikes, what worked, goals, preferences. Proactively remember such facts when mentioned. Re-using the same key overwrites that memory.",
     parameters: {
       type: "object",
       properties: {
-        key: { type: "string", description: "Short topic/title, e.g. 'resume' or 'favorite workouts'." },
-        content: { type: "string", description: "What to remember." }
+        key: { type: "string", description: "Short topic/title, e.g. 'right knee' or 'lisinopril'." },
+        content: { type: "string", description: "What to remember." },
+        category: {
+          type: "string",
+          enum: [
+            "medication",
+            "condition",
+            "injury",
+            "training",
+            "nutrition",
+            "equipment",
+            "schedule",
+            "preference",
+            "goal",
+            "general"
+          ],
+          description: "Bucket for the fact; use medication/condition/injury for health-critical facts."
+        }
       },
       required: ["key", "content"]
     }
@@ -714,8 +730,9 @@ function remember(args: Record<string, unknown>): VoiceToolResult {
   const key = asText(args.key);
   const content = asText(args.content);
   if (!key || !content) return { ok: false, message: "I need a key and something to remember." };
+  const category = isMemoryCategory(args.category) ? args.category : undefined;
   const repo = createLocalMemoryRepository(store());
-  repo.save(upsertMemory(repo.load(), { key, content, source: "agent" }));
+  repo.save(upsertMemory(repo.load(), { key, content, category, source: "agent" }));
   return { ok: true, message: `Got it — I'll remember "${key}".` };
 }
 

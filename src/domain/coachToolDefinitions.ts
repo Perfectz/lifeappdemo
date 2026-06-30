@@ -256,12 +256,28 @@ export const COACH_TOOL_DEFINITIONS: ToolDef[] = [
     function: {
       name: "save_memory",
       description:
-        "Store or update a durable fact about the user in long-term memory (resume, preferences, conditions, anything worth remembering). Re-using a key updates it.",
+        "Store or update a durable coaching fact about the user in long-term memory — injuries, medications, conditions, equipment, schedule, food likes/dislikes, what has worked, goals, preferences. Proactively use this whenever the user mentions such a fact. Re-using a key updates it.",
       parameters: {
         type: "object",
         properties: {
-          key: { type: "string" },
-          content: { type: "string" }
+          key: { type: "string", description: "Short topic, e.g. 'right knee' or 'lisinopril'." },
+          content: { type: "string", description: "The fact to remember." },
+          category: {
+            type: "string",
+            enum: [
+              "medication",
+              "condition",
+              "injury",
+              "training",
+              "nutrition",
+              "equipment",
+              "schedule",
+              "preference",
+              "goal",
+              "general"
+            ],
+            description: "Bucket for the fact. Use medication/condition/injury for anything health-critical."
+          }
         },
         required: ["key", "content"]
       }

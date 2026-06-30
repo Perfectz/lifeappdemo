@@ -44,7 +44,7 @@ export type CalorieBudget = {
   fatTargetG: number;
 };
 
-const MIN_CALORIES: Record<BiologicalSex, number> = { male: 1500, female: 1200 };
+export const MIN_CALORIES: Record<BiologicalSex, number> = { male: 1500, female: 1200 };
 
 function round(value: number): number {
   return Math.round(value);
@@ -60,15 +60,23 @@ export function computeCalorieBudget(input: CalorieBudgetInput): CalorieBudget {
   const deficit = input.goal === "lose" ? 500 : 0;
   const recommendedCalories = Math.max(MIN_CALORIES[input.sex], round(tdee - deficit));
 
-  // Protein anchored to target body weight (~0.8 g/lb); fat ~25% of calories;
-  // carbs fill the remainder (floored at 0).
   const anchorWeight = input.targetWeightLbs ?? input.weightLbs;
-  const proteinTargetG = round(anchorWeight * 0.8);
-  const fatTargetG = round((recommendedCalories * 0.25) / 9);
-  const carbsTargetG = Math.max(
-    0,
-    round((recommendedCalories - proteinTargetG * 4 - fatTargetG * 9) / 4)
-  );
+  const macros = macroSplit(recommendedCalories, anchorWeight);
 
-  return { bmr, tdee, recommendedCalories, proteinTargetG, carbsTargetG, fatTargetG };
+  return { bmr, tdee, recommendedCalories, ...macros };
+}
+
+/**
+ * Split a calorie target into macros: protein anchored to target body weight
+ * (~0.8 g/lb); fat ~25% of calories; carbs fill the remainder (floored at 0).
+ * Shared by the static budget and the adaptive-TDEE target so both stay coherent.
+ */
+export function macroSplit(
+  calories: number,
+  anchorWeightLbs: number
+): { proteinTargetG: number; carbsTargetG: number; fatTargetG: number } {
+  const proteinTargetG = round(anchorWeightLbs * 0.8);
+  const fatTargetG = round((calories * 0.25) / 9);
+  const carbsTargetG = Math.max(0, round((calories - proteinTargetG * 4 - fatTargetG * 9) / 4));
+  return { proteinTargetG, carbsTargetG, fatTargetG };
 }

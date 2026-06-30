@@ -10,6 +10,9 @@ import type { IsoDateTime } from "@/domain/types";
 export type HealthGoals = {
   weightTargetLbs?: number;
   weightStartLbs?: number;
+  /** Desired weekly weight change in lb (negative = loss). Drives the adaptive
+   *  calorie target's deficit/surplus. Bounded to a safe range. */
+  weeklyWeightChangeTargetLbs?: number;
   bpSystolicTarget: number;
   bpDiastolicTarget: number;
   fastingGlucoseTarget: number;
@@ -17,6 +20,10 @@ export type HealthGoals = {
   dailyWorkoutsTarget: number;
   updatedAt: IsoDateTime;
 };
+
+/** Safe bounds for the weekly weight-change goal (lb/week). */
+export const MIN_WEEKLY_WEIGHT_CHANGE = -2;
+export const MAX_WEEKLY_WEIGHT_CHANGE = 1.5;
 
 export const DEFAULT_HEALTH_GOALS: Omit<HealthGoals, "updatedAt"> = {
   bpSystolicTarget: 130,
@@ -47,6 +54,11 @@ export function isHealthGoals(value: unknown): value is HealthGoals {
     isPositiveNumber(goals.dailyWorkoutsTarget) &&
     (goals.weightTargetLbs === undefined || isPositiveNumber(goals.weightTargetLbs)) &&
     (goals.weightStartLbs === undefined || isPositiveNumber(goals.weightStartLbs)) &&
+    (goals.weeklyWeightChangeTargetLbs === undefined ||
+      (typeof goals.weeklyWeightChangeTargetLbs === "number" &&
+        Number.isFinite(goals.weeklyWeightChangeTargetLbs) &&
+        goals.weeklyWeightChangeTargetLbs >= MIN_WEEKLY_WEIGHT_CHANGE &&
+        goals.weeklyWeightChangeTargetLbs <= MAX_WEEKLY_WEIGHT_CHANGE)) &&
     typeof goals.updatedAt === "string"
   );
 }

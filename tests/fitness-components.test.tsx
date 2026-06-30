@@ -32,9 +32,9 @@ describe("DailyFitness", () => {
     fireEvent.click(screen.getByRole("button", { name: "Log martial arts" }));
     await waitFor(() => expect(screen.getByText("3/3")).toBeVisible());
 
-    expect(
-      screen.getByText("✓ Day complete — all three sessions logged.")
-    ).toBeVisible();
+    const goodDay = screen.getByText(/Good day/);
+    expect(goodDay).toBeVisible();
+    expect(goodDay).toHaveTextContent(/all three/);
 
     const stored = JSON.parse(window.localStorage.getItem(workoutStorageKey) ?? "[]");
     expect(stored).toHaveLength(3);

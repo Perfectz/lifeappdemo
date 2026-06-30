@@ -4,18 +4,56 @@ import type { IsoDateTime } from "@/domain/types";
  * Agent-writable long-term memory (Karpathy "LLM memory / wiki" style): a
  * growing set of keyed facts the AI agent — or the user — can store and recall
  * across sessions. Distinct from the hand-authored About Me wiki: this is the
- * flexible, append-as-you-go notebook ("resume", "favorite workouts", "coffee
- * order", ...). Stored locally and synced via the cloud snapshot.
+ * flexible, append-as-you-go notebook the coach fills by *talking* to you, so
+ * you never have to manage a profile form.
+ *
+ * Facts are categorized so the coach can treat the safety-critical ones
+ * (medications, conditions, injuries) as ground truth and so the user can scan
+ * "what the coach knows" at a glance.
  */
 
 export const memorySources = ["user", "agent"] as const;
 export type MemorySource = (typeof memorySources)[number];
 
+/** Coaching/clinical buckets. Order matters: safety-critical first. */
+export const memoryCategories = [
+  "medication",
+  "condition",
+  "injury",
+  "training",
+  "nutrition",
+  "equipment",
+  "schedule",
+  "preference",
+  "goal",
+  "general"
+] as const;
+export type MemoryCategory = (typeof memoryCategories)[number];
+
+export const memoryCategoryLabel: Record<MemoryCategory, string> = {
+  medication: "Medications",
+  condition: "Conditions",
+  injury: "Injuries & limits",
+  training: "Training",
+  nutrition: "Nutrition",
+  equipment: "Equipment & access",
+  schedule: "Schedule & constraints",
+  preference: "Preferences",
+  goal: "Goals",
+  general: "General"
+};
+
+/** Categories the coach must treat as safety ground truth. */
+export const SAFETY_CRITICAL_CATEGORIES: MemoryCategory[] = ["medication", "condition", "injury"];
+
+export const DEFAULT_MEMORY_CATEGORY: MemoryCategory = "general";
+
 export type MemoryEntry = {
   id: string;
-  /** Short topic/title used as the upsert identity, e.g. "resume". */
+  /** Short topic/title used as the upsert identity, e.g. "right knee". */
   key: string;
   content: string;
+  category: MemoryCategory;
   source: MemorySource;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
@@ -24,11 +62,15 @@ export type MemoryEntry = {
 export type MemoryInput = {
   key: string;
   content: string;
+  category?: MemoryCategory;
   source?: MemorySource;
 };
 
 export type MemoryValidationResult =
-  | { ok: true; value: { key: string; content: string; source: MemorySource } }
+  | {
+      ok: true;
+      value: { key: string; content: string; category: MemoryCategory; source: MemorySource };
+    }
   | { ok: false; message: string };
 
 const MAX_KEY = 80;
@@ -36,6 +78,10 @@ const MAX_CONTENT = 4000;
 
 function normalizeKey(key: string): string {
   return key.trim().toLowerCase();
+}
+
+export function isMemoryCategory(value: unknown): value is MemoryCategory {
+  return typeof value === "string" && memoryCategories.includes(value as MemoryCategory);
 }
 
 export function validateMemoryInput(input: MemoryInput): MemoryValidationResult {
@@ -48,9 +94,10 @@ export function validateMemoryInput(input: MemoryInput): MemoryValidationResult 
     return { ok: false, message: "Memory needs content to store." };
   }
   const source = input.source && memorySources.includes(input.source) ? input.source : "agent";
+  const category = isMemoryCategory(input.category) ? input.category : DEFAULT_MEMORY_CATEGORY;
   return {
     ok: true,
-    value: { key: key.slice(0, MAX_KEY), content: content.slice(0, MAX_CONTENT), source }
+    value: { key: key.slice(0, MAX_KEY), content: content.slice(0, MAX_CONTENT), category, source }
   };
 }
 
@@ -66,6 +113,7 @@ export function createMemoryEntry(
     id: globalThis.crypto?.randomUUID?.() ?? `memory-${now}`,
     key: validation.value.key,
     content: validation.value.content,
+    category: validation.value.category,
     source: validation.value.source,
     createdAt: now,
     updatedAt: now
@@ -91,6 +139,7 @@ export function upsertMemory(
             ...entry,
             key: validation.value.key,
             content: validation.value.content,
+            category: validation.value.category,
             source: validation.value.source,
             updatedAt: now
           }
@@ -114,6 +163,11 @@ export function findMemory(entries: MemoryEntry[], query: string): MemoryEntry[]
   );
 }
 
+/** Back-compatible read of a possibly-uncategorized stored entry. */
+export function memoryCategoryOf(entry: MemoryEntry): MemoryCategory {
+  return isMemoryCategory(entry.category) ? entry.category : DEFAULT_MEMORY_CATEGORY;
+}
+
 export function isMemoryEntry(value: unknown): value is MemoryEntry {
   if (!value || typeof value !== "object") return false;
   const entry = value as Partial<MemoryEntry>;
@@ -124,17 +178,38 @@ export function isMemoryEntry(value: unknown): value is MemoryEntry {
     typeof entry.content === "string" &&
     entry.source !== undefined &&
     memorySources.includes(entry.source) &&
+    // category is optional for backward compatibility with v1 memories.
+    (entry.category === undefined || isMemoryCategory(entry.category)) &&
     typeof entry.createdAt === "string" &&
     typeof entry.updatedAt === "string"
   );
 }
 
-/** Render memories for an AI prompt, capped to a character budget. */
+/**
+ * Render memories for an AI prompt, grouped by category (safety-critical first)
+ * so the coach can reliably find and honor medications/conditions/injuries.
+ */
 export function formatMemoriesForPrompt(entries: MemoryEntry[], maxChars = 4000): string {
   if (entries.length === 0) return "";
-  const lines = [...entries]
-    .sort((a, b) => (b.updatedAt > a.updatedAt ? 1 : -1))
-    .map((entry) => `- ${entry.key}: ${entry.content}`);
-  const text = `## Saved memories\n${lines.join("\n")}`;
+
+  const byCategory = new Map<MemoryCategory, MemoryEntry[]>();
+  for (const entry of entries) {
+    const cat = memoryCategoryOf(entry);
+    const list = byCategory.get(cat) ?? [];
+    list.push(entry);
+    byCategory.set(cat, list);
+  }
+
+  const blocks: string[] = [];
+  for (const cat of memoryCategories) {
+    const list = byCategory.get(cat);
+    if (!list || list.length === 0) continue;
+    const lines = [...list]
+      .sort((a, b) => (b.updatedAt > a.updatedAt ? 1 : -1))
+      .map((entry) => `- ${entry.key}: ${entry.content}`);
+    blocks.push(`### ${memoryCategoryLabel[cat]}\n${lines.join("\n")}`);
+  }
+
+  const text = `## What I know about you\n${blocks.join("\n")}`;
   return text.length > maxChars ? `${text.slice(0, maxChars)}\n…(truncated)` : text;
 }

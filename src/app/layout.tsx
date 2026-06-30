@@ -7,6 +7,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { PWAServiceWorkerRegister } from "@/components/PWAServiceWorkerRegister";
 import { withBasePath } from "@/config/site";
 import "./globals.css";
+import "./timeline-mirror.css";
 
 // Display font for chrome labels (brand, group captions, nav strongs,
 // hero name). Pixelify Sans is crisp at small sizes and reads like a

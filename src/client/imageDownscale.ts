@@ -29,3 +29,18 @@ export async function fileToDownscaledDataUrl(file: File, maxDim = 1024): Promis
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
   return canvas.toDataURL("image/jpeg", 0.82);
 }
+
+/**
+ * Fetch an image by URL and return a downscaled JPEG data URL. Used to seed
+ * reference images bundled under /public at runtime (keeps them out of git
+ * while still loading into the on-device store).
+ */
+export async function fetchToDownscaledDataUrl(url: string, maxDim = 1024): Promise<string> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Could not fetch image: ${url}`);
+  }
+  const blob = await response.blob();
+  const file = new File([blob], "seed-image", { type: blob.type || "image/png" });
+  return fileToDownscaledDataUrl(file, maxDim);
+}

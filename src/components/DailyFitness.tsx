@@ -17,7 +17,20 @@ import {
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import { toLocalIsoDate } from "@/domain/dates";
 import { createWorkout } from "@/domain/workouts";
-import type { Workout } from "@/domain";
+import {
+  getOrComputeWorkoutPlan,
+  recomputeWorkoutPlan,
+  suggestionToWorkoutInput,
+  swapBucketPreset
+} from "@/client/workoutSuggestion";
+import type { DailyWorkoutPlan, WorkoutSuggestion } from "@/domain/workoutPlan";
+import type { Workout, WorkoutType } from "@/domain";
+
+const BUCKET_LABEL: Record<WorkoutType, string> = {
+  strength: "Strength",
+  cardio: "Cardio",
+  martial_arts: "Martial arts"
+};
 
 function prettyIso(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -101,6 +114,31 @@ export function DailyFitness() {
     (id: string) => persist(workouts.filter((w) => w.id !== id)),
     [persist, workouts]
   );
+
+  // Today's AI-picked plan (presets or custom). Falls back to deterministic.
+  const [plan, setPlan] = useState<DailyWorkoutPlan | null>(null);
+  const [recomputingPlan, setRecomputingPlan] = useState(false);
+
+  useEffect(() => {
+    void getOrComputeWorkoutPlan().then(setPlan);
+  }, []);
+
+  function logSuggestion(suggestion: WorkoutSuggestion) {
+    addWorkout(createWorkout(suggestionToWorkoutInput(suggestion, viewed)));
+  }
+
+  function swap(bucket: WorkoutType) {
+    if (plan) setPlan(swapBucketPreset(window.localStorage, plan, bucket));
+  }
+
+  async function handleRecomputePlan() {
+    setRecomputingPlan(true);
+    try {
+      setPlan(await recomputeWorkoutPlan());
+    } finally {
+      setRecomputingPlan(false);
+    }
+  }
 
   // Most recent prior day that has workouts — powers "repeat" templating.
   const previousDay = useMemo(() => {
@@ -238,8 +276,11 @@ export function DailyFitness() {
           ))}
           <strong className="fitness-count">{status.completedCount}/3</strong>
         </div>
-        {status.isComplete ? (
-          <p className="fitness-complete">✓ Day complete — all three sessions logged.</p>
+        {status.isGoodDay ? (
+          <p className="fitness-complete">
+            ✓ Good day{status.bonusCount > 0 ? ` · +${status.bonusCount} bonus` : ""}
+            {status.isComplete ? " — all three! 🔥" : ""}
+          </p>
         ) : null}
         {!status.isComplete && previousDay ? (
           <button type="button" className="fitness-repeat-btn" onClick={repeatPreviousDay}>
@@ -247,6 +288,77 @@ export function DailyFitness() {
           </button>
         ) : null}
       </header>
+
+      {/* Today's AI-picked plan */}
+      {isToday && plan && plan.items.length > 0 ? (
+        <section className="dashboard-section fitness-plan" aria-label="Today's workout">
+          <header className="fitness-card-head">
+            <div>
+              <p className="eyebrow">Coach pick</p>
+              <h2>Today&apos;s workout</h2>
+            </div>
+            <button
+              type="button"
+              className="nutri-mini-btn"
+              onClick={() => void handleRecomputePlan()}
+              disabled={recomputingPlan}
+            >
+              {recomputingPlan ? "Picking…" : "↻ Re-pick"}
+            </button>
+          </header>
+          {plan.note ? <p className="reminders-help">{plan.note}</p> : null}
+          <div className="fitness-plan-items">
+            {plan.items.map((item) => {
+              const done = Boolean(status.byType[item.bucket]);
+              const isPrimary = item.bucket === "strength";
+              return (
+                <div key={item.bucket} className={`fitness-plan-item${done ? " is-done" : ""}`}>
+                  <div className="fitness-plan-item-head">
+                    <span className="fitness-plan-bucket">
+                      {BUCKET_LABEL[item.bucket]}
+                      {isPrimary ? "" : " · bonus"}
+                    </span>
+                    {done ? (
+                      <span className="fitness-badge fitness-badge-done">Logged</span>
+                    ) : item.estMinutes ? (
+                      <span className="fitness-plan-mins">~{item.estMinutes} min</span>
+                    ) : null}
+                  </div>
+                  <p className="fitness-plan-title">
+                    {item.title}
+                    {item.variant ? ` · ${item.variant}` : ""}
+                  </p>
+                  {item.rationale ? <p className="fitness-plan-why">{item.rationale}</p> : null}
+                  {item.swaps && item.swaps.length > 0 ? (
+                    <p className="fitness-plan-swap">⚠ {item.swaps.join(" · ")}</p>
+                  ) : null}
+                  {item.exercises && item.exercises.length > 0 ? (
+                    <ul className="fitness-plan-ex">
+                      {item.exercises.map((line, i) => (
+                        <li key={i}>{line}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {!done ? (
+                    <div className="fitness-plan-actions">
+                      <button
+                        type="button"
+                        className="command-button command-button-primary"
+                        onClick={() => logSuggestion(item)}
+                      >
+                        <span>Log it</span>
+                      </button>
+                      <button type="button" className="command-button" onClick={() => swap(item.bucket)}>
+                        <span>Swap</span>
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       {/* Strength */}
       <section className="dashboard-section fitness-card">
