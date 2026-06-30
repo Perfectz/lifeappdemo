@@ -1,4 +1,64 @@
 /* ============================================================
+   Medication one-tap log (Vitals)
+   ============================================================ */
+
+.med-quick-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.med-quick-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1.1rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+}
+
+.med-quick-btn:active {
+  transform: scale(0.98);
+}
+
+.med-quick-btn.is-taken {
+  background: color-mix(in srgb, var(--success) 18%, var(--surface-soft));
+  border-color: var(--success);
+}
+
+.med-quick-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.med-quick-btn.is-taken .med-quick-icon {
+  color: var(--success);
+  font-weight: 800;
+}
+
+.med-quick-label {
+  font-weight: 700;
+}
+
+.med-quick-state {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+@media (max-width: 420px) {
+  .med-quick-buttons {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
    Member approval / access control
    ============================================================ */
 
