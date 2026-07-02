@@ -6,6 +6,9 @@ out
 # Personal Timeline Mirror reference photos + rubrics — seeded at runtime, never commit
 /public/timeline-seed/
 
+# Marketing/video content assets (large binaries) — never commit
+/content/
+
 # Promo/demo media + scripts — may contain personal data; never commit
 *.mp4
 *.mov

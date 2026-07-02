@@ -41,8 +41,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ skipped: "push feature disabled" });
   }
 
+  // Fail closed: without a configured secret this endpoint must not run —
+  // it scans every user's subscriptions with the service-role key and can
+  // spam duplicate pushes if triggered by anonymous callers.
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

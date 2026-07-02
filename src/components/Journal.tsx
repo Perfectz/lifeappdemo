@@ -1,9 +1,10 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { SectionHeader } from "@/components/SectionHeader";
+import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalJournalRepository } from "@/data/journalRepository";
 import type { JournalEntry, JournalEntryInput, JournalEntryType } from "@/domain";
 import { toLocalIsoDate } from "@/domain/dates";
@@ -53,30 +54,22 @@ export function Journal() {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const isInitialJournalLoad = useRef(true);
   const entriesForSelectedDate = useMemo(
     () => getJournalEntriesForDate(entries, selectedDate),
     [entries, selectedDate]
   );
   const recentEntries = useMemo(() => getRecentJournalEntries(entries), [entries]);
 
-  useEffect(() => {
+  const reload = useCallback(() => {
     setEntries(createLocalJournalRepository(window.localStorage).load());
-    setHasLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (!hasLoaded) {
-      return;
-    }
-
-    if (isInitialJournalLoad.current) {
-      isInitialJournalLoad.current = false;
-      return;
-    }
-
-    createLocalJournalRepository(window.localStorage).save(entries);
-  }, [entries, hasLoaded]);
+    reload();
+    setHasLoaded(true);
+    window.addEventListener(dataChangedEventName, reload);
+    return () => window.removeEventListener(dataChangedEventName, reload);
+  }, [reload]);
 
   function setField<Key extends keyof JournalFormState>(key: Key, value: JournalFormState[Key]) {
     setForm((current) => ({
@@ -102,19 +95,22 @@ export function Journal() {
       return;
     }
 
-    setEntries((current) => {
-      const existing = editingEntryId
-        ? current.find((entry) => entry.id === editingEntryId)
-        : undefined;
+    // Read-modify-write against storage so concurrent writers (AI coach,
+    // voice agent) are never clobbered; the save dispatches
+    // dataChangedEventName, which reloads `entries` for the UI.
+    const repository = createLocalJournalRepository(window.localStorage);
+    const current = repository.load();
+    const existing = editingEntryId
+      ? current.find((entry) => entry.id === editingEntryId)
+      : undefined;
+    const next = existing
+      ? current.map((entry) =>
+          entry.id === existing.id ? updateJournalEntry(existing, validation.value) : entry
+        )
+      : [createJournalEntry(validation.value), ...current];
 
-      if (!existing) {
-        return [createJournalEntry(validation.value), ...current];
-      }
-
-      return current.map((entry) =>
-        entry.id === existing.id ? updateJournalEntry(existing, validation.value) : entry
-      );
-    });
+    repository.save(next);
+    setEntries(repository.load());
     setSelectedDate(validation.value.date);
     setMessage(editingEntryId ? "Journal entry updated." : "Journal entry saved.");
     resetForm();
@@ -137,7 +133,9 @@ export function Journal() {
       return;
     }
 
-    setEntries((current) => deleteJournalEntry(current, entry.id));
+    const repository = createLocalJournalRepository(window.localStorage);
+    repository.save(deleteJournalEntry(repository.load(), entry.id));
+    setEntries(repository.load());
     if (editingEntryId === entry.id) {
       resetForm();
     }

@@ -25,9 +25,11 @@ export async function POST(request: Request) {
   }
 
   const r = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
-  const date = typeof r.date === "string" ? r.date : "";
+  // Strict ISO date — this string is interpolated into the AI prompt, so it
+  // must not become an unbounded free-text channel that bypasses the clamps.
+  const date = typeof r.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : "";
   if (!date) {
-    return NextResponse.json({ error: "A date is required." }, { status: 400 });
+    return NextResponse.json({ error: "A valid date (YYYY-MM-DD) is required." }, { status: 400 });
   }
 
   const clampText = (value: unknown): string | undefined =>

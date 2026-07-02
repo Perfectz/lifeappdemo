@@ -84,9 +84,22 @@
         server HTML when online to avoid stale screens, while AI coaching and fresh server
         requests require network access.
       </p>
-      <a href="dashboard">Dashboard</a>
-      <a href="tasks">Quest Log</a>
-      <a href="settings">Install Settings</a>
+      <a href="dashboard" data-app-path="dashboard">Dashboard</a>
+      <a href="tasks" data-app-path="tasks">Quest Log</a>
+      <a href="settings" data-app-path="settings">Install Settings</a>
     </main>
+    <script>
+      // This page is served by the service worker at whatever URL failed to
+      // load, so relative hrefs resolve against that route (e.g. /tasks/dashboard).
+      // Rewrite them against the SW scope so they work from any depth.
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistration().then(function (registration) {
+          if (!registration) return;
+          document.querySelectorAll("a[data-app-path]").forEach(function (link) {
+            link.href = new URL(link.getAttribute("data-app-path"), registration.scope).toString();
+          });
+        });
+      }
+    </script>
   </body>
 </html>

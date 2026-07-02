@@ -1,4 +1,4 @@
-const CACHE_VERSION = "lifequest-v42";
+const CACHE_VERSION = "lifequest-v43";
 const APP_SHELL_CACHE = `${CACHE_VERSION}-app-shell`;
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const SCOPE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, "");
@@ -28,17 +28,15 @@ const PRECACHE_URLS = [
 function shouldNeverCache(url) {
   const pathname = pathWithoutScope(url);
 
+  // Only same-origin GETs reach this check, so API/data traffic is fully
+  // covered by the /api/ and /_next/ prefixes. Avoid substring checks like
+  // `includes("ai")` — they also matched static assets such as
+  // /assets/sprites/ai-advisor-*.png and silently excluded them offline.
   return (
     url.pathname.startsWith("/api/") ||
     url.pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
-    pathname.startsWith("/_next/") ||
-    url.pathname.includes("openai") ||
-    url.pathname.includes("realtime") ||
-    url.pathname.includes("ai") ||
-    pathname.includes("openai") ||
-    pathname.includes("realtime") ||
-    pathname.includes("ai")
+    pathname.startsWith("/_next/")
   );
 }
 

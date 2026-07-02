@@ -426,7 +426,8 @@ function logCardio(args: Record<string, unknown>): VoiceToolResult {
   const workout = createWorkout({
     date: today(),
     type: "cardio",
-    title: option?.label ?? asText(args.activity) ?? "Cardio",
+    // "||" not "??": asText returns "" for missing values, which must fall through.
+    title: option?.label || asText(args.activity) || "Cardio",
     durationMinutes: asNumber(args.minutes),
     distanceMiles: asNumber(args.distanceMiles),
     weightVestLbs: asNumber(args.weightVestLbs)
@@ -465,7 +466,8 @@ function logMartialArts(args: Record<string, unknown>): VoiceToolResult {
   const workout = createWorkout({
     date: today(),
     type: "martial_arts",
-    title: option?.label ?? asText(args.session) ?? "Martial arts",
+    // "||" not "??": asText returns "" for missing values, which must fall through.
+    title: option?.label || asText(args.session) || "Martial arts",
     durationMinutes: asNumber(args.minutes)
   });
   repo.save([workout, ...repo.load()]);

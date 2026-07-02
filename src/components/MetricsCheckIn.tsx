@@ -1,9 +1,10 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { SectionHeader } from "@/components/SectionHeader";
+import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import type { CheckInType, MetricEntry, MetricInput } from "@/domain";
 import { toLocalIsoDate } from "@/domain/dates";
@@ -102,18 +103,16 @@ export function MetricsCheckIn() {
   const [error, setError] = useState<string | null>(null);
   const recentEntries = useMemo(() => getRecentMetricEntries(entries), [entries]);
 
-  useEffect(() => {
+  const reload = useCallback(() => {
     setEntries(createLocalMetricRepository(window.localStorage).load());
-    setHasLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (!hasLoaded) {
-      return;
-    }
-
-    createLocalMetricRepository(window.localStorage).save(entries);
-  }, [entries, hasLoaded]);
+    reload();
+    setHasLoaded(true);
+    window.addEventListener(dataChangedEventName, reload);
+    return () => window.removeEventListener(dataChangedEventName, reload);
+  }, [reload]);
 
   function setField<Key extends keyof MetricFormState>(key: Key, value: MetricFormState[Key]) {
     setForm((current) => ({
@@ -135,7 +134,12 @@ export function MetricsCheckIn() {
     }
 
     const entry = createMetricEntry(validation.value);
-    setEntries((current) => [entry, ...current]);
+    // Read-modify-write against storage so concurrent writers (voice agent,
+    // imports) are never clobbered; the save dispatches dataChangedEventName,
+    // which reloads `entries` for the UI.
+    const repository = createLocalMetricRepository(window.localStorage);
+    repository.save([entry, ...repository.load()]);
+    setEntries(repository.load());
     setForm((current) => ({
       ...emptyForm(),
       date: current.date,

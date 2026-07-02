@@ -22,7 +22,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON request body." }, { status: 400 });
   }
 
-  const facts = body as {
+  // `JSON.parse("null")` succeeds, so guard before property access.
+  const facts = (body && typeof body === "object" ? body : {}) as {
     timeOfDay?: unknown;
     heroName?: unknown;
     allClear?: unknown;

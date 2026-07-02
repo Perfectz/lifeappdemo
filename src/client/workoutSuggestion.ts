@@ -110,6 +110,11 @@ export function buildWorkoutContext(storage: Storage): WorkoutContext {
   };
 }
 
+// Module-level guard so React StrictMode's double-invoked effect (and any
+// concurrent callers) share one compute per day instead of racing duplicate
+// paid AI calls. Same pattern as timelineSeed.
+let inFlightPlan: { date: IsoDate; promise: Promise<DailyWorkoutPlan> } | null = null;
+
 /** Today's plan — cached, else deterministic, upgraded by AI when available. */
 export async function getOrComputeWorkoutPlan(
   storage: Storage = window.localStorage
@@ -118,6 +123,18 @@ export async function getOrComputeWorkoutPlan(
   const existing = getWorkoutPlanForDate(storage, date);
   if (existing) return existing;
 
+  if (inFlightPlan?.date === date) return inFlightPlan.promise;
+  const promise = computeWorkoutPlan(storage, date).finally(() => {
+    if (inFlightPlan?.promise === promise) inFlightPlan = null;
+  });
+  inFlightPlan = { date, promise };
+  return promise;
+}
+
+async function computeWorkoutPlan(
+  storage: Storage,
+  date: IsoDate
+): Promise<DailyWorkoutPlan> {
   const now = new Date().toISOString();
   const ctx = buildWorkoutContext(storage);
   let plan = buildDeterministicPlan(ctx.recentStrengthTitles, date, now);

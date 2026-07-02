@@ -156,17 +156,25 @@ export function TimelineMirror() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    const loadReferences = () => {
+      void loadHydratedReferences().then((refs) => {
+        if (!cancelled) setReferences(refs);
+      });
+    };
     reloadCheckins();
-    reloadReferences();
+    loadReferences();
     void seedTimelineForPatrick().then((res) => {
-      if (res.seeded) {
-        setSeedNote(
-          `Loaded your timelines (${res.references} reference photos + your rubrics). Manage them anytime via the gear.`
-        );
-        reloadReferences();
-      }
+      if (cancelled || !res.seeded) return;
+      setSeedNote(
+        `Loaded your timelines (${res.references} reference photos + your rubrics). Manage them anytime via the gear.`
+      );
+      loadReferences();
     });
-  }, [reloadCheckins, reloadReferences]);
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadCheckins]);
 
   // Keep the comparison strip fresh if references change in Setup.
   useEffect(() => {

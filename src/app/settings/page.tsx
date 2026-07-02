@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { CloudSyncPanel } from "@/components/CloudSyncPanel";
 import { DataBackupPanel } from "@/components/DataBackupPanel";
 import { DemoModePanel } from "@/components/DemoModePanel";
@@ -10,6 +12,10 @@ import { ProfilePanel } from "@/components/ProfilePanel";
 import { RemindersPanel } from "@/components/RemindersPanel";
 import { SoundPanel } from "@/components/SoundPanel";
 import { ThemePicker } from "@/components/ThemePicker";
+
+export const metadata: Metadata = {
+  title: "Settings"
+};
 
 export default function SettingsPage() {
   return (

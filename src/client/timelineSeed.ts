@@ -169,6 +169,14 @@ async function runSeed(): Promise<TimelineSeedResult> {
 export async function seedTimelineForPatrick(): Promise<TimelineSeedResult> {
   if (typeof window === "undefined") return { seeded: false, references: 0, docs: 0 };
   if (inFlight) return inFlight;
-  inFlight = runSeed().catch(() => ({ seeded: false, references: 0, docs: 0 }));
+  inFlight = runSeed()
+    .catch(() => ({ seeded: false, references: 0, docs: 0 }))
+    .then((result) => {
+      // If the run bailed before setting the flag (signed out, wrong account,
+      // assets missing, or an error), release the guard so a later call — e.g.
+      // right after Patrick signs in — retries instead of returning this no-op.
+      if (!window.localStorage.getItem(SEED_FLAG)) inFlight = null;
+      return result;
+    });
   return inFlight;
 }

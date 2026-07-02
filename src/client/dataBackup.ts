@@ -69,9 +69,10 @@ function isBackup(value: unknown): value is DataBackup {
 }
 
 /**
- * Restore a backup, replacing every LifeQuest key it contains. Only
- * keys under the `lifequest.` namespace are written, so a malformed or
- * malicious file can't scribble into unrelated storage.
+ * Restore a backup, replacing every LifeQuest key it contains and removing
+ * LifeQuest keys it doesn't (so deletions don't resurrect). Only keys under
+ * the `lifequest.` namespace are touched, so a malformed or malicious file
+ * can't scribble into unrelated storage.
  */
 export function importAllData(storage: Storage, rawJson: string): ImportResult {
   let parsed: unknown;
@@ -90,6 +91,18 @@ export function importAllData(storage: Storage, rawJson: string): ImportResult {
 
   const restoredKeys: string[] = [];
   try {
+    // Remove LifeQuest keys absent from the backup so deletions propagate
+    // instead of resurrecting across devices. Sync-internal keys (the excluded
+    // prefix) are never part of a snapshot, so they're left untouched.
+    // Collect first, then remove — deleting while indexing skips keys.
+    const staleKeys: string[] = [];
+    for (let i = 0; i < storage.length; i += 1) {
+      const key = storage.key(i);
+      if (!key || !key.startsWith("lifequest.") || key.startsWith(EXCLUDED_PREFIX)) continue;
+      if (!Object.prototype.hasOwnProperty.call(parsed.data, key)) staleKeys.push(key);
+    }
+    for (const key of staleKeys) storage.removeItem(key);
+
     for (const [key, value] of Object.entries(parsed.data)) {
       if (!key.startsWith("lifequest.") || key.startsWith(EXCLUDED_PREFIX)) continue;
       storage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));

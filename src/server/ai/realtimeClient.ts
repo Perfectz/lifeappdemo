@@ -1,6 +1,6 @@
 import type { CreateRealtimeSessionResponse, VoiceSessionMode } from "@/domain";
 import { REALTIME_VOICE_MODEL } from "@/config/ai";
-import { buildOpenAIError } from "@/server/ai/openaiClient";
+import { AINotConfiguredError, buildOpenAIError } from "@/server/ai/openaiClient";
 
 export type RealtimeClientSecretInput = {
   mode: VoiceSessionMode;
@@ -36,7 +36,7 @@ export async function createRealtimeClientSecret(
       return createMockRealtimeClientSecret(input.mode);
     }
 
-    throw new Error("OpenAI API key is not configured.");
+    throw new AINotConfiguredError();
   }
 
   const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {

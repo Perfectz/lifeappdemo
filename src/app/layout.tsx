@@ -30,11 +30,17 @@ const vt323 = VT323({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://perfectz.github.io/lifeappdemo"),
   title: {
     default: "LifeQuest OS",
     template: "%s | LifeQuest OS"
   },
   description: "A local-first JRPG-inspired life operating system scaffold.",
+  openGraph: {
+    title: "LifeQuest OS",
+    description: "A local-first JRPG-inspired life operating system scaffold.",
+    type: "website"
+  },
   applicationName: "LifeQuest OS",
   manifest: withBasePath("/manifest.webmanifest"),
   icons: {

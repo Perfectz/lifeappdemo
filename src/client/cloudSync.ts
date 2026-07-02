@@ -150,7 +150,7 @@ export function subscribeAuthState(callback: (user: CloudUser | null) => void): 
 }
 
 /** Stash a timestamped local snapshot before an overwrite; keep only the most recent few. */
-function stashLocalBackup(store: Storage): void {
+function stashLocalBackup(store: Storage): boolean {
   try {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     store.setItem(`${BACKUP_PREFIX}${stamp}`, serializeBackup(exportAllData(store)));
@@ -164,9 +164,23 @@ function stashLocalBackup(store: Storage): void {
       const oldest = keys.shift();
       if (oldest) store.removeItem(oldest);
     }
+    return true;
   } catch {
-    // best-effort; never block on the safety copy
+    // Usually storage quota — the caller decides whether to proceed without it.
+    return false;
   }
+}
+
+/** Drop all but the newest stashed backup to free quota for a stash retry. */
+function pruneOldestBackups(store: Storage): void {
+  // Collect first, then remove — deleting while indexing skips keys.
+  const keys: string[] = [];
+  for (let i = 0; i < store.length; i += 1) {
+    const key = store.key(i);
+    if (key && key.startsWith(BACKUP_PREFIX)) keys.push(key);
+  }
+  keys.sort();
+  for (const key of keys.slice(0, -1)) store.removeItem(key);
 }
 
 export function hasLocalBackup(): boolean {
@@ -267,7 +281,15 @@ export async function pullSnapshot(): Promise<SyncResult<{ restoredKeys: string[
   const row = data as { data?: unknown; updated_at?: unknown } | null;
   if (!row || !row.data) return { ok: false, message: "No cloud backup found yet." };
 
-  stashLocalBackup(store);
+  // The stash is the only undo for the overwrite below. If it can't be written
+  // (e.g. quota), free space by pruning old backups and retry once; if it still
+  // fails, abort rather than replace local data without a safety copy.
+  if (!stashLocalBackup(store)) {
+    pruneOldestBackups(store);
+    if (!stashLocalBackup(store)) {
+      return { ok: false, message: "Couldn't save a local safety copy — restore cancelled." };
+    }
+  }
 
   const json = typeof row.data === "string" ? row.data : JSON.stringify(row.data);
   const result: ImportResult = importAllData(store, json);
@@ -365,6 +387,12 @@ export function startCloudSync(): () => void {
     cachedUser = session?.user
       ? { id: session.user.id, email: session.user.email ?? null }
       : null;
+    if (!cachedUser && pushTimer) {
+      // Signed out — drop any pending debounced push so it doesn't fire and
+      // surface a "sign in to back up" error right after a deliberate sign-out.
+      clearTimeout(pushTimer);
+      pushTimer = null;
+    }
     if (authEvent === "SIGNED_IN" || authEvent === "INITIAL_SESSION") {
       void reconcile();
     }

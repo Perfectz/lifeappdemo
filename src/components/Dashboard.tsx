@@ -49,8 +49,11 @@ export function Dashboard() {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const heroName = useHeroName();
-  const today = toLocalIsoDate();
-  const readableToday = formatReadableDate();
+  // Derive dates from the mounted `now` state so the statically prerendered
+  // HTML (built at an arbitrary time) never bakes in a date that mismatches
+  // the client on hydration.
+  const today = now ? toLocalIsoDate(now) : "";
+  const readableToday = now ? formatReadableDate(now) : "";
   const stats = useMemo(() => getDashboardStats(tasks, today), [tasks, today]);
   const todaysPlan = useMemo(() => getActiveDailyPlanForDate(plans, today), [plans, today]);
   const taskById = useMemo(

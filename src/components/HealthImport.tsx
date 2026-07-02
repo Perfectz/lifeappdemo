@@ -1,9 +1,10 @@
 "use client";
 
-import { type ChangeEvent, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { SectionHeader } from "@/components/SectionHeader";
+import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import type { HealthImportBatch, ImportedHealthRecord, MetricEntry } from "@/domain";
 import {
@@ -23,7 +24,6 @@ export function HealthImport() {
   const [metricEntries, setMetricEntries] = useState<MetricEntry[]>([]);
   const [batch, setBatch] = useState<HealthImportBatch | null>(null);
   const [records, setRecords] = useState<ImportedHealthRecord[]>([]);
-  const [hasLoaded, setHasLoaded] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
@@ -35,18 +35,15 @@ export function HealthImport() {
     (row) => row.mapping.targetMetric !== "ignored" && !row.duplicate
   ).length;
 
-  useEffect(() => {
+  const reload = useCallback(() => {
     setMetricEntries(createLocalMetricRepository(window.localStorage).load());
-    setHasLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (!hasLoaded) {
-      return;
-    }
-
-    createLocalMetricRepository(window.localStorage).save(metricEntries);
-  }, [hasLoaded, metricEntries]);
+    reload();
+    window.addEventListener(dataChangedEventName, reload);
+    return () => window.removeEventListener(dataChangedEventName, reload);
+  }, [reload]);
 
   async function parseFile(file: File) {
     setIsParsing(true);
@@ -89,8 +86,11 @@ export function HealthImport() {
       return;
     }
 
-    const result = confirmHealthImport(records, metricEntries);
-    createLocalMetricRepository(window.localStorage).save(result.entries);
+    // Read-modify-write against storage so entries written elsewhere since
+    // the page loaded (voice agent, other tabs) are preserved.
+    const repository = createLocalMetricRepository(window.localStorage);
+    const result = confirmHealthImport(records, repository.load());
+    repository.save(result.entries);
     setMetricEntries(result.entries);
     setBatch({
       ...batch,

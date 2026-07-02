@@ -120,7 +120,13 @@ export function DailyFitness() {
   const [recomputingPlan, setRecomputingPlan] = useState(false);
 
   useEffect(() => {
-    void getOrComputeWorkoutPlan().then(setPlan);
+    let cancelled = false;
+    void getOrComputeWorkoutPlan().then((next) => {
+      if (!cancelled) setPlan(next);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function logSuggestion(suggestion: WorkoutSuggestion) {

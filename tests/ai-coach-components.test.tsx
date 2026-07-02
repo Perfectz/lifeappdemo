@@ -8,6 +8,19 @@ import { foodEntryStorageKey } from "@/data/foodEntryRepository";
 
 const now = "2026-05-04T10:00:00.000Z";
 
+/** Response-like stub exposing headers/json/text so it satisfies fetch
+ *  wrappers that read the body through either method. */
+function jsonResponse(body: unknown, ok = true) {
+  return {
+    ok,
+    headers: {
+      get: (name: string) => (name.toLowerCase() === "content-type" ? "application/json" : null)
+    },
+    json: async () => body,
+    text: async () => JSON.stringify(body)
+  };
+}
+
 describe("AICoachPanel", () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -34,10 +47,9 @@ describe("AICoachPanel", () => {
         }
       ])
     );
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: "Start with Open local quest.", mode: "general" })
-    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ message: "Start with Open local quest.", mode: "general" }));
     vi.stubGlobal("fetch", fetchMock);
 
     render(<AICoachPanel />);
@@ -60,10 +72,7 @@ describe("AICoachPanel", () => {
   });
 
   it("sends prior turns as conversation history", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: "Reply.", mode: "general" })
-    });
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ message: "Reply.", mode: "general" }));
     vi.stubGlobal("fetch", fetchMock);
 
     render(<AICoachPanel />);
@@ -85,7 +94,7 @@ describe("AICoachPanel", () => {
   it("persists the conversation and restores it on remount, and 'New chat' starts fresh", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: "Eat eggs.", mode: "general" }) })
+      vi.fn().mockResolvedValue(jsonResponse({ message: "Eat eggs.", mode: "general" }))
     );
 
     const first = render(<AICoachPanel />);
@@ -116,9 +125,8 @@ describe("AICoachPanel", () => {
   it("lets the coach log a meal (log_food) and saves it on confirm", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
+      vi.fn().mockResolvedValue(
+        jsonResponse({
           message: "Want me to log that?",
           mode: "general",
           proposals: [
@@ -133,7 +141,7 @@ describe("AICoachPanel", () => {
             }
           ]
         })
-      })
+      )
     );
 
     render(<AICoachPanel />);
@@ -158,10 +166,7 @@ describe("AICoachPanel", () => {
   it("shows a safe error when the chat request fails", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        json: async () => ({ error: "AI coach is unavailable right now." })
-      })
+      vi.fn().mockResolvedValue(jsonResponse({ error: "AI coach is unavailable right now." }, false))
     );
 
     render(<AICoachPanel />);
@@ -202,9 +207,8 @@ describe("AICoachPanel", () => {
   it("renders proposals, confirms one, and saves returned tasks", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
+      .mockResolvedValueOnce(
+        jsonResponse({
           message: "I found one task proposal for review.",
           mode: "general",
           proposals: [
@@ -219,10 +223,9 @@ describe("AICoachPanel", () => {
             }
           ]
         })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
           ok: true,
           appliedChangeSummary: "Created task: Walk on the treadmill tomorrow",
           tasks: [
@@ -237,7 +240,7 @@ describe("AICoachPanel", () => {
             }
           ]
         })
-      });
+      );
     vi.stubGlobal("fetch", fetchMock);
 
     render(<AICoachPanel />);
@@ -263,9 +266,8 @@ describe("AICoachPanel", () => {
   it("dismisses a proposal without mutating tasks", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
+      vi.fn().mockResolvedValue(
+        jsonResponse({
           message: "Review this proposal.",
           proposals: [
             {
@@ -279,7 +281,7 @@ describe("AICoachPanel", () => {
             }
           ]
         })
-      })
+      )
     );
 
     render(<AICoachPanel />);

@@ -4,33 +4,16 @@ import { useEffect } from "react";
 
 import { basePath } from "@/config/site";
 
-const currentCacheVersion = "lifequest-v19";
-
 export function PWAServiceWorkerRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator) || window.location.hostname === "") {
       return;
     }
 
-    if ("caches" in window) {
-      caches
-        .keys()
-        .then((cacheNames) =>
-          Promise.all(
-            cacheNames
-              .filter(
-                (cacheName) =>
-                  cacheName.startsWith("lifequest-") &&
-                  !cacheName.startsWith(currentCacheVersion)
-              )
-              .map((cacheName) => caches.delete(cacheName))
-          )
-        )
-        .catch(() => {
-          // Cache cleanup is best-effort; network-first loading still works without it.
-        });
-    }
-
+    // Old-cache cleanup is owned by sw.js's `activate` handler, which prunes
+    // every cache that doesn't match its CACHE_VERSION. Doing it here too with
+    // a second hardcoded version string caused the live caches to be deleted
+    // whenever the two versions drifted apart (which broke offline support).
     navigator.serviceWorker
       .register(`${basePath}/sw.js`, { scope: basePath ? `${basePath}/` : "/" })
       .then((registration) => {

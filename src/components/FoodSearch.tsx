@@ -42,6 +42,8 @@ export function FoodSearch({ date }: { date: string }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
+  // Monotonic id so an older, slower request can't overwrite newer results.
+  const requestIdRef = useRef(0);
 
   const stopScan = () => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -130,16 +132,19 @@ export function FoodSearch({ date }: { date: string }) {
     setError(null);
     setStatus(null);
     setLoading(true);
+    const requestId = ++requestIdRef.current;
     try {
       const response = await fetch(`/api/food/search?q=${encodeURIComponent(q)}`);
       const data = await response.json();
+      if (requestId !== requestIdRef.current) return; // superseded by a newer request
       if (!response.ok) throw new Error(data.error ?? "Search failed.");
       showResults(Array.isArray(data.items) ? data.items : []);
       if (!data.items?.length) setError("No matches. Try different words or add it manually.");
     } catch (searchError) {
+      if (requestId !== requestIdRef.current) return;
       setError(searchError instanceof Error ? searchError.message : "Search failed.");
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }
 
@@ -147,15 +152,18 @@ export function FoodSearch({ date }: { date: string }) {
     setError(null);
     setStatus(null);
     setLoading(true);
+    const requestId = ++requestIdRef.current;
     try {
       const response = await fetch(`/api/food/barcode?code=${encodeURIComponent(code)}`);
       const data = await response.json();
+      if (requestId !== requestIdRef.current) return; // superseded by a newer request
       if (!response.ok) throw new Error(data.error ?? "Lookup failed.");
       showResults(data.item ? [data.item] : []);
     } catch (lookupError) {
+      if (requestId !== requestIdRef.current) return;
       setError(lookupError instanceof Error ? lookupError.message : "Lookup failed.");
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }
 

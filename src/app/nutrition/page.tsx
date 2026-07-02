@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
+
 import { NutritionDiary } from "@/components/NutritionDiary";
+
+export const metadata: Metadata = {
+  title: "Nutrition"
+};
 
 export default function NutritionPage() {
   return (

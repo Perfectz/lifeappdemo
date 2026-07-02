@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
+
 import Link from "next/link";
 
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { SectionHeader } from "@/components/SectionHeader";
+
+export const metadata: Metadata = {
+  title: "Offline"
+};
 
 export default function OfflinePage() {
   return (

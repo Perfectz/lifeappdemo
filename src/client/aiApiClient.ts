@@ -43,9 +43,13 @@ async function readApiJson<T extends { error?: string }>(
 ): Promise<T> {
   const contentType = response.headers?.get("content-type") ?? "";
 
+  // Read the body exactly once — calling response.json() and response.text()
+  // on the same response throws "body stream already read".
+  const text = typeof response.text === "function" ? (await response.text()).trim() : "";
+
   if (contentType.includes("application/json") || !contentType) {
     try {
-      return (await response.json()) as T;
+      return JSON.parse(text) as T;
     } catch {
       if (contentType.includes("application/json")) {
         return { error: fallbackError } as T;
@@ -53,7 +57,6 @@ async function readApiJson<T extends { error?: string }>(
     }
   }
 
-  const text = typeof response.text === "function" ? (await response.text()).trim() : "";
   const isHtmlError = contentType.includes("text/html") || text.startsWith("<");
   return { error: isHtmlError ? fallbackError : text || fallbackError } as T;
 }

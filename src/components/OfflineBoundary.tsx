@@ -13,6 +13,10 @@ export function useNetworkStatus(): boolean {
       setIsOnline(navigator.onLine);
     }
 
+    // Sync with the real connectivity state on mount — otherwise a page opened
+    // while already offline reports "online" until the next connectivity flip.
+    updateStatus();
+
     window.addEventListener("online", updateStatus);
     window.addEventListener("offline", updateStatus);
 

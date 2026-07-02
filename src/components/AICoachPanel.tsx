@@ -148,6 +148,9 @@ export function AICoachPanel() {
   const endRef = useRef<HTMLDivElement | null>(null);
   const activeIdRef = useRef<string | null>(null);
   const createdAtRef = useRef<string | null>(null);
+  // True only when messages changed through a user action (send, photo,
+  // proposal apply) — loading or reopening a thread must not re-save it.
+  const dirtyRef = useRef(false);
   const isOnline = useNetworkStatus();
   const heroName = useHeroName();
   const speechSupported = useMemo(() => getSpeechRecognitionCtor() !== null, []);
@@ -165,8 +168,12 @@ export function AICoachPanel() {
     }
   }, []);
 
-  // Auto-persist the active conversation whenever its turns change.
+  // Auto-persist the active conversation whenever its turns change through a
+  // user action. Skipped for loads/restores so merely opening or browsing a
+  // thread doesn't bump its updatedAt and corrupt the history order.
   useEffect(() => {
+    if (!dirtyRef.current) return;
+    dirtyRef.current = false;
     const records: ChatMessageRecord[] = messages
       .filter((message) => message.id !== WELCOME_ID && message.content.trim())
       .map((message) => ({ id: message.id, role: message.role, content: message.content }));
@@ -191,6 +198,14 @@ export function AICoachPanel() {
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ behavior: "smooth", block: "end" });
   }, [messages, isSending]);
+
+  // Stop any in-flight dictation when the panel unmounts.
+  useEffect(
+    () => () => {
+      recognitionRef.current?.stop();
+    },
+    []
+  );
 
   function newChat() {
     activeIdRef.current = null;
@@ -266,6 +281,7 @@ export function AICoachPanel() {
     }
 
     const history = historyFor();
+    dirtyRef.current = true;
     setMessages((current) => [
       ...current,
       { id: createMessageId("user"), role: "user", content: trimmed }
@@ -289,6 +305,7 @@ export function AICoachPanel() {
             .join("\n\n") || undefined,
         history
       });
+      dirtyRef.current = true;
       setMessages((current) => [
         ...current,
         {
@@ -332,6 +349,7 @@ export function AICoachPanel() {
     }
 
     const note = draft.trim();
+    dirtyRef.current = true;
     setMessages((current) => [
       ...current,
       {
@@ -353,6 +371,7 @@ export function AICoachPanel() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Couldn't analyze that photo.");
       const result = parseVisionResult(data);
+      dirtyRef.current = true;
       setMessages((current) => [
         ...current,
         {
@@ -396,6 +415,7 @@ export function AICoachPanel() {
   }
 
   function setProposalStatus(messageId: string, proposalId: string, status: AIToolProposal["status"]) {
+    dirtyRef.current = true;
     setMessages((current) =>
       current.map((message) =>
         message.id === messageId
@@ -495,6 +515,7 @@ export function AICoachPanel() {
 
   function applyVision(messageId: string, card: VisionProposalCard) {
     const outcome = executeVoiceTool(card.tool, card.args);
+    dirtyRef.current = true;
     setMessages((current) =>
       current.map((message) =>
         message.id === messageId
@@ -513,6 +534,7 @@ export function AICoachPanel() {
   }
 
   function dismissVision(messageId: string, card: VisionProposalCard) {
+    dirtyRef.current = true;
     setMessages((current) =>
       current.map((message) =>
         message.id === messageId

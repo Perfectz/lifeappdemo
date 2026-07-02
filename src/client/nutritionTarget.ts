@@ -218,6 +218,11 @@ export function buildTargetComputation(
   };
 }
 
+// Module-level guard so React StrictMode's double-invoked effect (and any
+// concurrent callers) share one compute per day instead of racing duplicate
+// paid AI calls. Same pattern as timelineSeed.
+let inFlightTarget: { date: IsoDate; promise: Promise<DailyNutritionTarget | null> } | null = null;
+
 /** Today's target — cached, else computed (AI-tuned when available, deterministic otherwise). */
 export async function getOrComputeDailyTarget(
   storage: Storage = window.localStorage
@@ -226,6 +231,18 @@ export async function getOrComputeDailyTarget(
   const existing = getTargetForDate(storage, date);
   if (existing) return existing;
 
+  if (inFlightTarget?.date === date) return inFlightTarget.promise;
+  const promise = computeDailyTarget(storage, date).finally(() => {
+    if (inFlightTarget?.promise === promise) inFlightTarget = null;
+  });
+  inFlightTarget = { date, promise };
+  return promise;
+}
+
+async function computeDailyTarget(
+  storage: Storage,
+  date: IsoDate
+): Promise<DailyNutritionTarget | null> {
   const now = new Date().toISOString();
   const comp = buildTargetComputation(storage, date, now);
   if (!comp) return null; // not enough body data — diary falls back to manual goals

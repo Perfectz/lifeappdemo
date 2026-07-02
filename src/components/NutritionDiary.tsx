@@ -80,16 +80,18 @@ export function NutritionDiary() {
     setGoals(loadNutritionGoals(storage));
   }, []);
 
-  const refreshTarget = useCallback(() => {
-    void getOrComputeDailyTarget().then(setDailyTarget);
-  }, []);
-
   useEffect(() => {
+    let cancelled = false;
     reload();
-    refreshTarget();
+    void getOrComputeDailyTarget().then((target) => {
+      if (!cancelled) setDailyTarget(target);
+    });
     window.addEventListener(dataChangedEventName, reload);
-    return () => window.removeEventListener(dataChangedEventName, reload);
-  }, [reload, refreshTarget]);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(dataChangedEventName, reload);
+    };
+  }, [reload]);
 
   async function handleRecompute() {
     setRecomputing(true);
@@ -366,12 +368,13 @@ export function NutritionDiary() {
               <div className="nutri-add-form">
                 <input className="fitness-input" placeholder="Food description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
                 <div className="nutri-add-grid">
-                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="cal" value={form.calories} onChange={(e) => setForm({ ...form, calories: e.target.value })} />
-                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="protein" value={form.proteinG} onChange={(e) => setForm({ ...form, proteinG: e.target.value })} />
-                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="carbs" value={form.carbsG} onChange={(e) => setForm({ ...form, carbsG: e.target.value })} />
-                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="fat" value={form.fatG} onChange={(e) => setForm({ ...form, fatG: e.target.value })} />
-                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="sugar" value={form.sugarG} onChange={(e) => setForm({ ...form, sugarG: e.target.value })} />
-                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="sodium(mg)" value={form.sodiumMg} onChange={(e) => setForm({ ...form, sodiumMg: e.target.value })} />
+                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="cal" aria-label="Calories" value={form.calories} onChange={(e) => setForm({ ...form, calories: e.target.value })} />
+                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="protein" aria-label="Protein (g)" value={form.proteinG} onChange={(e) => setForm({ ...form, proteinG: e.target.value })} />
+                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="carbs" aria-label="Carbs (g)" value={form.carbsG} onChange={(e) => setForm({ ...form, carbsG: e.target.value })} />
+                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="fat" aria-label="Fat (g)" value={form.fatG} onChange={(e) => setForm({ ...form, fatG: e.target.value })} />
+                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="fiber" aria-label="Fiber (g)" value={form.fiberG} onChange={(e) => setForm({ ...form, fiberG: e.target.value })} />
+                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="sugar" aria-label="Sugar (g)" value={form.sugarG} onChange={(e) => setForm({ ...form, sugarG: e.target.value })} />
+                  <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="sodium(mg)" aria-label="Sodium (mg)" value={form.sodiumMg} onChange={(e) => setForm({ ...form, sodiumMg: e.target.value })} />
                 </div>
                 <div className="nutri-add-actions">
                   <button type="button" className="login-submit" onClick={() => saveFood(meal)}>

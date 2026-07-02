@@ -14,8 +14,9 @@ import { computeDailyAlignment } from "@/domain/alignment";
 import { computeBosses } from "@/domain/bosses";
 import { computeCharacterStats } from "@/domain/characterStats";
 import { toLocalIsoDate } from "@/domain/dates";
-import { weightGoalProgressPercent } from "@/domain/healthGoals";
+import { weightGoalProgressPercent, type HealthGoals } from "@/domain/healthGoals";
 import { levelFromJourney } from "@/domain/levels";
+import type { NutritionGoals } from "@/domain/nutritionGoals";
 import { getTransformation } from "@/domain/transformation";
 import { latestWeight } from "@/domain/vitals";
 import type { FoodEntry, MetricEntry, Workout } from "@/domain";
@@ -24,13 +25,20 @@ export function CharacterScreen() {
   const [metrics, setMetrics] = useState<MetricEntry[]>([]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [foods, setFoods] = useState<FoodEntry[]>([]);
-  const today = toLocalIsoDate();
+  const [goals, setGoals] = useState<HealthGoals | null>(null);
+  const [nutritionGoals, setNutritionGoals] = useState<NutritionGoals | null>(null);
+  const [today, setToday] = useState<string | null>(null);
 
+  // Storage is only read inside effects so the server render and the first
+  // client render agree (both render nothing until `today` is set).
   const reload = useCallback(() => {
     const storage = window.localStorage;
     setMetrics(createLocalMetricRepository(storage).load());
     setWorkouts(createLocalWorkoutRepository(storage).load());
     setFoods(createLocalFoodEntryRepository(storage).load());
+    setGoals(loadHealthGoals(storage));
+    setNutritionGoals(loadNutritionGoals(storage));
+    setToday(toLocalIsoDate());
   }, []);
 
   useEffect(() => {
@@ -40,10 +48,7 @@ export function CharacterScreen() {
   }, [reload]);
 
   const view = useMemo(() => {
-    const storage = typeof window !== "undefined" ? window.localStorage : undefined;
-    if (!storage) return null;
-    const goals = loadHealthGoals(storage);
-    const nutritionGoals = loadNutritionGoals(storage);
+    if (!today || !goals || !nutritionGoals) return null;
     const alignment = computeDailyAlignment({ today, metrics, workouts, goals, foods, nutritionGoals });
     const weightPercent = weightGoalProgressPercent(goals, latestWeight(metrics)?.weightLbs);
     const transformation = getTransformation({
@@ -54,7 +59,7 @@ export function CharacterScreen() {
     const stats = computeCharacterStats({ today, metrics, workouts, goals });
     const bosses = computeBosses({ today, metrics, goals });
     return { level, stats, bosses };
-  }, [today, metrics, workouts, foods]);
+  }, [today, metrics, workouts, foods, goals, nutritionGoals]);
 
   if (!view) return null;
   const { level, stats, bosses } = view;

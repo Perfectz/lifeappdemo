@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   getCurrentCloudUser,
@@ -33,16 +33,18 @@ export function CloudSyncPanel() {
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [canUndo, setCanUndo] = useState(false);
 
-  const refresh = useCallback(async () => {
+  useEffect(() => {
     if (!configured) return;
-    setUser(await getCurrentCloudUser());
+    let cancelled = false;
+    void getCurrentCloudUser().then((current) => {
+      if (!cancelled) setUser(current);
+    });
     setLastSynced(getLastSyncedAt());
     setCanUndo(hasLocalBackup());
+    return () => {
+      cancelled = true;
+    };
   }, [configured]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   if (!configured) {
     return (

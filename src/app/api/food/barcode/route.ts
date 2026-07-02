@@ -26,9 +26,11 @@ export async function GET(request: Request) {
     }
     return NextResponse.json({ item });
   } catch (error) {
-    const reason = error instanceof Error ? ` (${error.message})` : "";
+    // Log the detail server-side; don't echo internal fetch/undici error text
+    // (hostnames, DNS failures) to the browser.
+    console.error("food barcode lookup failed:", error);
     return NextResponse.json(
-      { error: `The food database is unavailable right now${reason}. Try again or add the food manually.` },
+      { error: "The food database is unavailable right now. Try again or add the food manually." },
       { status: 502 }
     );
   }

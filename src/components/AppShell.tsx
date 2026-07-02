@@ -97,6 +97,8 @@ export function AppShell({ children }: AppShellProps) {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const heroName = useHeroName();
   const prevProgressRef = useRef<{ level: number; streakDays: number } | null>(null);
+  const moreButtonRef = useRef<HTMLButtonElement | null>(null);
+  const moreCloseRef = useRef<HTMLButtonElement | null>(null);
 
   const closeMore = useCallback(() => setIsMoreOpen(false), []);
 
@@ -115,6 +117,17 @@ export function AppShell({ children }: AppShellProps) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, [isMoreOpen]);
+
+  // Move focus into the dialog when it opens; return it to the More button
+  // when it closes.
+  useEffect(() => {
+    if (!isMoreOpen) return;
+    const timer = window.setTimeout(() => moreCloseRef.current?.focus(), 20);
+    return () => {
+      window.clearTimeout(timer);
+      moreButtonRef.current?.focus();
+    };
   }, [isMoreOpen]);
 
   const primaryMobileItems = useMemo(
@@ -148,11 +161,14 @@ export function AppShell({ children }: AppShellProps) {
   }, [navStatus, primaryMobileItems]);
 
   useEffect(() => {
+    let lastComputedDay = "";
+
     // Hot path: runs on every data change. Reads each repo exactly once.
     function updateStatus() {
       const storage = window.localStorage;
       const stamp = new Date();
       const today = toLocalIsoDate(stamp);
+      lastComputedDay = today;
       const tasks = createLocalTaskRepository(storage).load();
       const metrics = createLocalMetricRepository(storage).load();
       const plans = createLocalDailyPlanRepository(storage).load();
@@ -211,16 +227,29 @@ export function AppShell({ children }: AppShellProps) {
       updateDemo();
     }
 
+    // Data events are the usual trigger, but an app left open overnight never
+    // fires one — so re-run when the local date rolls past the last computed
+    // "today" (checked on tab focus and on a slow interval).
+    function refreshOnDateChange() {
+      if (toLocalIsoDate(new Date()) !== lastComputedDay) {
+        updateStatus();
+      }
+    }
+
     updateStatus();
     updateDemo();
     window.addEventListener("storage", onStorage);
     window.addEventListener(dataChangedEventName, updateStatus);
     window.addEventListener(demoModeChangedEventName, updateDemo);
+    document.addEventListener("visibilitychange", refreshOnDateChange);
+    const dayWatchId = window.setInterval(refreshOnDateChange, 60_000);
 
     return () => {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener(dataChangedEventName, updateStatus);
       window.removeEventListener(demoModeChangedEventName, updateDemo);
+      document.removeEventListener("visibilitychange", refreshOnDateChange);
+      window.clearInterval(dayWatchId);
     };
   }, []);
 
@@ -417,6 +446,7 @@ export function AppShell({ children }: AppShellProps) {
         })}
         <button
           type="button"
+          ref={moreButtonRef}
           aria-haspopup="dialog"
           aria-expanded={isMoreOpen}
           aria-controls="more-menu-sheet"
@@ -460,6 +490,7 @@ export function AppShell({ children }: AppShellProps) {
           <p className="eyebrow">Main Menu</p>
           <button
             type="button"
+            ref={moreCloseRef}
             className="more-sheet-close"
             onClick={closeMore}
             aria-label="Close menu"

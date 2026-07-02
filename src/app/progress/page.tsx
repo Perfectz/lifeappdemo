@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
+
 import { ProgressPhotos } from "@/components/ProgressPhotos";
+
+export const metadata: Metadata = {
+  title: "Progress"
+};
 
 export default function ProgressPage() {
   return (

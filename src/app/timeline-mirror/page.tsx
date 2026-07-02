@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
+
 import { TimelineMirror } from "@/components/TimelineMirror";
+
+export const metadata: Metadata = {
+  title: "Timeline Mirror"
+};
 
 export default function TimelineMirrorPage() {
   return (

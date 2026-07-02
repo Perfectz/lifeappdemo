@@ -85,6 +85,17 @@ export async function startVoiceAgent(callbacks: VoiceAgentCallbacks): Promise<V
   const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
   mic.getTracks().forEach((track) => pc.addTrack(track, mic));
 
+  // Shared teardown for the mic + peer connection — used by stop() and by the
+  // failure path below so an aborted connect never leaves the mic live.
+  const releaseMedia = () => {
+    mic.getTracks().forEach((track) => track.stop());
+    try {
+      pc.close();
+    } catch {
+      /* ignore */
+    }
+  };
+
   const channel = pc.createDataChannel("oai-events");
 
   const send = (payload: unknown) => {
@@ -146,24 +157,30 @@ export async function startVoiceAgent(callbacks: VoiceAgentCallbacks): Promise<V
     }
   });
 
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
+  // Everything past getUserMedia can throw (SDP exchange, network) — release
+  // the mic + peer connection on any failure so the mic indicator doesn't
+  // stay lit after an aborted connect.
+  try {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
 
-  const sdpResponse = await fetch(REALTIME_URL, {
-    method: "POST",
-    body: offer.sdp ?? "",
-    headers: {
-      Authorization: `Bearer ${token.clientSecret}`,
-      "Content-Type": "application/sdp"
+    const sdpResponse = await fetch(REALTIME_URL, {
+      method: "POST",
+      body: offer.sdp ?? "",
+      headers: {
+        Authorization: `Bearer ${token.clientSecret}`,
+        "Content-Type": "application/sdp"
+      }
+    });
+    if (!sdpResponse.ok) {
+      throw new Error("The realtime voice service refused the connection.");
     }
-  });
-  if (!sdpResponse.ok) {
-    mic.getTracks().forEach((track) => track.stop());
-    pc.close();
-    throw new Error("The realtime voice service refused the connection.");
+    const answerSdp = await sdpResponse.text();
+    await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+  } catch (error) {
+    releaseMedia();
+    throw error;
   }
-  const answerSdp = await sdpResponse.text();
-  await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
 
   let stopped = false;
   const stop = () => {
@@ -174,12 +191,7 @@ export async function startVoiceAgent(callbacks: VoiceAgentCallbacks): Promise<V
     } catch {
       /* ignore */
     }
-    mic.getTracks().forEach((track) => track.stop());
-    try {
-      pc.close();
-    } catch {
-      /* ignore */
-    }
+    releaseMedia();
     audioEl.srcObject = null;
     callbacks.onStatus?.("ended");
   };

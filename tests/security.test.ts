@@ -105,8 +105,10 @@ describe("secret hygiene baseline", () => {
 
     expect(serviceWorker).toContain('url.pathname.startsWith("/api/")');
     expect(serviceWorker).toContain('url.pathname.startsWith("/_next/")');
-    expect(serviceWorker).toContain('url.pathname.includes("ai")');
-    expect(serviceWorker).toContain('url.pathname.includes("realtime")');
+    // The /api/ prefix covers every AI + realtime endpoint. Substring checks
+    // like includes("ai") were removed on purpose: they also matched static
+    // assets (e.g. /assets/sprites/ai-advisor-*.png) and broke offline caching.
+    expect(serviceWorker).not.toContain('.includes("ai")');
     expect(serviceWorker).toContain("shouldNeverCache");
     expect(serviceWorker).not.toContain('"/standup/morning"');
     expect(serviceWorker).not.toContain("caches.open(APP_SHELL_CACHE).then((cache) => cache.put(request");
