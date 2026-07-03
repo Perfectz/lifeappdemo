@@ -16,7 +16,7 @@ describe("NutritionDiary", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Breakfast" })).toBeVisible());
 
     const breakfast = screen.getByLabelText("Breakfast");
-    fireEvent.click(within(breakfast).getByRole("button", { name: "+ Add" }));
+    fireEvent.click(within(breakfast).getByRole("button", { name: "Add food to Breakfast" }));
 
     fireEvent.change(within(breakfast).getByPlaceholderText("Food description"), {
       target: { value: "Oatmeal" }

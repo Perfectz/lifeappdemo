@@ -333,7 +333,12 @@ export function NutritionDiary() {
           <section className="dashboard-section nutri-meal" key={meal} aria-label={MEAL_LABEL[meal]}>
             <div className="nutri-meal-head">
               <SectionHeader eyebrow={`${Math.round(mealCals)} cal`} title={MEAL_LABEL[meal]} />
-              <button type="button" className="nutri-mini-btn" onClick={() => openAdd(meal)}>
+              <button
+                type="button"
+                className="nutri-mini-btn"
+                aria-label={`Add food to ${MEAL_LABEL[meal]}`}
+                onClick={() => openAdd(meal)}
+              >
                 + Add
               </button>
             </div>

@@ -18,6 +18,8 @@ const eslintConfig = [
   {
     ignores: [
       ".next/**",
+      // Agent worktrees (parallel sessions) live inside the repo — never lint them.
+      ".claude/**",
       "next-env.d.ts",
       "node_modules/**",
       "out/**",

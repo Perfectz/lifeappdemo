@@ -46,9 +46,9 @@ export const navigationGroups: NavigationGroup[] = [
         primaryMobile: true
       },
       {
-        label: "Nutrition",
+        label: "Food Diary",
         href: "/nutrition",
-        description: "Food diary — calories & macros",
+        description: "Calories & macros",
         icon: "metrics",
         shortLabel: "Food",
         primaryMobile: true
@@ -58,7 +58,7 @@ export const navigationGroups: NavigationGroup[] = [
         href: "/fitness",
         description: "Daily training sessions",
         icon: "metrics",
-        shortLabel: "Train",
+        shortLabel: "Fitness",
         primaryMobile: true
       }
     ]

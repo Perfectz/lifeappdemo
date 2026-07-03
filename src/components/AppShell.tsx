@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { celebrate } from "@/client/celebrate";
+import { openCommandPalette } from "@/client/commandPalette";
 import { openQuickAdd } from "@/client/quickAdd";
 import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { CharacterSprite } from "@/components/CharacterSprite";
@@ -95,12 +96,23 @@ export function AppShell({ children }: AppShellProps) {
   const [navStatus, setNavStatus] = useState<NavStatusMap>({});
   const [now, setNow] = useState<Date | null>(null);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  // Rendered after mount so the server HTML never bakes in a platform guess.
+  const [paletteShortcut, setPaletteShortcut] = useState<string | null>(null);
   const heroName = useHeroName();
   const prevProgressRef = useRef<{ level: number; streakDays: number } | null>(null);
   const moreButtonRef = useRef<HTMLButtonElement | null>(null);
   const moreCloseRef = useRef<HTMLButtonElement | null>(null);
 
   const closeMore = useCallback(() => setIsMoreOpen(false), []);
+
+  // The coach screen has its own chat composer along the bottom edge; the
+  // global FABs would sit on top of it on small screens.
+  const isCoachRoute = pathname === "/coach";
+
+  useEffect(() => {
+    const isMac = /Mac|iPhone|iPad/i.test(navigator.platform);
+    setPaletteShortcut(isMac ? "⌘K" : "Ctrl+K");
+  }, []);
 
   // Close the More sheet whenever route changes.
   useEffect(() => {
@@ -123,10 +135,11 @@ export function AppShell({ children }: AppShellProps) {
   // when it closes.
   useEffect(() => {
     if (!isMoreOpen) return;
+    const moreButton = moreButtonRef.current;
     const timer = window.setTimeout(() => moreCloseRef.current?.focus(), 20);
     return () => {
       window.clearTimeout(timer);
-      moreButtonRef.current?.focus();
+      moreButton?.focus();
     };
   }, [isMoreOpen]);
 
@@ -264,7 +277,7 @@ export function AppShell({ children }: AppShellProps) {
     heroStatus.mp === undefined ? 0 : Math.round((heroStatus.mp / heroStatus.mpMax) * 100);
 
   return (
-    <div className="app-shell">
+    <div className={isCoachRoute ? "app-shell app-shell-coach" : "app-shell"}>
       <ThemeBootstrap />
       <a className="skip-link" href="#content">
         Skip to content
@@ -355,6 +368,18 @@ export function AppShell({ children }: AppShellProps) {
         >
           <span aria-hidden="true">+</span>
           <span>New Quest</span>
+        </button>
+        <button
+          type="button"
+          className="palette-trigger"
+          onClick={() => openCommandPalette()}
+          aria-label="Open command palette"
+        >
+          <span aria-hidden="true">▸</span>
+          <span>Search</span>
+          <kbd suppressHydrationWarning aria-hidden="true">
+            {paletteShortcut ?? "Ctrl+K"}
+          </kbd>
         </button>
         <nav className="nav-list" aria-label="Primary">
           {navigationGroups.map((group, groupIndex) => (
@@ -499,6 +524,17 @@ export function AppShell({ children }: AppShellProps) {
           </button>
         </header>
         <div className="more-sheet-body">
+          <button
+            type="button"
+            className="more-sheet-search"
+            onClick={() => {
+              closeMore();
+              openCommandPalette();
+            }}
+          >
+            <span aria-hidden="true">▸</span>
+            <span>Search everything…</span>
+          </button>
           {overflowGroups.map((group) => (
             <section className="more-sheet-group" key={group.id}>
               <p className="nav-group-caption" aria-hidden="true">
@@ -563,14 +599,16 @@ export function AppShell({ children }: AppShellProps) {
           </section>
         </div>
       </aside>
-      <button
-        type="button"
-        className="quick-add-fab"
-        aria-label="New quest"
-        onClick={() => openQuickAdd()}
-      >
-        +
-      </button>
+      {isCoachRoute ? null : (
+        <button
+          type="button"
+          className="quick-add-fab"
+          aria-label="New quest"
+          onClick={() => openQuickAdd()}
+        >
+          +
+        </button>
+      )}
       <CommandPalette />
       <QuickAddQuest />
       <OnboardingWelcome />

@@ -11,6 +11,13 @@ export const metadata: Metadata = {
 export default function VitalsPage() {
   return (
     <div className="vitals-page">
+      <header className="standup-hero">
+        <div>
+          <p className="eyebrow">Health</p>
+          <h1 id="vitals-title">Vitals</h1>
+          <p>Log glucose, blood pressure, weight, meds &amp; supplements.</p>
+        </div>
+      </header>
       <MedicationQuickLog />
       <Vitals />
       <SupplementLog />
