@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { DailyFitness } from "@/components/DailyFitness";
 
 export const metadata: Metadata = {
-  title: "Fitness"
+  title: "Training"
 };
 
 export default function FitnessPage() {

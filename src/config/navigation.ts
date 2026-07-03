@@ -35,7 +35,8 @@ export const navigationGroups: NavigationGroup[] = [
         href: "/coach",
         description: "Chat, photo & voice coaching",
         icon: "coach",
-        shortLabel: "Coach"
+        shortLabel: "Coach",
+        primaryMobile: true
       },
       {
         label: "Morning Stand-Up",
@@ -61,11 +62,11 @@ export const navigationGroups: NavigationGroup[] = [
         primaryMobile: true
       },
       {
-        label: "Fitness",
+        label: "Training",
         href: "/fitness",
         description: "Daily training sessions",
         icon: "metrics",
-        shortLabel: "Fitness",
+        shortLabel: "Train",
         primaryMobile: true
       }
     ]
