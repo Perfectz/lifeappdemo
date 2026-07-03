@@ -30,7 +30,6 @@ const vt323 = VT323({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://perfectz.github.io/lifeappdemo"),
   title: {
     default: "LifeQuest OS",
     template: "%s | LifeQuest OS"
