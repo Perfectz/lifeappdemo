@@ -31,6 +31,13 @@ export const navigationGroups: NavigationGroup[] = [
         primaryMobile: true
       },
       {
+        label: "AI Coach",
+        href: "/coach",
+        description: "Chat, photo & voice coaching",
+        icon: "coach",
+        shortLabel: "Coach"
+      },
+      {
         label: "Morning Stand-Up",
         href: "/standup/morning",
         description: "Vitals, training & intention",
@@ -110,25 +117,6 @@ export const navigationGroups: NavigationGroup[] = [
     ]
   },
   {
-    id: "coach",
-    caption: "Coach",
-    items: [
-      {
-        label: "AI Coach",
-        href: "/coach",
-        description: "Chat, photo & voice coaching",
-        icon: "coach",
-        shortLabel: "Coach"
-      },
-      {
-        label: "About Me",
-        href: "/profile",
-        description: "Personal context for the AI",
-        icon: "journal"
-      }
-    ]
-  },
-  {
     id: "more",
     caption: "More",
     items: [
@@ -138,6 +126,12 @@ export const navigationGroups: NavigationGroup[] = [
         description: "Capture and clear quests",
         icon: "tasks",
         shortLabel: "Quests"
+      },
+      {
+        label: "About Me",
+        href: "/profile",
+        description: "Personal context for the AI",
+        icon: "journal"
       },
       {
         label: "Journal",
