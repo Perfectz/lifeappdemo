@@ -59,6 +59,8 @@ test.describe("smoke: AI coach chat shell", () => {
     await page.goto("/coach");
     await expect(page.getByRole("button", { name: "＋ New chat" })).toBeVisible();
     await expect(page.getByRole("button", { name: /History \(\d+\)/ })).toBeVisible();
-    await expect(page.getByLabel("Message")).toBeVisible();
+    // Role-scoped: getByLabel("Message") substring-matches the dictation
+    // button ("Dictate your message") too when speech recognition exists.
+    await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
   });
 });

@@ -1,3 +1,4 @@
+import { getAuthHeaders } from "@/client/authToken";
 import type {
   AIChatMode,
   AIStoredAppData,
@@ -66,7 +67,8 @@ export async function sendAIChatRequest(input: AIChatRequest): Promise<AIChatRes
   const response = await fetch("/api/ai/chat", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      ...(await getAuthHeaders())
     },
     body: JSON.stringify(input)
   });
@@ -86,7 +88,8 @@ export async function confirmAIToolProposal(
   const response = await fetch("/api/ai/tools/confirm", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      ...(await getAuthHeaders())
     },
     body: JSON.stringify(input)
   });

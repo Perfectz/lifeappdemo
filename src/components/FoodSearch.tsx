@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { getAuthHeaders } from "@/client/authToken";
 import { SectionHeader } from "@/components/SectionHeader";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 import { scaleMacros, type FoodSearchItem } from "@/domain/foodSearch";
@@ -134,7 +135,9 @@ export function FoodSearch({ date }: { date: string }) {
     setLoading(true);
     const requestId = ++requestIdRef.current;
     try {
-      const response = await fetch(`/api/food/search?q=${encodeURIComponent(q)}`);
+      const response = await fetch(`/api/food/search?q=${encodeURIComponent(q)}`, {
+        headers: await getAuthHeaders()
+      });
       const data = await response.json();
       if (requestId !== requestIdRef.current) return; // superseded by a newer request
       if (!response.ok) throw new Error(data.error ?? "Search failed.");
@@ -154,7 +157,9 @@ export function FoodSearch({ date }: { date: string }) {
     setLoading(true);
     const requestId = ++requestIdRef.current;
     try {
-      const response = await fetch(`/api/food/barcode?code=${encodeURIComponent(code)}`);
+      const response = await fetch(`/api/food/barcode?code=${encodeURIComponent(code)}`, {
+        headers: await getAuthHeaders()
+      });
       const data = await response.json();
       if (requestId !== requestIdRef.current) return; // superseded by a newer request
       if (!response.ok) throw new Error(data.error ?? "Lookup failed.");

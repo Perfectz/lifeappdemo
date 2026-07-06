@@ -5,6 +5,7 @@
  * unavailable, so there's always a session waiting with zero decisions.
  */
 
+import { getAuthHeaders } from "@/client/authToken";
 import { equipmentForVariant, getExerciseVariant, strengthWorkouts } from "@/config/fitness";
 import { loadHealthGoals } from "@/data/healthGoalsRepository";
 import { createLocalMemoryRepository } from "@/data/memoryRepository";
@@ -142,7 +143,7 @@ async function computeWorkoutPlan(
   try {
     const response = await fetch("/api/ai/workout-suggestion", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
       body: JSON.stringify({
         date,
         historySummary: ctx.historySummary,

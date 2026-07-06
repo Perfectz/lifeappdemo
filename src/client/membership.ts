@@ -9,10 +9,12 @@
  */
 
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { APP_CREATOR_EMAIL, isAppCreator } from "@/lib/supabase/config";
 import type { CloudUser } from "@/client/cloudSync";
 
-/** The single app creator who approves everyone else. */
-export const APP_CREATOR_EMAIL = "pzgambo@gmail.com";
+// Shared with the server-side guard (src/server/auth/requireUser.ts);
+// re-exported so existing imports keep working.
+export { APP_CREATOR_EMAIL, isAppCreator };
 
 export type MembershipStatus = "approved" | "pending" | "denied" | "none";
 
@@ -23,10 +25,6 @@ export type MemberRecord = {
   requestedAt: string | null;
   decidedAt: string | null;
 };
-
-export function isAppCreator(email: string | null | undefined): boolean {
-  return Boolean(email) && email!.trim().toLowerCase() === APP_CREATOR_EMAIL;
-}
 
 function rowToRecord(row: Record<string, unknown>): MemberRecord {
   const status = row.status === "approved" || row.status === "denied" ? row.status : "pending";

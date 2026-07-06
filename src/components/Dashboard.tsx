@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { getAuthHeaders } from "@/client/authToken";
 import { useHeroName } from "@/client/useHeroName";
 import { AiAdvisorPopup } from "@/components/AiAdvisorPopup";
 import { CharacterSprite } from "@/components/CharacterSprite";
@@ -168,7 +169,7 @@ export function Dashboard() {
       try {
         const response = await fetch("/api/ai/brief", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
           body: JSON.stringify({
             timeOfDay: brief.timeOfDay,
             heroName,

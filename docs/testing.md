@@ -64,9 +64,10 @@ character, progress, coach, morning) and that the core daily flows persist (log
 vitals, log a food). It runs on `chromium` + `mobile-chrome`. Run locally with
 `npm run test:e2e`.
 
-The login gate (`AuthGate`) is bypassed for tests via `NEXT_PUBLIC_E2E=1`, which
-the Playwright `webServer` sets — it is never enabled in production builds, and
-the real protection is Supabase RLS, not the client gate.
+The login gate (`AuthGate`) and the server-side API guard
+(`src/server/auth/requireUser.ts`, which requires a Supabase session on the
+AI/food/realtime routes) are both bypassed for tests via `NEXT_PUBLIC_E2E=1`,
+which the Playwright `webServer` sets — never set it in a real deployment.
 
 The older per-feature specs were removed once they fell behind major feature
 changes; rebuild targeted specs on top of the smoke suite as flows stabilize.

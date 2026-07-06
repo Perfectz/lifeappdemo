@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 
 import { applyAITaskToolProposal, validateConfirmTaskToolRequest } from "@/domain/aiTaskTools";
+import { requireUser } from "@/server/auth/requireUser";
 
 export async function POST(request: Request) {
+  // No OpenAI call happens here (applying a proposal is deterministic), but
+  // the route still ingests user data, so it requires the same signed-in user
+  // as the rest of the AI surface.
+  const auth = await requireUser(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
   let body: unknown;
 
   try {

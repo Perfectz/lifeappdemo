@@ -1,3 +1,4 @@
+import { getAuthHeaders } from "@/client/authToken";
 import { executeVoiceTool, VOICE_TOOL_DEFINITIONS } from "@/client/voiceTools";
 
 /**
@@ -67,7 +68,7 @@ export async function startVoiceAgent(callbacks: VoiceAgentCallbacks): Promise<V
 
   const tokenResponse = await fetch("/api/realtime/session", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
     body: JSON.stringify({ mode: "general" })
   });
   const token = (await tokenResponse.json()) as { clientSecret?: string; error?: string };
