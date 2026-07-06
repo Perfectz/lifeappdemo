@@ -85,6 +85,50 @@ describe("data backup", () => {
     expect(storage.getItem("lifequest.tasks.v1")).not.toBeNull();
   });
 
+  it("rolls back to the pre-import state when a write fails mid-import", () => {
+    const seed = {
+      "lifequest.old.v1": JSON.stringify([{ id: "will-be-removed" }]),
+      "lifequest.tasks.v1": JSON.stringify([{ id: "original" }])
+    };
+    const inner = makeMemoryStorage(seed);
+    // Fail exactly one write (the second), like a quota error partway through;
+    // rollback writes go through afterwards, as they would once the partial
+    // import's bytes are cleared.
+    let writes = 0;
+    const failing = {
+      get length() {
+        return inner.length;
+      },
+      clear: () => inner.clear(),
+      getItem: (k: string) => inner.getItem(k),
+      key: (i: number) => inner.key(i),
+      removeItem: (k: string) => inner.removeItem(k),
+      setItem: (k: string, v: string) => {
+        writes += 1;
+        if (writes === 2) throw new Error("QuotaExceededError");
+        inner.setItem(k, v);
+      }
+    } as Storage;
+
+    const backup = JSON.stringify({
+      app: backupAppId,
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      data: {
+        "lifequest.tasks.v1": [{ id: "imported" }],
+        "lifequest.notes.v1": [{ id: "n1" }]
+      }
+    });
+
+    const result = importAllData(failing, backup);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.message).toContain("rolled back");
+    // No mixed state: everything is exactly as it was before the import.
+    expect(inner.getItem("lifequest.old.v1")).toBe(seed["lifequest.old.v1"]);
+    expect(inner.getItem("lifequest.tasks.v1")).toBe(seed["lifequest.tasks.v1"]);
+    expect(inner.getItem("lifequest.notes.v1")).toBeNull();
+  });
+
   it("builds a timestamped file name", () => {
     expect(backupFileName(new Date("2026-05-26T08:09:10.000Z"))).toBe(
       "lifequest-backup-2026-05-26-08-09-10.json"
