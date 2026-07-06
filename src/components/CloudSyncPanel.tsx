@@ -7,6 +7,7 @@ import {
   getLastSyncedAt,
   hasLocalBackup,
   isCloudSyncConfigured,
+  mergeWithCloud,
   pullSnapshot,
   pushSnapshot,
   restoreLatestLocalBackup,
@@ -70,7 +71,20 @@ export function CloudSyncPanel() {
   async function handleBackup() {
     setBusy(true);
     setStatus(null);
-    const result = await pushSnapshot();
+    let result = await pushSnapshot();
+    if (!result.ok && result.conflict) {
+      // Another device advanced the cloud row. Merge (per record, newest
+      // wins, nothing dropped silently) and retry the push once.
+      const merged = await mergeWithCloud();
+      if (merged.ok) {
+        setCanUndo(hasLocalBackup());
+        result = merged.cloudNeedsPush
+          ? await pushSnapshot()
+          : { ok: true, at: merged.at ?? getLastSyncedAt() ?? new Date().toISOString() };
+      } else {
+        result = { ok: false, message: merged.message };
+      }
+    }
     setBusy(false);
     if (result.ok) {
       setLastSynced(result.at);

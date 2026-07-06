@@ -5110,6 +5110,18 @@ h1 {
   }
 }
 
+/* Informational sync notices (merge results) reuse the toast shell but must
+   not look like a data-loss error — calm slate instead of alarm red. */
+.storage-error-toast--info {
+  background: linear-gradient(180deg, rgba(24, 38, 58, 0.98), rgba(10, 18, 32, 0.98));
+  color: #d4e4f7;
+}
+
+.storage-error-toast--info .storage-error-toast-glyph {
+  background: var(--accent, #6ea8fe);
+  color: #08131f;
+}
+
 .storage-error-toast-glyph {
   align-items: center;
   background: var(--danger);

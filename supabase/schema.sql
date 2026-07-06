@@ -28,3 +28,23 @@ create policy "Users update own data"
   on public.user_data for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- Server-authoritative updated_at: the sync client uses this column as an
+-- optimistic-concurrency token (UPDATE … WHERE updated_at = <last seen>),
+-- so it must come from the database clock, never a device clock. The trigger
+-- overrides any client-sent value on insert and update.
+create or replace function public.set_user_data_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists user_data_set_updated_at on public.user_data;
+create trigger user_data_set_updated_at
+  before insert or update on public.user_data
+  for each row
+  execute function public.set_user_data_updated_at();
