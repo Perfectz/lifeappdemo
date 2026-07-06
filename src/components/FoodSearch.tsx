@@ -236,6 +236,7 @@ export function FoodSearch({ date }: { date: string }) {
       <div className="food-search-row">
         <input
           className="fitness-input"
+          aria-label="Search foods"
           placeholder="Search foods (e.g. greek yogurt)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -255,6 +256,7 @@ export function FoodSearch({ date }: { date: string }) {
         <input
           className="fitness-input"
           inputMode="numeric"
+          aria-label="Barcode number"
           placeholder="Barcode number"
           value={barcode}
           onChange={(e) => setBarcode(e.target.value)}

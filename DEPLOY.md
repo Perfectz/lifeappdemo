@@ -8,9 +8,6 @@ Stack: **Vercel** (Next.js app + serverless API routes) + **Supabase** (auth + c
 - A Vercel account (sign in with GitHub).
 - A Supabase account (sign in with GitHub).
 
-> Do NOT use `npm run build:pages` for Vercel — that script strips the `/api`
-> routes for GitHub Pages (static export). Vercel must run plain `next build`.
-
 ---
 
 ## 1. Vercel (gets the app live)

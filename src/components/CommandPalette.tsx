@@ -10,6 +10,7 @@ import {
   type KeyboardEvent
 } from "react";
 
+import { openCommandPaletteEventName } from "@/client/commandPalette";
 import { openQuickAdd } from "@/client/quickAdd";
 import { JrpgIcon } from "@/components/JrpgIcon";
 import {
@@ -128,6 +129,16 @@ export function CommandPalette() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+
+  // Visible triggers (sidebar button, More sheet) dispatch this event so the
+  // palette isn't reachable only through the keyboard shortcut.
+  useEffect(() => {
+    function onOpenRequest() {
+      setOpen(true);
+    }
+    window.addEventListener(openCommandPaletteEventName, onOpenRequest);
+    return () => window.removeEventListener(openCommandPaletteEventName, onOpenRequest);
+  }, []);
 
   // Focus input when opening.
   useEffect(() => {

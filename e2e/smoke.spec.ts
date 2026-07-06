@@ -46,7 +46,7 @@ test.describe("smoke: core daily flows persist", () => {
   test("nutrition diary logs a food to a meal", async ({ page }) => {
     await page.goto("/nutrition");
     const breakfast = page.getByLabel("Breakfast");
-    await breakfast.getByRole("button", { name: "+ Add" }).click();
+    await breakfast.getByRole("button", { name: "Add food to Breakfast" }).click();
     await breakfast.getByPlaceholder("Food description").fill("Oatmeal");
     await breakfast.getByPlaceholder("cal").fill("320");
     await breakfast.getByRole("button", { name: /Add to Breakfast/i }).click();
