@@ -20,6 +20,11 @@ const eslintConfig = [
       ".next/**",
       // Agent worktrees (parallel sessions) live inside the repo — never lint them.
       ".claude/**",
+      // Stray tooling/content directories dropped in by other sessions.
+      ".agents/**",
+      ".codex/**",
+      "agent/**",
+      "hyperframes-skills/**",
       "next-env.d.ts",
       "node_modules/**",
       "out/**",
