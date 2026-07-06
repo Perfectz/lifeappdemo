@@ -18,3 +18,15 @@ export const supabaseAnonKey =
 export function isSupabaseConfigured(): boolean {
   return Boolean(supabaseUrl && supabaseAnonKey);
 }
+
+/**
+ * The single app creator who approves everyone else (see
+ * supabase/app-member-approval.sql — the same email is the RLS admin).
+ * Shared here so both the client gate (src/client/membership.ts) and the
+ * server guard (src/server/auth/requireUser.ts) agree on who the admin is.
+ */
+export const APP_CREATOR_EMAIL = "pzgambo@gmail.com";
+
+export function isAppCreator(email: string | null | undefined): boolean {
+  return Boolean(email) && email!.trim().toLowerCase() === APP_CREATOR_EMAIL;
+}

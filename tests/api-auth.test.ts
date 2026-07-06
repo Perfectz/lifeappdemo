@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { POST as chatPost } from "@/app/api/ai/chat/route";
 import { POST as confirmPost } from "@/app/api/ai/tools/confirm/route";
@@ -6,6 +6,25 @@ import { GET as foodSearchGet } from "@/app/api/food/search/route";
 import { POST as realtimePost } from "@/app/api/realtime/session/route";
 import { checkRateLimit, resetRateLimiter } from "@/server/ai/rateLimiter";
 import { requireUser, setAuthUserForTests } from "@/server/auth/requireUser";
+
+// Fake Supabase for the real verification path (used with NODE_ENV stubbed
+// away from "test"). getUser validates the bearer token; the from() chain
+// answers the app_members membership lookup.
+const supabaseMocks = vi.hoisted(() => ({
+  getUser: vi.fn(),
+  maybeSingle: vi.fn()
+}));
+
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: vi.fn(() => ({
+    auth: { getUser: supabaseMocks.getUser },
+    from: () => ({
+      select: () => ({
+        eq: () => ({ maybeSingle: supabaseMocks.maybeSingle })
+      })
+    })
+  }))
+}));
 
 function post(url: string, body: unknown): Request {
   return new Request(url, {
@@ -15,9 +34,22 @@ function post(url: string, body: unknown): Request {
   });
 }
 
+function bearerRequest(token?: string): Request {
+  return new Request("http://localhost/api/ai/chat", {
+    method: "POST",
+    body: "{}",
+    headers: token
+      ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+      : { "Content-Type": "application/json" }
+  });
+}
+
 afterEach(() => {
   setAuthUserForTests(undefined);
   resetRateLimiter();
+  supabaseMocks.getUser.mockReset();
+  supabaseMocks.maybeSingle.mockReset();
+  vi.unstubAllEnvs();
 });
 
 describe("requireUser", () => {
@@ -42,6 +74,81 @@ describe("requireUser", () => {
     setAuthUserForTests({ id: "user-42", email: "member@example.com" });
     const result = await requireUser(post("http://localhost/api/ai/chat", {}));
     expect(result).toEqual({ ok: true, user: { id: "user-42", email: "member@example.com" } });
+  });
+});
+
+describe("requireUser real verification path", () => {
+  // NODE_ENV=test short-circuits the guard; stub it away to exercise the
+  // Bearer-token + membership pipeline against the mocked Supabase client.
+  function enterProductionMode() {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_E2E", "");
+  }
+
+  it("rejects requests without an Authorization header", async () => {
+    enterProductionMode();
+    const result = await requireUser(bearerRequest());
+    expect(result).toMatchObject({ ok: false, status: 401 });
+    expect(supabaseMocks.getUser).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid or expired token", async () => {
+    enterProductionMode();
+    supabaseMocks.getUser.mockResolvedValue({ data: { user: null }, error: { message: "bad" } });
+    const result = await requireUser(bearerRequest("forged-token"));
+    expect(result).toMatchObject({ ok: false, status: 401 });
+    expect(supabaseMocks.getUser).toHaveBeenCalledWith("forged-token");
+  });
+
+  it("rejects a valid user who is not an approved member (invite-only)", async () => {
+    enterProductionMode();
+    supabaseMocks.getUser.mockResolvedValue({
+      data: { user: { id: "user-9", email: "stranger@example.com" } },
+      error: null
+    });
+    supabaseMocks.maybeSingle.mockResolvedValue({ data: { status: "pending" }, error: null });
+    const result = await requireUser(bearerRequest("valid-token"));
+    expect(result).toMatchObject({ ok: false, status: 403 });
+  });
+
+  it("fails closed when the membership lookup errors", async () => {
+    enterProductionMode();
+    supabaseMocks.getUser.mockResolvedValue({
+      data: { user: { id: "user-9", email: "stranger@example.com" } },
+      error: null
+    });
+    supabaseMocks.maybeSingle.mockResolvedValue({ data: null, error: { message: "down" } });
+    const result = await requireUser(bearerRequest("valid-token"));
+    expect(result).toMatchObject({ ok: false, status: 403 });
+  });
+
+  it("accepts an approved member", async () => {
+    enterProductionMode();
+    supabaseMocks.getUser.mockResolvedValue({
+      data: { user: { id: "user-7", email: "member@example.com" } },
+      error: null
+    });
+    supabaseMocks.maybeSingle.mockResolvedValue({ data: { status: "approved" }, error: null });
+    const result = await requireUser(bearerRequest("valid-token"));
+    expect(result).toEqual({ ok: true, user: { id: "user-7", email: "member@example.com" } });
+  });
+
+  it("accepts the app creator without a membership row", async () => {
+    enterProductionMode();
+    supabaseMocks.getUser.mockResolvedValue({
+      data: { user: { id: "creator", email: "pzgambo@gmail.com" } },
+      error: null
+    });
+    const result = await requireUser(bearerRequest("valid-token"));
+    expect(result).toEqual({ ok: true, user: { id: "creator", email: "pzgambo@gmail.com" } });
+    expect(supabaseMocks.maybeSingle).not.toHaveBeenCalled();
+  });
+
+  it("bypasses auth when the Playwright webserver sets NEXT_PUBLIC_E2E=1", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_E2E", "1");
+    const result = await requireUser(bearerRequest());
+    expect(result).toEqual({ ok: true, user: { id: "e2e", email: null } });
   });
 });
 
