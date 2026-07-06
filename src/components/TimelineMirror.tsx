@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { getAuthHeaders } from "@/client/authToken";
 import { fileToDownscaledDataUrl } from "@/client/imageDownscale";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TimelineHistory } from "@/components/TimelineHistory";
@@ -230,7 +231,7 @@ export function TimelineMirror() {
       const refInputs = await loadReferenceInputs();
       const response = await fetch("/api/ai/timeline-mirror", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({
           currentPhoto: { dataUrl: photoDataUrl, poseType: "unknown" },
           references: refInputs,

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 
+import { getAuthHeaders } from "@/client/authToken";
 import { createClientId } from "@/client/clientIds";
 import { fileToDownscaledDataUrl } from "@/client/imageDownscale";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -83,7 +84,7 @@ export function MealPhotoLogger({ date }: { date: string }) {
     try {
       const response = await fetch("/api/ai/meal", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({ image: dataUrl })
       });
       const data = await response.json();

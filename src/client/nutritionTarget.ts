@@ -8,6 +8,7 @@
  * "determined daily from your metrics" even with no API key.
  */
 
+import { getAuthHeaders } from "@/client/authToken";
 import { loadBodyProfile } from "@/data/bodyProfileRepository";
 import { loadHealthGoals } from "@/data/healthGoalsRepository";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
@@ -251,7 +252,7 @@ async function computeDailyTarget(
   try {
     const response = await fetch("/api/ai/nutrition-target", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
       body: JSON.stringify({
         date,
         baseline: comp.baseline,

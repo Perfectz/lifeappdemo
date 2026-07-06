@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { getAuthHeaders } from "@/client/authToken";
 import { fileToDownscaledDataUrl } from "@/client/imageDownscale";
 import { SectionHeader } from "@/components/SectionHeader";
 import { loadWiki } from "@/data/wikiRepository";
@@ -111,7 +112,7 @@ export function ProgressPhotos() {
       const goalContext = isWikiEmpty(wiki) ? undefined : formatWikiForPrompt(wiki);
       const response = await fetch("/api/ai/progress", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({
           images: todays.map((photo) => ({ angle: photo.angle, dataUrl: photo.dataUrl })),
           goalContext

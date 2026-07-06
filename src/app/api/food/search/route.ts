@@ -2,11 +2,17 @@ import { NextResponse } from "next/server";
 
 import { searchFoods } from "@/server/food/openFoodFacts";
 import { checkRateLimit } from "@/server/ai/rateLimiter";
+import { requireUser } from "@/server/auth/requireUser";
 
 export const maxDuration = 30;
 
 export async function GET(request: Request) {
-  const limit = checkRateLimit("food-search");
+  const auth = await requireUser(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
+  const limit = checkRateLimit(`food-search:${auth.user.id}`);
   if (!limit.ok) {
     return NextResponse.json(
       { error: "Too many searches. Please slow down for a moment." },

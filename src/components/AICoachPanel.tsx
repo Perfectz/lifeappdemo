@@ -6,6 +6,7 @@ import {
   confirmAIToolProposal,
   sendAIChatRequest
 } from "@/client/aiApiClient";
+import { getAuthHeaders } from "@/client/authToken";
 import { createClientId } from "@/client/clientIds";
 import { fileToDownscaledDataUrl } from "@/client/imageDownscale";
 import { loadWiki } from "@/data/wikiRepository";
@@ -365,7 +366,7 @@ export function AICoachPanel() {
     try {
       const response = await fetch("/api/ai/vision", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({ image: dataUrl, context: note || undefined })
       });
       const data = await response.json();

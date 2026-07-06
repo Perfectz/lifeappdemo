@@ -6,8 +6,12 @@ export type RateLimitResult = { ok: true } | { ok: false; retryAfterSeconds: num
 
 /**
  * Simple fixed-window in-memory limiter. Sufficient for a local-first,
- * single-user app to stop a runaway client from hammering the paid AI
+ * few-users app to stop a runaway client from hammering the paid AI
  * endpoint. Per server instance (not distributed).
+ *
+ * Callers key buckets as `${route}:${userId}` (see handleAIRoute and the
+ * food routes) so one member — or one leaked token — can't exhaust the
+ * shared window for everyone else.
  */
 export function checkRateLimit(
   key: string,

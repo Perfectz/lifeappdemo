@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { AINotConfiguredError, OpenAIRequestError } from "@/server/ai/openaiClient";
-import { checkRateLimit } from "@/server/ai/rateLimiter";
+import { handleAIRoute } from "@/server/ai/aiRoute";
 import { suggestDailyWorkoutPlan } from "@/server/ai/workoutCoachClient";
 
 export const maxDuration = 45;
@@ -9,57 +8,37 @@ export const maxDuration = 45;
 const MAX_TEXT_CHARS = 6_000;
 
 export async function POST(request: Request) {
-  const limit = checkRateLimit("ai-workout-suggestion");
-  if (!limit.ok) {
-    return NextResponse.json(
-      { error: "Too many workout requests. Try again shortly." },
-      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
-    );
-  }
+  return handleAIRoute(
+    request,
+    {
+      rateLimitKey: "ai-workout-suggestion",
+      rateLimitedError: "Too many workout requests. Try again shortly.",
+      notConfiguredError: "AI workouts aren't configured. Add an OpenAI API key to enable them.",
+      unavailableError: "Couldn't pick today's workout right now."
+    },
+    async (body) => {
+      const r = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+      // Strict ISO date — this string is interpolated into the AI prompt, so it
+      // must not become an unbounded free-text channel that bypasses the clamps.
+      const date = typeof r.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : "";
+      if (!date) {
+        return NextResponse.json(
+          { error: "A valid date (YYYY-MM-DD) is required." },
+          { status: 400 }
+        );
+      }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON request body." }, { status: 400 });
-  }
+      const clampText = (value: unknown): string | undefined =>
+        typeof value === "string" && value.trim() ? value.slice(0, MAX_TEXT_CHARS) : undefined;
 
-  const r = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
-  // Strict ISO date — this string is interpolated into the AI prompt, so it
-  // must not become an unbounded free-text channel that bypasses the clamps.
-  const date = typeof r.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : "";
-  if (!date) {
-    return NextResponse.json({ error: "A valid date (YYYY-MM-DD) is required." }, { status: 400 });
-  }
-
-  const clampText = (value: unknown): string | undefined =>
-    typeof value === "string" && value.trim() ? value.slice(0, MAX_TEXT_CHARS) : undefined;
-
-  try {
-    const plan = await suggestDailyWorkoutPlan({
-      date,
-      historySummary: clampText(r.historySummary),
-      memorySummary: clampText(r.memorySummary),
-      readiness: clampText(r.readiness),
-      goal: clampText(r.goal)
-    });
-    return NextResponse.json(plan);
-  } catch (error) {
-    if (error instanceof AINotConfiguredError) {
-      return NextResponse.json(
-        { error: "AI workouts aren't configured. Add an OpenAI API key to enable them." },
-        { status: 503 }
-      );
+      const plan = await suggestDailyWorkoutPlan({
+        date,
+        historySummary: clampText(r.historySummary),
+        memorySummary: clampText(r.memorySummary),
+        readiness: clampText(r.readiness),
+        goal: clampText(r.goal)
+      });
+      return NextResponse.json(plan);
     }
-    if (error instanceof OpenAIRequestError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status === 429 ? 429 : 502 }
-      );
-    }
-    return NextResponse.json(
-      { error: "Couldn't pick today's workout right now." },
-      { status: 502 }
-    );
-  }
+  );
 }

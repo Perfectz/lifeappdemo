@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
 import type { TargetBaseline } from "@/domain/dailyNutritionTarget";
-import { AINotConfiguredError, OpenAIRequestError } from "@/server/ai/openaiClient";
-import { checkRateLimit } from "@/server/ai/rateLimiter";
+import { handleAIRoute } from "@/server/ai/aiRoute";
 import { suggestDailyNutritionTarget } from "@/server/ai/nutritionTargetClient";
 
 export const maxDuration = 30;
@@ -14,80 +13,60 @@ function posNum(value: unknown): value is number {
 }
 
 export async function POST(request: Request) {
-  const limit = checkRateLimit("ai-nutrition-target");
-  if (!limit.ok) {
-    return NextResponse.json(
-      { error: "Too many target requests. Try again shortly." },
-      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
-    );
-  }
+  return handleAIRoute(
+    request,
+    {
+      rateLimitKey: "ai-nutrition-target",
+      rateLimitedError: "Too many target requests. Try again shortly.",
+      notConfiguredError: "AI targets aren't configured. Add an OpenAI API key to enable them.",
+      unavailableError: "Couldn't compute today's target right now."
+    },
+    async (body) => {
+      const r = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+      // Strict ISO date — this string is interpolated into the AI prompt, so it
+      // must not become an unbounded free-text channel that bypasses the clamps.
+      const date = typeof r.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : "";
+      const baselineRaw = (r.baseline && typeof r.baseline === "object" ? r.baseline : {}) as Record<
+        string,
+        unknown
+      >;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON request body." }, { status: 400 });
-  }
+      if (!date) {
+        return NextResponse.json(
+          { error: "A valid date (YYYY-MM-DD) is required." },
+          { status: 400 }
+        );
+      }
+      if (
+        !posNum(baselineRaw.recommendedCalories) ||
+        !posNum(baselineRaw.minCalories) ||
+        typeof baselineRaw.proteinTargetG !== "number" ||
+        typeof baselineRaw.carbsTargetG !== "number" ||
+        typeof baselineRaw.fatTargetG !== "number"
+      ) {
+        return NextResponse.json({ error: "A valid baseline is required." }, { status: 400 });
+      }
 
-  const r = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
-  // Strict ISO date — this string is interpolated into the AI prompt, so it
-  // must not become an unbounded free-text channel that bypasses the clamps.
-  const date = typeof r.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : "";
-  const baselineRaw = (r.baseline && typeof r.baseline === "object" ? r.baseline : {}) as Record<
-    string,
-    unknown
-  >;
+      const baseline: TargetBaseline = {
+        recommendedCalories: baselineRaw.recommendedCalories,
+        proteinTargetG: baselineRaw.proteinTargetG,
+        carbsTargetG: baselineRaw.carbsTargetG,
+        fatTargetG: baselineRaw.fatTargetG,
+        minCalories: baselineRaw.minCalories
+      };
 
-  if (!date) {
-    return NextResponse.json({ error: "A valid date (YYYY-MM-DD) is required." }, { status: 400 });
-  }
-  if (
-    !posNum(baselineRaw.recommendedCalories) ||
-    !posNum(baselineRaw.minCalories) ||
-    typeof baselineRaw.proteinTargetG !== "number" ||
-    typeof baselineRaw.carbsTargetG !== "number" ||
-    typeof baselineRaw.fatTargetG !== "number"
-  ) {
-    return NextResponse.json({ error: "A valid baseline is required." }, { status: 400 });
-  }
+      const goal = r.goal === "lose" ? "lose" : "maintain";
+      const clampText = (value: unknown): string | undefined =>
+        typeof value === "string" && value.trim() ? value.slice(0, MAX_TEXT_CHARS) : undefined;
 
-  const baseline: TargetBaseline = {
-    recommendedCalories: baselineRaw.recommendedCalories,
-    proteinTargetG: baselineRaw.proteinTargetG,
-    carbsTargetG: baselineRaw.carbsTargetG,
-    fatTargetG: baselineRaw.fatTargetG,
-    minCalories: baselineRaw.minCalories
-  };
-
-  const goal = r.goal === "lose" ? "lose" : "maintain";
-  const clampText = (value: unknown): string | undefined =>
-    typeof value === "string" && value.trim() ? value.slice(0, MAX_TEXT_CHARS) : undefined;
-
-  try {
-    const target = await suggestDailyNutritionTarget({
-      date,
-      baseline,
-      goal,
-      profileContext: clampText(r.profileContext),
-      metricsSummary: clampText(r.metricsSummary)
-    });
-    return NextResponse.json(target);
-  } catch (error) {
-    if (error instanceof AINotConfiguredError) {
-      return NextResponse.json(
-        { error: "AI targets aren't configured. Add an OpenAI API key to enable them." },
-        { status: 503 }
-      );
+      const target = await suggestDailyNutritionTarget({
+        date,
+        baseline,
+        goal,
+        profileContext: clampText(r.profileContext),
+        metricsSummary: clampText(r.metricsSummary)
+      });
+      return NextResponse.json(target);
     }
-    if (error instanceof OpenAIRequestError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status === 429 ? 429 : 502 }
-      );
-    }
-    return NextResponse.json(
-      { error: "Couldn't compute today's target right now." },
-      { status: 502 }
-    );
-  }
+  );
 }
