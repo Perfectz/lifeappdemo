@@ -105,8 +105,12 @@ export function createAmbientScene(
     return null;
   }
 
-  let width = window.innerWidth;
-  let height = window.innerHeight;
+  // Clamp to ≥1: a zero-sized window (background tab prerender, minimized
+  // restore, some webviews) makes width/height → 0/0 = NaN, which poisons
+  // every world-space position and triggers
+  // "computeBoundingSphere(): Computed radius is NaN".
+  let width = Math.max(1, window.innerWidth);
+  let height = Math.max(1, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO));
   renderer.setSize(width, height, false);
   renderer.setClearColor(0x000000, 0);
@@ -167,6 +171,10 @@ export function createAmbientScene(
     sizeAttenuation: true
   });
   const motes = new THREE.Points(moteGeometry, moteMaterial);
+  // Fullscreen backdrop — always in view, so frustum culling buys nothing
+  // and its lazy computeBoundingSphere() is the code path that logs when a
+  // position ever goes non-finite. Skip it.
+  motes.frustumCulled = false;
   group.add(motes);
 
   // --- Horizon grid ----------------------------------------------------------
@@ -178,6 +186,7 @@ export function createAmbientScene(
     depthWrite: false
   });
   const grid = new THREE.Mesh(gridGeometry, gridMaterial);
+  grid.frustumCulled = false; // same rationale as the motes
   grid.rotation.x = -Math.PI / 2;
   grid.position.y = -worldH * 0.28; // bottom third of the view
   grid.position.z = -30;
@@ -312,8 +321,8 @@ export function createAmbientScene(
 
   // --- Resize --------------------------------------------------------------------
   function onResize() {
-    width = window.innerWidth;
-    height = window.innerHeight;
+    width = Math.max(1, window.innerWidth);
+    height = Math.max(1, window.innerHeight);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height, false);

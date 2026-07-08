@@ -71,7 +71,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${pixelifySans.variable} ${vt323.variable}`}>
+    // suppressHydrationWarning: the inline script below sets data-theme
+    // before hydration, which React would otherwise flag as a mismatch
+    // whenever a non-default theme is stored.
+    <html
+      lang="en"
+      className={`${pixelifySans.variable} ${vt323.variable}`}
+      suppressHydrationWarning
+    >
       <body>
         {/* Apply the stored menu theme before paint to avoid a flash of
             the default skin on first render. */}
