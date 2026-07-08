@@ -10,6 +10,10 @@ import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 import { loadNutritionGoals, saveNutritionGoals } from "@/data/nutritionGoalsRepository";
 import {
+  buildDeterministicAdvice,
+  getOrComputeDailyAdvice
+} from "@/client/nutritionAdvice";
+import {
   getOrComputeDailyTarget,
   recomputeDailyTarget,
   setManualDailyTarget
@@ -27,6 +31,7 @@ import {
   mealTypes,
   sumMacros
 } from "@/domain/nutrition";
+import { formatGapLabel, type NutritionAdvice } from "@/domain/nutritionAdvice";
 import { withNutritionGoalEdits, type NutritionGoals } from "@/domain/nutritionGoals";
 import type { FoodEntry, MealType } from "@/domain";
 
@@ -70,6 +75,7 @@ export function NutritionDiary() {
   const [error, setError] = useState<string | null>(null);
   const [dailyTarget, setDailyTarget] = useState<DailyNutritionTarget | null>(null);
   const [recomputing, setRecomputing] = useState(false);
+  const [advice, setAdvice] = useState<NutritionAdvice | null>(null);
 
   const viewDate = useMemo(() => shiftIsoDate(dayOffset), [dayOffset]);
   const isToday = dayOffset === 0;
@@ -92,6 +98,30 @@ export function NutritionDiary() {
       window.removeEventListener(dataChangedEventName, reload);
     };
   }, [reload]);
+
+  // Coach's advice: deterministic version renders immediately, the AI-toned
+  // rewrite swaps in when ready. Keyed on the diary state (foods reloads via
+  // the data-changed event), with a short debounce so a burst of edits only
+  // triggers one advice compute; the signature cache inside
+  // getOrComputeDailyAdvice stops repeat API calls for unchanged data.
+  useEffect(() => {
+    if (!isToday) {
+      setAdvice(null);
+      return;
+    }
+    let cancelled = false;
+    const storage = window.localStorage;
+    setAdvice(buildDeterministicAdvice(storage, viewDate, dailyTarget));
+    const timer = window.setTimeout(() => {
+      void getOrComputeDailyAdvice(storage, dailyTarget).then((next) => {
+        if (!cancelled) setAdvice(next);
+      });
+    }, 600);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [isToday, viewDate, dailyTarget, foods]);
 
   async function handleRecompute() {
     setRecomputing(true);
@@ -319,6 +349,36 @@ export function NutritionDiary() {
           </div>
         ) : null}
       </section>
+
+      {isToday && advice ? (
+        <section className="dashboard-section nutri-advice" aria-label="Coach's advice">
+          <div className="nutri-meal-head">
+            <SectionHeader
+              eyebrow={advice.source === "ai" ? "AI coach" : "Auto coach"}
+              title="Coach's Advice"
+            />
+          </div>
+          <p className="nutri-target-why">{advice.verdict}</p>
+          {advice.warnings.map((warning) => (
+            <p className="form-error" role="alert" key={warning}>
+              {warning}
+            </p>
+          ))}
+          {advice.gaps.length > 0 ? (
+            <ul className="nutri-entries">
+              {advice.gaps.map((gap) => (
+                <li className="nutri-entry" key={gap.nutrient}>
+                  <div>
+                    <strong>{formatGapLabel(gap)}</strong>
+                    <small>{gap.suggestion}</small>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="reminders-help">{advice.timing}</p>
+        </section>
+      ) : null}
 
       {error ? (
         <p className="form-error" role="alert">

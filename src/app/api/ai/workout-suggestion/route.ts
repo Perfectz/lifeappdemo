@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { coachStyles } from "@/domain/trainingProfile";
 import { handleAIRoute } from "@/server/ai/aiRoute";
 import { suggestDailyWorkoutPlan } from "@/server/ai/workoutCoachClient";
 
@@ -36,7 +37,15 @@ export async function POST(request: Request) {
         historySummary: clampText(r.historySummary),
         memorySummary: clampText(r.memorySummary),
         readiness: clampText(r.readiness),
-        goal: clampText(r.goal)
+        goal: clampText(r.goal),
+        profileSummary: clampText(r.profileSummary),
+        progressionSummary: clampText(r.progressionSummary),
+        karateToday: r.karateToday === true,
+        // Enum-checked, not free text — this selects style guidance in the prompt.
+        coachStyle:
+          typeof r.coachStyle === "string" && (coachStyles as readonly string[]).includes(r.coachStyle)
+            ? r.coachStyle
+            : undefined
       });
       return NextResponse.json(plan);
     }

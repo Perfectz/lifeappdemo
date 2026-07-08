@@ -23,8 +23,30 @@ import {
   suggestionToWorkoutInput,
   swapBucketPreset
 } from "@/client/workoutSuggestion";
+import { TrainingProfilePanel } from "@/components/TrainingProfilePanel";
+import { formatPrescriptionScheme } from "@/domain/coachProgram";
+import type { ExercisePrescription } from "@/domain/strengthProgression";
 import type { DailyWorkoutPlan, WorkoutSuggestion } from "@/domain/workoutPlan";
 import type { Workout, WorkoutType } from "@/domain";
+
+type PrescriptionDraftRow = {
+  exercise: string;
+  sets: string;
+  reps: string;
+  weight: string;
+  note?: string;
+};
+
+type PrescriptionDraft = {
+  title: string;
+  summary?: string;
+  rows: PrescriptionDraftRow[];
+};
+
+function positiveInt(value: string, fallback: number): number {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
 
 const BUCKET_LABEL: Record<WorkoutType, string> = {
   strength: "Strength",
@@ -61,6 +83,63 @@ function optionalWeight(value: string | undefined): number | undefined {
 function optionalDistance(value: string | undefined): number | undefined {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+/** "1 warm-up, then 4 sets increasing weight — triples: 135/155/175/185" or "5×5 @ 190 lb". */
+const schemeText = formatPrescriptionScheme;
+
+/**
+ * The prescription list. Split-style sessions (Vinny) carry muscle-group
+ * headers — render Chest / Tris / Bis blocks with numbered exercises. Plans
+ * without groups (older cached plans, simple-progressive) keep the flat list.
+ */
+function PrescriptionList({ prescriptions }: { prescriptions: ExercisePrescription[] }) {
+  if (!prescriptions.some((p) => p.group)) {
+    return (
+      <ul className="fitness-plan-ex">
+        {prescriptions.map((p, i) => (
+          <li key={`${p.exercise}-${i}`}>
+            <strong>{p.exercise}</strong> — {schemeText(p)}
+            {p.note ? (
+              <>
+                <br />
+                <small>{p.note}</small>
+              </>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  const groups: { name?: string; items: ExercisePrescription[] }[] = [];
+  for (const p of prescriptions) {
+    const last = groups[groups.length - 1];
+    if (last && (p.group ?? "") === (last.name ?? "")) last.items.push(p);
+    else groups.push({ name: p.group, items: [p] });
+  }
+  return (
+    <div className="fitness-plan-groups">
+      {groups.map((g, gi) => (
+        <div key={`${g.name ?? "group"}-${gi}`} className="fitness-plan-group">
+          {g.name ? <p className="fitness-plan-group-name">{g.name}</p> : null}
+          <ol className="fitness-plan-ex">
+            {g.items.map((p, i) => (
+              <li key={`${p.exercise}-${i}`}>
+                <strong>{p.exercise}</strong> — {schemeText(p)}
+                {p.note ? (
+                  <>
+                    <br />
+                    <small>{p.note}</small>
+                  </>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function DailyFitness() {
@@ -133,7 +212,56 @@ export function DailyFitness() {
     addWorkout(createWorkout(suggestionToWorkoutInput(suggestion, viewed)));
   }
 
+  // "Log as prescribed": prefill an editable copy of the coach's prescription,
+  // let the user adjust sets/reps/weight, then save through the normal
+  // createWorkout/addWorkout path.
+  const [prescriptionDraft, setPrescriptionDraft] = useState<PrescriptionDraft | null>(null);
+
+  function startPrescribedLog(suggestion: WorkoutSuggestion) {
+    setPrescriptionDraft({
+      title: suggestion.title,
+      summary: suggestion.progressionSummary ?? suggestion.description,
+      rows: (suggestion.prescriptions ?? []).map((p) => ({
+        exercise: p.exercise,
+        sets: String(p.sets),
+        reps: String(p.reps),
+        weight: p.weightLbs !== undefined ? String(p.weightLbs) : "",
+        note: p.note
+      }))
+    });
+  }
+
+  function updateDraftRow(index: number, patch: Partial<PrescriptionDraftRow>) {
+    setPrescriptionDraft((prev) =>
+      prev
+        ? { ...prev, rows: prev.rows.map((row, i) => (i === index ? { ...row, ...patch } : row)) }
+        : prev
+    );
+  }
+
+  function savePrescribedLog() {
+    if (!prescriptionDraft) return;
+    const sets = prescriptionDraft.rows.flatMap((row) => {
+      const setCount = positiveInt(row.sets, 1);
+      const reps = positiveInt(row.reps, 1);
+      const weightLbs = optionalWeight(row.weight);
+      return Array.from({ length: setCount }, () => ({ exercise: row.exercise, reps, weightLbs }));
+    });
+    addWorkout(
+      createWorkout({
+        date: viewed,
+        type: "strength",
+        source: "ai",
+        title: prescriptionDraft.title,
+        notes: prescriptionDraft.summary,
+        sets
+      })
+    );
+    setPrescriptionDraft(null);
+  }
+
   function swap(bucket: WorkoutType) {
+    if (bucket === "strength") setPrescriptionDraft(null);
     if (plan) setPlan(swapBucketPreset(window.localStorage, plan, bucket));
   }
 
@@ -317,6 +445,11 @@ export function DailyFitness() {
             {plan.items.map((item) => {
               const done = Boolean(status.byType[item.bucket]);
               const isPrimary = item.bucket === "strength";
+              // Old cached plans predate prescriptions — guard the optional field.
+              const hasPrescriptions =
+                item.bucket === "strength" &&
+                Array.isArray(item.prescriptions) &&
+                item.prescriptions.length > 0;
               return (
                 <div key={item.bucket} className={`fitness-plan-item${done ? " is-done" : ""}`}>
                   <div className="fitness-plan-item-head">
@@ -338,22 +471,101 @@ export function DailyFitness() {
                   {item.swaps && item.swaps.length > 0 ? (
                     <p className="fitness-plan-swap">⚠ {item.swaps.join(" · ")}</p>
                   ) : null}
-                  {item.exercises && item.exercises.length > 0 ? (
+                  {hasPrescriptions ? (
+                    <>
+                      {item.progressionSummary ? (
+                        <p className="fitness-plan-why">{item.progressionSummary}</p>
+                      ) : null}
+                      {item.description ? (
+                        <p className="fitness-plan-tip">“{item.description}” — Coach</p>
+                      ) : null}
+                      <PrescriptionList prescriptions={item.prescriptions!} />
+                    </>
+                  ) : item.exercises && item.exercises.length > 0 ? (
                     <ul className="fitness-plan-ex">
                       {item.exercises.map((line, i) => (
                         <li key={i}>{line}</li>
                       ))}
                     </ul>
                   ) : null}
-                  {!done ? (
+                  {!done && hasPrescriptions && prescriptionDraft ? (
+                    <div className="fitness-form" aria-label="Log as prescribed">
+                      {prescriptionDraft.rows.map((row, i) => (
+                        <div key={`${row.exercise}-${i}`} className="fitness-exercise-detail">
+                          <p className="fitness-exercise-name">{row.exercise}</p>
+                          <label className="fitness-label">
+                            Sets
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              className="fitness-input"
+                              value={row.sets}
+                              onChange={(e) => updateDraftRow(i, { sets: e.target.value })}
+                            />
+                          </label>
+                          <label className="fitness-label">
+                            Reps
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              className="fitness-input"
+                              value={row.reps}
+                              onChange={(e) => updateDraftRow(i, { reps: e.target.value })}
+                            />
+                          </label>
+                          <label className="fitness-label">
+                            Weight (lb)
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              min={0}
+                              step="2.5"
+                              className="fitness-input"
+                              placeholder="bodyweight"
+                              value={row.weight}
+                              onChange={(e) => updateDraftRow(i, { weight: e.target.value })}
+                            />
+                          </label>
+                        </div>
+                      ))}
+                      <div className="fitness-plan-actions">
+                        <button
+                          type="button"
+                          className="command-button command-button-primary"
+                          onClick={savePrescribedLog}
+                        >
+                          <span>Save session</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="command-button"
+                          onClick={() => setPrescriptionDraft(null)}
+                        >
+                          <span>Cancel</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : !done ? (
                     <div className="fitness-plan-actions">
-                      <button
-                        type="button"
-                        className="command-button command-button-primary"
-                        onClick={() => logSuggestion(item)}
-                      >
-                        <span>Log it</span>
-                      </button>
+                      {hasPrescriptions ? (
+                        <button
+                          type="button"
+                          className="command-button command-button-primary"
+                          onClick={() => startPrescribedLog(item)}
+                        >
+                          <span>Log as prescribed</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="command-button command-button-primary"
+                          onClick={() => logSuggestion(item)}
+                        >
+                          <span>Log it</span>
+                        </button>
+                      )}
                       <button type="button" className="command-button" onClick={() => swap(item.bucket)}>
                         <span>Swap</span>
                       </button>
@@ -625,6 +837,9 @@ export function DailyFitness() {
           </div>
         )}
       </section>
+
+      {/* Training profile — what the coach programs with */}
+      <TrainingProfilePanel />
     </section>
   );
 }

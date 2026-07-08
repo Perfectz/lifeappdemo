@@ -11,6 +11,7 @@ import { loadHealthGoals } from "@/data/healthGoalsRepository";
 import { createLocalMemoryRepository } from "@/data/memoryRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
+import { loadTrainingProfile } from "@/data/trainingProfileRepository";
 import {
   clearWorkoutPlanForDate,
   getWorkoutPlanForDate,
@@ -23,8 +24,11 @@ import {
   memoryCategoryOf,
   type MemoryCategory
 } from "@/domain/memory";
+import { buildVinnyProgressionContext } from "@/domain/coachProgram";
+import { buildProgressionContext } from "@/domain/strengthProgression";
+import { formatTrainingProfileForPrompt, type TrainingProfile } from "@/domain/trainingProfile";
 import {
-  buildDeterministicPlan,
+  buildProgressivePlan,
   buildWorkoutCatalog,
   isDailyWorkoutPlan,
   type DailyWorkoutPlan,
@@ -92,22 +96,46 @@ function goalText(storage: Storage): string {
   return losing ? "lose fat while preserving muscle" : "maintain and build capability";
 }
 
+/** Did today's check-in record a karate class? Class counts as the MA session. */
+function karateClassToday(storage: Storage, date: IsoDate): boolean {
+  return createLocalMetricRepository(storage)
+    .load()
+    .some((entry) => entry.date === date && entry.karateClass === true);
+}
+
 export type WorkoutContext = {
   historySummary: string;
   memorySummary?: string;
   readiness?: string;
   goal: string;
   recentStrengthTitles: string[];
+  profile: TrainingProfile;
+  profileSummary: string;
+  /** Per-lift e1RM + last-session numbers from the progression engine. */
+  progressionSummary: string;
+  karateToday: boolean;
+  /** Longer window used by the progression engine (not just the last 10 days). */
+  progressionWorkouts: Workout[];
 };
 
-export function buildWorkoutContext(storage: Storage): WorkoutContext {
+export function buildWorkoutContext(storage: Storage, date: IsoDate = toLocalIsoDate()): WorkoutContext {
   const recent = recentWorkouts(storage, 10);
+  const progressionWorkouts = recentWorkouts(storage, 120);
+  const profile = loadTrainingProfile(storage);
   return {
     historySummary: historySummary(recent),
     memorySummary: memorySummary(storage),
     readiness: readinessSummary(storage),
     goal: goalText(storage),
-    recentStrengthTitles: recent.filter((w) => w.type === "strength").map((w) => w.title ?? "")
+    recentStrengthTitles: recent.filter((w) => w.type === "strength").map((w) => w.title ?? ""),
+    profile,
+    profileSummary: formatTrainingProfileForPrompt(profile),
+    progressionSummary:
+      profile.coachStyle === "vinny_split"
+        ? buildVinnyProgressionContext(profile, progressionWorkouts)
+        : buildProgressionContext(profile, progressionWorkouts),
+    karateToday: karateClassToday(storage, date),
+    progressionWorkouts
   };
 }
 
@@ -137,8 +165,12 @@ async function computeWorkoutPlan(
   date: IsoDate
 ): Promise<DailyWorkoutPlan> {
   const now = new Date().toISOString();
-  const ctx = buildWorkoutContext(storage);
-  let plan = buildDeterministicPlan(ctx.recentStrengthTitles, date, now);
+  const ctx = buildWorkoutContext(storage, date);
+  // Deterministic baseline with real programming: exact sets×reps×loads from
+  // the linear-progression engine, so offline days still get coached numbers.
+  let plan = buildProgressivePlan(ctx.profile, ctx.progressionWorkouts, date, now, {
+    karateToday: ctx.karateToday
+  });
 
   try {
     const response = await fetch("/api/ai/workout-suggestion", {
@@ -149,7 +181,11 @@ async function computeWorkoutPlan(
         historySummary: ctx.historySummary,
         memorySummary: ctx.memorySummary,
         readiness: ctx.readiness,
-        goal: ctx.goal
+        goal: ctx.goal,
+        profileSummary: ctx.profileSummary,
+        progressionSummary: ctx.progressionSummary,
+        karateToday: ctx.karateToday,
+        coachStyle: ctx.profile.coachStyle
       })
     });
     if (response.ok) {
@@ -225,7 +261,22 @@ export function suggestionToWorkoutInput(
         };
       }
     }
-    // custom strength
+    // custom strength — prescriptions (exact sets×reps×load) expand to real
+    // per-set entries; plans cached before prescriptions existed fall back to
+    // the free-form exercise lines.
+    if (suggestion.prescriptions && suggestion.prescriptions.length > 0) {
+      return {
+        ...base,
+        sets: suggestion.prescriptions.flatMap((p) =>
+          Array.from({ length: p.sets }, () => ({
+            exercise: p.exercise,
+            reps: p.reps,
+            weightLbs: p.weightLbs
+          }))
+        ),
+        notes: suggestion.progressionSummary ?? suggestion.description
+      };
+    }
     return {
       ...base,
       sets: (suggestion.exercises ?? []).map((line) => ({ exercise: line })),

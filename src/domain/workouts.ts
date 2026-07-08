@@ -18,9 +18,11 @@ export const equipmentOptions: Equipment[] = [
 ];
 
 /**
- * The user's actual home setup: an adjustable bench, two adjustable dumbbells
- * (up to 25 lb each) and a 25 lb kettlebell. Used to constrain the workout
- * generator so it never programs equipment that isn't on hand.
+ * @deprecated Legacy snapshot of the original home-only setup. The editable
+ * source of truth for equipment/gym access is now the training profile
+ * (`@/domain/trainingProfile` + "lifequest.training-profile.v1") — the user
+ * also has bands and commercial gym access (barbells/machines), which this
+ * constant predates. Kept only so old references keep compiling.
  */
 export const homeStrengthInventory = {
   adjustableBench: true,

@@ -8,10 +8,12 @@ import { useHeroName } from "@/client/useHeroName";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { CommandButton } from "@/components/CommandButton";
 import { DashboardQuestCard } from "@/components/DashboardQuestCard";
+import { FuelCard } from "@/components/FuelCard";
 import type { JrpgIconName } from "@/components/JrpgIcon";
 import { NorthStarCard } from "@/components/NorthStarCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { SetupPrompt } from "@/components/SetupPrompt";
+import { TodayTrainingCard } from "@/components/TodayTrainingCard";
 import { VitalsAlertBanner } from "@/components/VitalsAlertBanner";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
@@ -228,6 +230,11 @@ export function Dashboard() {
           )}
         </section>
       ) : null}
+
+      <div className="dashboard-health-row">
+        <TodayTrainingCard />
+        <FuelCard />
+      </div>
 
       {hasLoaded && demoState ? (
         <section className="dashboard-section demo-dashboard-callout" aria-label="Demo data summary">

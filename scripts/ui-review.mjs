@@ -40,6 +40,9 @@ await shot("desktop-settings", { width: 1280, height: 800, path: "/settings" });
 await shot("mobile-dashboard", { width: 375, height: 812, path: "/dashboard" });
 await shot("mobile-coach", { width: 375, height: 812, path: "/coach" });
 await shot("mobile-vitals", { width: 375, height: 812, path: "/vitals" });
+await shot("desktop-fitness", { width: 1280, height: 800, path: "/fitness", settle: 2000 });
+await shot("mobile-fitness", { width: 375, height: 812, path: "/fitness", settle: 2000 });
+await shot("desktop-nutrition", { width: 1280, height: 800, path: "/nutrition", settle: 2000 });
 await shot("desktop-celebrate-burst", { width: 1280, height: 800, path: "/dashboard", burst: true });
 
 await browser.close();
