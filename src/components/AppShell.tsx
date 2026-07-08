@@ -14,6 +14,7 @@ import {
 import { celebrate } from "@/client/celebrate";
 import { openCommandPalette } from "@/client/commandPalette";
 import { openQuickAdd } from "@/client/quickAdd";
+import { AmbientBackdrop } from "@/components/fx/AmbientBackdrop";
 import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { CloudSyncBootstrap } from "@/components/CloudSyncBootstrap";
@@ -615,6 +616,7 @@ export function AppShell({ children }: AppShellProps) {
       <ReminderManager />
       <StorageErrorToast />
       <CelebrationOverlay />
+      <AmbientBackdrop />
       <LevelUpToast />
       <CloudSyncBootstrap />
       <VoiceAgent />

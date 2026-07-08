@@ -19,10 +19,12 @@
     "@ai-sdk/react": "^3.0.211",
     "@openai/agents": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
+    "@types/three": "^0.185.0",
     "ai": "^6.0.209",
     "next": "^15.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "three": "^0.185.1",
     "web-push": "^3.6.7",
     "zod": "^4.4.3"
   },

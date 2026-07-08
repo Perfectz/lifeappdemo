@@ -60,6 +60,27 @@
 
   --menu-cursor: #fff7c2;
   --menu-cursor-glow: rgba(246, 199, 104, 0.75);
+
+  /* ---- Modern composition tokens (depth / focus / glass) ----
+     Layered soft shadows give content panels quiet depth (the hard PSX
+     bevel stays reserved for true chrome: sidebar, tabbar, palette,
+     sheets). --ring-focus is the universal focus treatment. The glass
+     tokens are translucent chrome fills used only where backdrop-filter
+     is supported (solid --menu-window-fill remains the fallback).
+     Every token here is re-declared in the gameboy + amber theme blocks. */
+  --shadow-ambient: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-key: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --ring-focus-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  --ring-focus: 0 0 0 2px var(--ring-focus-color);
+  --panel-highlight: rgba(255, 255, 255, 0.05);
+  --bar-sheen: rgba(255, 255, 255, 0.22);
+  --chrome-glass-bg: rgba(10, 16, 28, 0.72);
+  --overlay-backdrop: rgba(2, 5, 12, 0.55);
+  /* Page-shell fill: the big rounded frame each route paints behind its
+     panels. Token-driven so light themes stay light. */
+  --page-shell-bg: rgba(18, 24, 36, 0.84);
+  --page-shell-highlight: rgba(255, 255, 255, 0.035);
+  --page-shell-border: rgba(110, 231, 183, 0.12);
 }
 
 * {
@@ -114,6 +135,19 @@ html[data-theme="gameboy"] {
 
   --menu-cursor: #0f380f;
   --menu-cursor-glow: rgba(15, 56, 15, 0.55);
+
+  /* Modern composition tokens — light LCD: ink-tinted shadows and a DARK
+     inner highlight (a white sheen reads as glare on the pale screen). */
+  --shadow-ambient: 0 8px 24px rgba(15, 56, 15, 0.25);
+  --shadow-key: 0 2px 8px rgba(15, 56, 15, 0.28);
+  --ring-focus-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  --panel-highlight: rgba(15, 56, 15, 0.12);
+  --bar-sheen: rgba(255, 255, 255, 0.38);
+  --chrome-glass-bg: rgba(196, 224, 96, 0.78);
+  --overlay-backdrop: rgba(15, 56, 15, 0.4);
+  --page-shell-bg: rgba(155, 188, 15, 0.6);
+  --page-shell-highlight: rgba(255, 255, 255, 0.16);
+  --page-shell-border: rgba(15, 56, 15, 0.35);
 }
 
 html[data-theme="gameboy"] body {
@@ -169,6 +203,18 @@ html[data-theme="amber"] {
 
   --menu-cursor: #ffd24a;
   --menu-cursor-glow: rgba(255, 210, 74, 0.85);
+
+  /* Modern composition tokens — CRT amber: deeper blacks, phosphor-tinted
+     highlight and sheen. */
+  --shadow-ambient: 0 8px 24px rgba(0, 0, 0, 0.55);
+  --shadow-key: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --panel-highlight: rgba(255, 176, 0, 0.08);
+  --bar-sheen: rgba(255, 235, 170, 0.28);
+  --chrome-glass-bg: rgba(20, 10, 0, 0.78);
+  --overlay-backdrop: rgba(5, 2, 0, 0.62);
+  --page-shell-bg: rgba(18, 9, 0, 0.84);
+  --page-shell-highlight: rgba(255, 176, 0, 0.06);
+  --page-shell-border: rgba(255, 176, 0, 0.18);
 }
 
 html[data-theme="amber"] body {
@@ -190,10 +236,17 @@ html[data-theme="amber"] body {
 
 body {
   margin: 0;
+  /* Composed deep-space backdrop: cool key glow (top-left), a whisper of
+     accent, a warm counter-glow, then a soft vignette over the base.
+     NOTE: this paints on the root background layer, BELOW the animated
+     canvas at z-index 0 — the content column (.content) itself stays
+     transparent so the canvas shows through between panels. */
   background:
     radial-gradient(circle at 8% 0%, rgba(61, 139, 253, 0.24), transparent 28rem),
+    radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 36rem),
     radial-gradient(circle at 92% 100%, rgba(110, 231, 183, 0.14), transparent 30rem),
     linear-gradient(135deg, rgba(246, 199, 104, 0.055), transparent 26rem),
+    radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.32)),
     var(--bg);
   color: var(--text);
   font-family: var(--font-body);
@@ -632,9 +685,11 @@ textarea {
 
 .mobile-tabbar-link span {
   font-family: var(--font-mono);
-  font-size: 0.92rem;
+  /* Six tabs share the floating dock; tighter metrics keep VITALS from
+     ellipsizing at 375px. */
+  font-size: 0.84rem;
   font-weight: 400;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
   line-height: 1;
   max-width: 100%;
   overflow: hidden;
@@ -983,9 +1038,9 @@ textarea {
 .reports-page,
 .coach-page {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 18rem),
-    rgba(18, 24, 36, 0.92);
-  border: 1px solid rgba(110, 231, 183, 0.12);
+    linear-gradient(180deg, var(--page-shell-highlight), transparent 18rem),
+    var(--page-shell-bg);
+  border: 1px solid var(--page-shell-border);
   border-radius: var(--radius-lg);
   box-shadow:
     0 1rem 2.5rem var(--shadow),
@@ -7882,4 +7937,406 @@ button,
 
 .supplement-dose-input {
   max-width: 8rem;
+}
+
+/* ============================================================
+   Modern composition layer
+   ------------------------------------------------------------
+   Restyle pass: quieter depth hierarchy for content panels (soft
+   layered shadows + hairline borders), glass chrome where
+   backdrop-filter is supported, a universal focus ring, refined
+   typography rhythm, and cheap micro-interactions. No selector is
+   renamed or removed above — everything here overrides by cascade
+   order. All tokens are theme-aware (see :root + theme blocks).
+   ============================================================ */
+
+/* ---- 1. Depth system: content panels whisper, chrome keeps the bevel ---- */
+
+/* Page-level shells: hairline border + ambient/key shadow + faint top
+   inner highlight instead of shouting with accents. */
+.page-panel,
+.quest-log-page,
+.dashboard-page,
+.standup-page,
+.health-import-page,
+.metrics-page,
+.journal-page,
+.notes-page,
+.reports-page,
+.coach-page {
+  border-color: var(--line);
+  box-shadow:
+    inset 0 1px 0 var(--panel-highlight),
+    var(--shadow-ambient),
+    var(--shadow-key);
+}
+
+/* Hero banners: keep a whisper of accent tint in the border, layered lift. */
+.quest-log-hero,
+.dashboard-hero,
+.standup-hero,
+.metrics-hero,
+.journal-hero,
+.notes-hero,
+.reports-hero,
+.coach-hero {
+  border-color: color-mix(in srgb, var(--accent) 14%, var(--line));
+  box-shadow:
+    inset 0 1px 0 var(--panel-highlight),
+    var(--shadow-ambient),
+    var(--shadow-key);
+}
+
+/* Stat/status cards: tight key shadow only (they sit inside a shell that
+   already carries the ambient), slightly larger radius to breathe. */
+.status-panel {
+  border-color: var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 1px 0 var(--panel-highlight),
+    var(--shadow-key);
+}
+
+/* Keep the bottom accent rule inside the new rounded corners. */
+.status-panel::after {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  left: 0.6rem;
+  right: 0.6rem;
+}
+
+.status-panel-success {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+}
+
+.status-panel-warning {
+  border-color: color-mix(in srgb, var(--accent-strong) 42%, var(--line));
+}
+
+.dashboard-section {
+  box-shadow:
+    inset 0 1px 0 var(--panel-highlight),
+    var(--shadow-key);
+}
+
+.dashboard-quest-card {
+  box-shadow:
+    inset 0 1px 0 var(--panel-highlight),
+    var(--shadow-key);
+}
+
+.dashboard-quest-card:hover {
+  box-shadow:
+    inset 0 1px 0 var(--panel-highlight),
+    var(--shadow-key),
+    var(--shadow-ambient);
+}
+
+/* True chrome keeps its bevel identity, gains ambient lift. */
+.sidebar {
+  box-shadow:
+    0 0.8rem 2rem rgba(0, 0, 0, 0.2),
+    var(--shadow-ambient);
+}
+
+.command-palette {
+  box-shadow:
+    var(--bevel-inset),
+    var(--shadow-ambient),
+    0 1.5rem 3rem rgba(0, 0, 0, 0.55);
+}
+
+.more-sheet {
+  box-shadow:
+    var(--bevel-inset),
+    var(--shadow-ambient),
+    0 -1.2rem 2.4rem rgba(0, 0, 0, 0.5);
+}
+
+.quick-add {
+  box-shadow:
+    var(--bevel-inset),
+    var(--shadow-ambient),
+    0 1.5rem 3rem rgba(0, 0, 0, 0.55);
+}
+
+/* ---- 2. Atmosphere: glass chrome (backdrop-filter surfaces ONLY —
+        sidebar, tabbar, palette, sheets, overlay backdrops; never cards
+        in scrolling lists). Solid --menu-window-fill remains the
+        no-support fallback via the base rules above. ---- */
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sidebar {
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+    backdrop-filter: blur(14px) saturate(1.15);
+    background:
+      linear-gradient(180deg, var(--panel-highlight), transparent 32%),
+      var(--chrome-glass-bg);
+  }
+
+  .mobile-tabbar {
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(14px) saturate(1.2);
+    background:
+      linear-gradient(180deg, var(--panel-highlight), transparent 46%),
+      var(--chrome-glass-bg);
+  }
+
+  /* Overlay veils: blur + saturate what's behind, lighter tint. */
+  .command-palette-backdrop,
+  .quick-add-backdrop,
+  .more-sheet-backdrop,
+  .onboarding-backdrop,
+  .levelup-toast {
+    -webkit-backdrop-filter: blur(8px) saturate(1.2);
+    backdrop-filter: blur(8px) saturate(1.2);
+    background: var(--overlay-backdrop);
+  }
+
+  /* Modal sheets: translucent fill + 1px gradient border (painted via
+     border-box background so it follows the radius), bevel kept via the
+     box-shadow above. */
+  .command-palette,
+  .quick-add,
+  .more-sheet,
+  .onboarding-card {
+    -webkit-backdrop-filter: blur(16px) saturate(1.25);
+    backdrop-filter: blur(16px) saturate(1.25);
+    border-color: transparent;
+    background:
+      linear-gradient(180deg, var(--panel-highlight), transparent 38%) padding-box,
+      linear-gradient(180deg, var(--chrome-glass-bg), var(--chrome-glass-bg)) padding-box,
+      linear-gradient(
+          165deg,
+          color-mix(in srgb, var(--accent) 40%, transparent),
+          color-mix(in srgb, var(--line) 85%, transparent) 38%,
+          color-mix(in srgb, var(--accent-strong) 34%, transparent)
+        )
+        border-box;
+  }
+}
+
+/* ---- 3. Typography rhythm ---- */
+
+h1 {
+  letter-spacing: 0.01em;
+}
+
+h1,
+h2 {
+  text-wrap: balance;
+}
+
+.content h2,
+.section-header h2 {
+  letter-spacing: 0.015em;
+}
+
+.eyebrow {
+  color: color-mix(in srgb, var(--accent) 80%, transparent);
+  font-size: 0.85rem;
+  letter-spacing: 0.16em;
+}
+
+/* ---- 4. Section headers: hairline chrome + pixel-dot ornament ---- */
+
+.section-header {
+  background:
+    radial-gradient(
+        circle,
+        color-mix(in srgb, var(--accent) 55%, transparent) 1px,
+        transparent 1.4px
+      )
+      left bottom / 7px 3px repeat-x,
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--bg) 82%, transparent),
+      color-mix(in srgb, var(--surface-soft) 42%, transparent)
+    );
+  border-color: var(--line);
+  box-shadow: inset 0 1px 0 var(--panel-highlight);
+}
+
+/* ---- 5. Mobile tabbar: floating dock ---- */
+
+.mobile-tabbar {
+  border: 1px solid var(--bevel-dark-strong);
+  border-radius: 12px;
+  bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  box-shadow:
+    inset 0 1px 0 var(--bevel-light),
+    var(--shadow-ambient),
+    0 -0.35rem 1rem rgba(0, 0, 0, 0.25);
+  left: 0.5rem;
+  padding: 0.4rem 0.5rem 0.45rem;
+  right: 0.5rem;
+}
+
+/* ---- 6. Micro-interactions (motion-gated) ---- */
+
+@media (prefers-reduced-motion: no-preference) {
+  button,
+  .nav-link,
+  .mobile-tabbar-link,
+  .more-sheet-search,
+  .report-history-item,
+  .supplement-item,
+  .chat-composer,
+  .skip-link {
+    transition:
+      background-color 160ms ease-out,
+      border-color 160ms ease-out,
+      box-shadow 160ms ease-out,
+      color 160ms ease-out,
+      transform 160ms ease-out;
+  }
+
+  .standup-mode-switch button:not(:disabled):hover {
+    box-shadow: var(--shadow-key);
+    transform: translateY(-1px);
+  }
+
+  .more-sheet-close:hover,
+  .quick-add-close:hover,
+  .quick-add-trigger:hover,
+  .palette-trigger:hover {
+    box-shadow: var(--bevel-inset), var(--shadow-key);
+    transform: translateY(-1px);
+  }
+
+  button:not(:disabled):active {
+    transform: translateY(0) scale(0.985);
+  }
+
+  /* Overlay entrances: slide + fade. The More sheet keeps its own
+     transform transition (translateY 100% -> 0), so it only fades via
+     its backdrop. The celebration card keeps its bespoke pop. */
+  .command-palette,
+  .quick-add,
+  .onboarding-card {
+    animation: overlay-rise 220ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  }
+
+  .command-palette-backdrop,
+  .quick-add-backdrop,
+  .more-sheet-backdrop,
+  .onboarding-backdrop,
+  .levelup-toast {
+    animation: overlay-fade 180ms ease-out both;
+  }
+}
+
+@keyframes overlay-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes overlay-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---- 7. Focus visibility: one ring to rule them all ----
+   Outline (not box-shadow) so it never clobbers bevel/key shadows.
+   The re-declared selectors below out-cascade earlier `outline: none`
+   rules while keeping their background/border affordances. */
+
+:focus-visible {
+  outline: 2px solid var(--ring-focus-color);
+  outline-offset: 2px;
+}
+
+.mobile-tabbar-link:focus-visible,
+.nav-link:focus-visible,
+.more-sheet-close:focus-visible,
+.command-button:focus-visible,
+.more-sheet-search:focus-visible,
+.report-history-item:focus-visible,
+.quest-form button:focus-visible,
+.quest-actions button:focus-visible,
+.quick-add-trigger:focus-visible,
+.palette-trigger:focus-visible,
+.login-input:focus-visible {
+  outline: 2px solid var(--ring-focus-color);
+  outline-offset: 2px;
+}
+
+/* Form fields previously used a hardcoded blue glow — retint to the
+   theme accent ring so gameboy/amber stay coherent. */
+.quick-task-form input:focus,
+.intention-field textarea:focus,
+.voice-transcript-field textarea:focus,
+.outcome-note input:focus,
+.reflection-grid textarea:focus,
+.metrics-form input:focus,
+.metrics-form select:focus,
+.metrics-form textarea:focus,
+.journal-form input:focus,
+.journal-form select:focus,
+.journal-form textarea:focus,
+.journal-date-filter input:focus,
+.notes-form input:focus,
+.notes-form textarea:focus,
+.notes-search input:focus,
+.reports-controls input:focus,
+.coach-form select:focus,
+.coach-form textarea:focus,
+.quest-form input:focus,
+.quest-form select:focus,
+.quest-form textarea:focus {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  box-shadow: var(--ring-focus);
+}
+
+/* Borderless inputs delegate focus to their styled container. */
+.chat-composer:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  box-shadow: var(--ring-focus);
+}
+
+.command-palette-input-row:focus-within {
+  box-shadow: inset 0 -2px 0 var(--ring-focus-color);
+}
+
+/* ---- 8. Retro accents, deliberately placed: stat-bar sheen ---- */
+
+.stat-bar span {
+  position: relative;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .stat-bar span::after {
+    animation: stat-bar-sheen 3.8s ease-in-out infinite;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      var(--bar-sheen) 50%,
+      transparent 65%
+    );
+    background-repeat: no-repeat;
+    background-size: 250% 100%;
+    content: "";
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+  }
+}
+
+@keyframes stat-bar-sheen {
+  0%,
+  60% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
 }

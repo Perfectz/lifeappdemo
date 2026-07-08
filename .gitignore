@@ -36,3 +36,14 @@ coverage
 
 # Test coverage output
 /coverage
+
+# Tooling/content directories dropped in by other agent sessions — never commit
+/.agents/
+/.codex/
+/agent/
+/hyperframes-skills/
+/lifequest-ai-goals-*.md
+/lifequest-script-*.txt
+/patrick-ai-writing-voice-guide.md
+/takeonme-intro-scene-breakdown.md
+/vox-style-asset-plan.md
