@@ -99,7 +99,9 @@ describe("Dashboard", () => {
       expect(screen.getByRole("heading", { name: "Planned for today" })).toBeVisible();
     });
     expect(screen.queryByRole("heading", { name: "Backlog item" })).not.toBeInTheDocument();
-    expect(screen.getByText("Backlog")).toBeVisible();
+    // The stat-tile row was removed; the backlog surfaces as a quiet link
+    // under the Planned Quests header instead.
+    expect(screen.getByRole("link", { name: "1 in backlog →" })).toBeVisible();
   });
 
   it("renders today's DailyPlan when one exists", async () => {

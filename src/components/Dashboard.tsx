@@ -5,16 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getAuthHeaders } from "@/client/authToken";
 import { useHeroName } from "@/client/useHeroName";
-import { AiAdvisorPopup } from "@/components/AiAdvisorPopup";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { CommandButton } from "@/components/CommandButton";
 import { DashboardQuestCard } from "@/components/DashboardQuestCard";
 import type { JrpgIconName } from "@/components/JrpgIcon";
 import { NorthStarCard } from "@/components/NorthStarCard";
 import { SectionHeader } from "@/components/SectionHeader";
-import { StatusPanel } from "@/components/StatusPanel";
 import { SetupPrompt } from "@/components/SetupPrompt";
-import { TimelineMirrorCard } from "@/components/TimelineMirrorCard";
 import { VitalsAlertBanner } from "@/components/VitalsAlertBanner";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
@@ -67,9 +64,6 @@ export function Dashboard() {
   const sideQuests = todaysPlan
     ? todaysPlan.sideQuestTaskIds.map((taskId) => taskById.get(taskId)).filter((task) => task !== undefined)
     : [];
-  const plannedQuestCount = todaysPlan
-    ? Number(Boolean(mainQuest)) + sideQuests.length
-    : stats.plannedTodayTasks.length;
   const latestMetricEntry = useMemo(
     () => getLatestMetricEntry(metricEntries),
     [metricEntries]
@@ -101,26 +95,6 @@ export function Dashboard() {
     activeQuestCount + stats.completedTodayCount > 0
       ? Math.round((stats.completedTodayCount / (activeQuestCount + stats.completedTodayCount)) * 100)
       : 0;
-  const advisorMessage = useMemo(() => {
-    if (!hasLoaded) {
-      return "Reading today's quest signal...";
-    }
-
-    if (mainQuest) {
-      return `Start with "${mainQuest.title}". Make the first action small enough to begin in five minutes.`;
-    }
-
-    if (todaysPlan) {
-      return "Today's plan exists, but the Main Quest needs an active quest. Pick a fresh anchor before side objectives.";
-    }
-
-    if (stats.plannedTodayTasks.length > 0) {
-      return "You have planned quests. Choose the one that most protects your energy and attention first.";
-    }
-
-    return "Start the morning stand-up and choose one Main Quest before adding more side objectives.";
-  }, [hasLoaded, mainQuest, stats.plannedTodayTasks.length, todaysPlan]);
-
   const brief = useMemo(
     () =>
       now
@@ -255,24 +229,6 @@ export function Dashboard() {
         </section>
       ) : null}
 
-      {hasLoaded ? <NorthStarCard /> : null}
-
-      {hasLoaded ? <TimelineMirrorCard /> : null}
-
-      <section className="dashboard-grid" aria-label="Today snapshot">
-        <StatusPanel
-          label="Planned Today"
-          tone="success"
-          value={String(plannedQuestCount)}
-        />
-        <StatusPanel label="Backlog" value={String(stats.activeBacklogCount)} />
-        <StatusPanel
-          label="Completed Today"
-          tone="warning"
-          value={String(stats.completedTodayCount)}
-        />
-      </section>
-
       {hasLoaded && demoState ? (
         <section className="dashboard-section demo-dashboard-callout" aria-label="Demo data summary">
           <SectionHeader eyebrow="Portfolio Mode" title="Screenshot-Ready Demo" />
@@ -290,6 +246,11 @@ export function Dashboard() {
       <div className="dashboard-layout">
         <section className="dashboard-section" aria-label="Today section">
           <SectionHeader eyebrow="Today Section" title="Planned Quests" />
+          {hasLoaded && stats.activeBacklogCount > 0 ? (
+            <p className="dashboard-backlog-link">
+              <Link href="/tasks">{stats.activeBacklogCount} in backlog →</Link>
+            </p>
+          ) : null}
           {!hasLoaded ? <p className="quest-empty">Loading dashboard...</p> : null}
           {hasLoaded && todaysPlan ? (
             <div className="daily-plan-summary">
@@ -340,8 +301,6 @@ export function Dashboard() {
         </section>
 
         <aside className="dashboard-side" aria-label="Dashboard actions">
-          <AiAdvisorPopup message={advisorMessage} />
-
           <section className="dashboard-section">
             <SectionHeader eyebrow="Metrics" title="Latest Snapshot" />
             {latestMetricEntry ? (
@@ -406,25 +365,10 @@ export function Dashboard() {
             )}
           </section>
 
-          <section className="dashboard-section">
-            <SectionHeader eyebrow="Next Action" title="Command Menu" />
-            <div className="command-list">
-              <CommandButton href="/standup/morning" icon="morning">
-                Start Morning Stand-Up
-              </CommandButton>
-              <CommandButton href="/tasks" icon="tasks">
-                Open Quest Log
-              </CommandButton>
-              <CommandButton href="/metrics" icon="metrics">
-                Log Metrics
-              </CommandButton>
-              <CommandButton href="/health-import" icon="healthImport">
-                Import Health Data
-              </CommandButton>
-            </div>
-          </section>
         </aside>
       </div>
+
+      {hasLoaded ? <NorthStarCard /> : null}
     </section>
   );
 }

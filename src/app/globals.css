@@ -7950,6 +7950,22 @@ button,
    order. All tokens are theme-aware (see :root + theme blocks).
    ============================================================ */
 
+/* Quiet backlog count under the Planned Quests header — replaces the
+   removed stat-tile row. */
+.dashboard-backlog-link {
+  margin: -0.4rem 0 0.8rem;
+  font-size: 0.82rem;
+}
+
+.dashboard-backlog-link a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.dashboard-backlog-link a:hover {
+  color: var(--accent);
+}
+
 /* ---- 1. Depth system: content panels whisper, chrome keeps the bevel ---- */
 
 /* Page-level shells: hairline border + ambient/key shadow + faint top
