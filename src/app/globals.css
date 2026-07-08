@@ -8666,3 +8666,103 @@ h2 {
   text-shadow: 0 0 8px var(--menu-cursor-glow);
   vertical-align: 0.08em;
 }
+
+/* ---------- Nutrition friction killers: quick add, copy yesterday, water ---------- */
+.nutri-meal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+}
+
+.nutri-copy-day {
+  display: flex;
+  justify-content: center;
+}
+
+.nutri-quick-add {
+  display: grid;
+  gap: 0.35rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.nutri-quick-label {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.nutri-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.nutri-quick-chip {
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.nutri-quick-chip:hover,
+.nutri-quick-chip:focus-visible {
+  border-color: var(--line-strong);
+}
+
+.nutri-quick-chip small {
+  color: var(--muted);
+  margin-left: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Water card: hydration-blue accent reusing the --line-strong tone. */
+.water-tracker {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.water-count {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
+.water-count strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.water-meter span {
+  background: linear-gradient(90deg, var(--line-strong), var(--accent));
+  box-shadow: 0 0 1rem var(--glow-blue);
+  transition: width 0.45s ease;
+}
+
+.water-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.water-add-btn {
+  border-color: var(--line-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nutri-quick-chip {
+    transition: none;
+  }
+
+  .water-meter span {
+    transition: none;
+  }
+}

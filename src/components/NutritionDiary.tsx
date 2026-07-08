@@ -6,6 +6,7 @@ import { playDing } from "@/client/sfx";
 import { FoodSearch } from "@/components/FoodSearch";
 import { MealPhotoLogger } from "@/components/MealPhotoLogger";
 import { SectionHeader } from "@/components/SectionHeader";
+import { WaterTracker } from "@/components/WaterTracker";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 import { loadNutritionGoals, saveNutritionGoals } from "@/data/nutritionGoalsRepository";
@@ -23,6 +24,12 @@ import {
   type DailyNutritionTarget
 } from "@/domain/dailyNutritionTarget";
 import { toLocalIsoDate } from "@/domain/dates";
+import {
+  buildQuickAddSuggestions,
+  copyEntriesToDate,
+  previousIsoDate,
+  type QuickAddFood
+} from "@/domain/foodQuickAdd";
 import {
   caloriesRemaining,
   createFoodEntry,
@@ -134,6 +141,14 @@ export function NutritionDiary() {
 
   const dayEntries = useMemo(() => getFoodEntriesForDate(foods, viewDate), [foods, viewDate]);
   const byMeal = useMemo(() => groupEntriesByMeal(dayEntries), [dayEntries]);
+  const prevDate = useMemo(() => previousIsoDate(viewDate), [viewDate]);
+  const prevDayEntries = useMemo(() => getFoodEntriesForDate(foods, prevDate), [foods, prevDate]);
+  const prevByMeal = useMemo(() => groupEntriesByMeal(prevDayEntries), [prevDayEntries]);
+  const quickAdd = useMemo(
+    () => buildQuickAddSuggestions(foods, { today: viewDate }),
+    [foods, viewDate]
+  );
+  const hasQuickAdd = quickAdd.recent.length > 0 || quickAdd.frequent.length > 0;
   const totals = useMemo(() => sumMacros(dayEntries), [dayEntries]);
   // Today uses the metrics-driven daily target; past days fall back to the
   // static goals (we don't recompute historical targets).
@@ -186,6 +201,41 @@ export function NutritionDiary() {
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Couldn't save that food.");
     }
+  }
+
+  /** Shared persist path for quick add + copy yesterday, so events fire. */
+  function saveNewEntries(newEntries: FoodEntry[]) {
+    if (newEntries.length === 0) return;
+    const repo = createLocalFoodEntryRepository(window.localStorage);
+    repo.save([...newEntries, ...repo.load()]);
+    setFoods(repo.load());
+    playDing();
+  }
+
+  function quickLogFood(meal: MealType, item: QuickAddFood) {
+    try {
+      saveNewEntries([
+        createFoodEntry({
+          date: viewDate,
+          mealType: meal,
+          description: item.name,
+          macros: item.macros,
+          estimateSource: "manual"
+        })
+      ]);
+      setAddingMeal(null);
+      setError(null);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Couldn't log that food.");
+    }
+  }
+
+  function copyMealFromYesterday(meal: MealType) {
+    saveNewEntries(copyEntriesToDate(prevByMeal[meal], viewDate));
+  }
+
+  function copyAllFromYesterday() {
+    saveNewEntries(copyEntriesToDate(prevDayEntries, viewDate));
   }
 
   function removeFood(id: string) {
@@ -257,6 +307,14 @@ export function NutritionDiary() {
           </button>
         )}
       </div>
+
+      {dayEntries.length === 0 && prevDayEntries.length > 0 ? (
+        <div className="nutri-copy-day">
+          <button type="button" className="nutri-mini-btn" onClick={copyAllFromYesterday}>
+            ⧉ Copy all of yesterday ({prevDayEntries.length})
+          </button>
+        </div>
+      ) : null}
 
       <section className="dashboard-section nutri-budget" aria-label="Calorie budget">
         {isToday && dailyTarget ? (
@@ -380,6 +438,8 @@ export function NutritionDiary() {
         </section>
       ) : null}
 
+      <WaterTracker date={viewDate} />
+
       {error ? (
         <p className="form-error" role="alert">
           {error}
@@ -393,14 +453,26 @@ export function NutritionDiary() {
           <section className="dashboard-section nutri-meal" key={meal} aria-label={MEAL_LABEL[meal]}>
             <div className="nutri-meal-head">
               <SectionHeader eyebrow={`${Math.round(mealCals)} cal`} title={MEAL_LABEL[meal]} />
-              <button
-                type="button"
-                className="nutri-mini-btn"
-                aria-label={`Add food to ${MEAL_LABEL[meal]}`}
-                onClick={() => openAdd(meal)}
-              >
-                + Add
-              </button>
+              <div className="nutri-meal-actions">
+                {entries.length === 0 && prevByMeal[meal].length > 0 ? (
+                  <button
+                    type="button"
+                    className="nutri-mini-btn"
+                    aria-label={`Copy yesterday's ${MEAL_LABEL[meal]}`}
+                    onClick={() => copyMealFromYesterday(meal)}
+                  >
+                    ⧉ Yesterday
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="nutri-mini-btn"
+                  aria-label={`Add food to ${MEAL_LABEL[meal]}`}
+                  onClick={() => openAdd(meal)}
+                >
+                  + Add
+                </button>
+              </div>
             </div>
 
             {entries.length > 0 ? (
@@ -431,6 +503,46 @@ export function NutritionDiary() {
 
             {addingMeal === meal ? (
               <div className="nutri-add-form">
+                {hasQuickAdd ? (
+                  <div className="nutri-quick-add" aria-label="Quick add">
+                    {quickAdd.recent.length > 0 ? (
+                      <>
+                        <p className="nutri-quick-label">Quick add · Recent</p>
+                        <div className="nutri-quick-chips">
+                          {quickAdd.recent.map((item) => (
+                            <button
+                              type="button"
+                              className="nutri-quick-chip"
+                              key={`recent-${item.name}-${item.calories}`}
+                              onClick={() => quickLogFood(meal, item)}
+                            >
+                              {item.name}
+                              <small>{Math.round(item.calories)} cal</small>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : null}
+                    {quickAdd.frequent.length > 0 ? (
+                      <>
+                        <p className="nutri-quick-label">Quick add · Frequent</p>
+                        <div className="nutri-quick-chips">
+                          {quickAdd.frequent.map((item) => (
+                            <button
+                              type="button"
+                              className="nutri-quick-chip"
+                              key={`frequent-${item.name}-${item.calories}`}
+                              onClick={() => quickLogFood(meal, item)}
+                            >
+                              {item.name}
+                              <small>{Math.round(item.calories)} cal</small>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
                 <input className="fitness-input" placeholder="Food description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
                 <div className="nutri-add-grid">
                   <input className="fitness-input" type="number" inputMode="numeric" min={0} placeholder="cal" aria-label="Calories" value={form.calories} onChange={(e) => setForm({ ...form, calories: e.target.value })} />
