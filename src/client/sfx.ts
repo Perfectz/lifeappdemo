@@ -60,3 +60,10 @@ export function playVictory(): void {
   if (!isSoundEnabled()) return;
   [784, 784, 1047].forEach((freq, index) => tone(freq, index * 0.12, 0.18, 0.07));
 }
+
+/** Two-note "rest is over" ping when the rest timer hits zero. */
+export function playRestDone(): void {
+  if (!isSoundEnabled()) return;
+  tone(988, 0, 0.1);
+  tone(1480, 0.09, 0.14, 0.07);
+}

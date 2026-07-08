@@ -2,7 +2,7 @@ import type { CharacterSpritePose } from "@/config/sprites";
 
 export const celebrateEventName = "lifequest:celebrate";
 
-export type CelebrationKind = "quest" | "levelup" | "streak";
+export type CelebrationKind = "quest" | "levelup" | "streak" | "pr";
 
 export type CelebrationDetail = {
   kind: CelebrationKind;

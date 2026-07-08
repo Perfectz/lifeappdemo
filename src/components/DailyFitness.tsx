@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { playDing } from "@/client/sfx";
+import { celebrate } from "@/client/celebrate";
+import { playDing, playVictory } from "@/client/sfx";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import {
@@ -16,6 +17,11 @@ import {
 } from "@/config/fitness";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import { toLocalIsoDate } from "@/domain/dates";
+import {
+  detectNewRecords,
+  formatRecordTitle,
+  prSetIndexesForWorkout
+} from "@/domain/personalRecords";
 import { createWorkout } from "@/domain/workouts";
 import {
   getOrComputeWorkoutPlan,
@@ -23,6 +29,7 @@ import {
   suggestionToWorkoutInput,
   swapBucketPreset
 } from "@/client/workoutSuggestion";
+import { RestTimer } from "@/components/RestTimer";
 import { TrainingProfilePanel } from "@/components/TrainingProfilePanel";
 import { formatPrescriptionScheme } from "@/domain/coachProgram";
 import type { ExercisePrescription } from "@/domain/strengthProgression";
@@ -176,15 +183,43 @@ export function DailyFitness() {
   const isToday = viewed === todayIso;
   const status = useMemo(() => getDailyFitnessStatus(workouts, viewed), [workouts, viewed]);
 
+  // "PR" badges for the logged strength rows — recomputed from history, never persisted.
+  const loggedStrength = status.byType.strength;
+  const strengthPrIndexes = useMemo(
+    () => (loggedStrength ? prSetIndexesForWorkout(workouts, loggedStrength) : new Set<number>()),
+    [workouts, loggedStrength]
+  );
+
   const persist = useCallback((next: Workout[]) => {
     createLocalWorkoutRepository(window.localStorage).save(next);
     setWorkouts(next);
   }, []);
 
+  // Rest timer chip: shown after a strength log; remounting via key restarts it.
+  const [restTimerKey, setRestTimerKey] = useState<number | null>(null);
+  const dismissRestTimer = useCallback(() => setRestTimerKey(null), []);
+
   const addWorkout = useCallback(
     (workout: Workout) => {
       persist([workout, ...workouts]);
-      playDing();
+      if (workout.type === "strength") {
+        // PR detection runs against the history as it stood before this log.
+        const records = detectNewRecords(workouts, workout);
+        if (records.length > 0) {
+          celebrate({
+            kind: "pr",
+            title: formatRecordTitle(records[0]),
+            subtitle: records[0].summary,
+            pose: "victory"
+          });
+          playVictory();
+        } else {
+          playDing();
+        }
+        setRestTimerKey(Date.now());
+      } else {
+        playDing();
+      }
     },
     [persist, workouts]
   );
@@ -595,7 +630,14 @@ export function DailyFitness() {
               <ul className="fitness-set-list">
                 {status.byType.strength.sets.map((set, index) => (
                   <li key={`${set.exercise}-${index}`}>
-                    <span>{set.exercise}</span>
+                    <span>
+                      {set.exercise}
+                      {strengthPrIndexes.has(index) ? (
+                        <span className="fitness-pr-badge" title="Personal record">
+                          PR
+                        </span>
+                      ) : null}
+                    </span>
                     {set.weightLbs ? <small>{set.weightLbs} lb</small> : null}
                   </li>
                 ))}
@@ -840,6 +882,9 @@ export function DailyFitness() {
 
       {/* Training profile — what the coach programs with */}
       <TrainingProfilePanel />
+
+      {/* Between-sets rest countdown — dismissible, never blocks logging. */}
+      {restTimerKey !== null ? <RestTimer key={restTimerKey} onDismiss={dismissRestTimer} /> : null}
     </section>
   );
 }

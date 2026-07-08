@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { CharacterSprite } from "@/components/CharacterSprite";
+import { ExerciseProgressPanel } from "@/components/ExerciseProgressPanel";
 import { NutritionTrends } from "@/components/NutritionTrends";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
@@ -171,6 +172,8 @@ export function TrendsView() {
               ))}
             </ul>
           </section>
+
+          <ExerciseProgressPanel />
 
           <NutritionTrends />
         </div>
