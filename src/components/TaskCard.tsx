@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { TaskForm } from "@/components/TaskForm";
 import type { Task, TaskInput } from "@/domain";
+import { checklistProgress, taskToInput } from "@/domain/tasks";
 
 type TaskCardProps = {
   onArchive: (task: Task) => void;
@@ -11,6 +12,13 @@ type TaskCardProps = {
   onReopen: (task: Task) => void;
   onUpdate: (task: Task, input: TaskInput) => void;
   task: Task;
+};
+
+const repeatLabels: Record<string, string> = {
+  daily: "Daily",
+  weekdays: "Weekdays",
+  weekly: "Weekly",
+  monthly: "Monthly"
 };
 
 export function TaskCard({
@@ -38,6 +46,16 @@ export function TaskCard({
     );
   }
 
+  const progress = checklistProgress(task);
+
+  function toggleChecklistItem(itemId: string) {
+    const checklist = (task.checklist ?? []).map((item) =>
+      item.id === itemId ? { ...item, done: !item.done } : item
+    );
+    // Persist through the normal update path so every consumer sees it.
+    onUpdate(task, { ...taskToInput(task), checklist });
+  }
+
   return (
     <li className="quest-card">
       <div>
@@ -46,11 +64,45 @@ export function TaskCard({
             <span className={`priority-gem priority-gem-${task.priority}`} aria-hidden="true" />
             {task.title}
           </h3>
-          <span className={`priority-badge priority-${task.priority}`}>
-            {task.priority}
-          </span>
+          <div className="quest-card-badges">
+            {progress.total > 0 ? (
+              <span
+                className="checklist-progress"
+                aria-label={`${progress.done} of ${progress.total} steps done`}
+              >
+                {progress.done}/{progress.total}
+              </span>
+            ) : null}
+            {task.recurrence ? (
+              <span
+                className="recurrence-badge"
+                title={`Repeats ${repeatLabels[task.recurrence.frequency].toLowerCase()}`}
+              >
+                <span aria-hidden="true">↻</span> {repeatLabels[task.recurrence.frequency]}
+              </span>
+            ) : null}
+            <span className={`priority-badge priority-${task.priority}`}>
+              {task.priority}
+            </span>
+          </div>
         </div>
         {task.description ? <p>{task.description}</p> : null}
+        {task.checklist && task.checklist.length > 0 ? (
+          <ul className="quest-checklist" aria-label={`${task.title} checklist`}>
+            {task.checklist.map((item) => (
+              <li key={item.id}>
+                <label className={item.done ? "quest-checklist-done" : undefined}>
+                  <input
+                    checked={item.done}
+                    onChange={() => toggleChecklistItem(item.id)}
+                    type="checkbox"
+                  />
+                  <span>{item.text}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <dl className="quest-meta">
           {task.dueDate ? (
             <div>

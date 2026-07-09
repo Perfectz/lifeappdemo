@@ -8766,3 +8766,204 @@ h2 {
     transition: none;
   }
 }
+
+/* ----------------------------------------------------------------------------
+ * Quest Log modernization: filters, date buckets, recurrence, checklists.
+ * Append-only; colors come from theme tokens so every theme inherits them.
+ * ------------------------------------------------------------------------- */
+
+.quest-filter-bar {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface-raised);
+}
+
+.quest-search {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.quest-search span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.quest-search input {
+  width: 100%;
+}
+
+.quest-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.quest-filter-chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.25rem 0.7rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.quest-filter-chip:hover,
+.quest-filter-chip:focus-visible {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.quest-filter-chip-active {
+  border-color: var(--accent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.quest-filter-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.quest-filter-clear {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+/* Overdue bucket: subtle warning tint on the section and its cards. */
+.quest-group-warn .quest-group-header h2 {
+  color: var(--warning);
+}
+
+.quest-group-warn .quest-count-badge {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.quest-group-warn .quest-card {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--line));
+  background: color-mix(in srgb, var(--warning) 7%, var(--surface-raised));
+}
+
+/* Recurrence + checklist badges in the card heading. */
+.quest-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+}
+
+.recurrence-badge,
+.checklist-progress {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.recurrence-badge {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  color: var(--accent);
+}
+
+/* Checklist rendering on the card. */
+.quest-checklist {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.quest-checklist label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.quest-checklist-done span {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+/* Checklist editor inside the quest form. */
+.checklist-fieldset {
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+}
+
+.checklist-editor {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.checklist-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.checklist-editor-row input {
+  flex: 1 1 auto;
+}
+
+.checklist-remove {
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+}
+
+.checklist-remove:hover,
+.checklist-remove:focus-visible {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.checklist-add {
+  border: 1px dashed var(--line-strong);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.checklist-add:hover,
+.checklist-add:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quest-filter-chip,
+  .checklist-add {
+    transition: none;
+  }
+}

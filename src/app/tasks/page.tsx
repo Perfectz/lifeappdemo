@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { CoachQuestSuggestions } from "@/components/CoachQuestSuggestions";
 import { QuestLog } from "@/components/QuestLog";
 
 export const metadata: Metadata = {
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function TasksPage() {
-  return <QuestLog />;
+  return (
+    <>
+      <CoachQuestSuggestions />
+      <QuestLog />
+    </>
+  );
 }

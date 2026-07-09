@@ -11,6 +11,8 @@ type TaskGroupProps = {
   onUpdate: (task: Task, input: TaskInput) => void;
   tasks: Task[];
   title: string;
+  /** "warn" tints the section (used by the Overdue bucket). */
+  tone?: "warn";
 };
 
 export function TaskGroup({
@@ -20,10 +22,14 @@ export function TaskGroup({
   onReopen,
   onUpdate,
   tasks,
-  title
+  title,
+  tone
 }: TaskGroupProps) {
   return (
-    <section className="quest-group" aria-label={title}>
+    <section
+      className={tone === "warn" ? "quest-group quest-group-warn" : "quest-group"}
+      aria-label={title}
+    >
       <div className="quest-group-header">
         <h2>{title}</h2>
         <span className="quest-count-badge" aria-label={`${tasks.length} quests`}>

@@ -2,8 +2,14 @@
 
 import { type FormEvent, useState } from "react";
 
-import type { Task, TaskInput, TaskPriority, TaskTag } from "@/domain";
-import { taskPriorities, taskTags, validateTaskInput } from "@/domain/tasks";
+import type { RecurrenceFrequency, Task, TaskInput, TaskPriority, TaskTag } from "@/domain";
+import {
+  newChecklistItem,
+  recurrenceFrequencies,
+  taskPriorities,
+  taskTags,
+  validateTaskInput
+} from "@/domain/tasks";
 
 type TaskFormProps = {
   buttonLabel: string;
@@ -18,7 +24,16 @@ const defaultInput: TaskInput = {
   priority: "medium",
   tags: [],
   dueDate: "",
-  plannedForDate: ""
+  plannedForDate: "",
+  recurrence: undefined,
+  checklist: []
+};
+
+const repeatLabels: Record<RecurrenceFrequency, string> = {
+  daily: "Daily",
+  weekdays: "Weekdays",
+  weekly: "Weekly",
+  monthly: "Monthly"
 };
 
 function getInitialInput(task?: Task): TaskInput {
@@ -32,7 +47,9 @@ function getInitialInput(task?: Task): TaskInput {
     priority: task.priority,
     tags: task.tags,
     dueDate: task.dueDate ?? "",
-    plannedForDate: task.plannedForDate ?? ""
+    plannedForDate: task.plannedForDate ?? "",
+    recurrence: task.recurrence,
+    checklist: task.checklist ?? []
   };
 }
 
@@ -56,6 +73,36 @@ export function TaskForm({ buttonLabel, initialTask, onCancel, onSubmit }: TaskF
     }));
   }
 
+  function setRepeat(value: string) {
+    setField(
+      "recurrence",
+      value === "none" ? undefined : { frequency: value as RecurrenceFrequency }
+    );
+  }
+
+  function addChecklistLine() {
+    setInput((current) => ({
+      ...current,
+      checklist: [...(current.checklist ?? []), newChecklistItem()]
+    }));
+  }
+
+  function setChecklistText(itemId: string, text: string) {
+    setInput((current) => ({
+      ...current,
+      checklist: (current.checklist ?? []).map((item) =>
+        item.id === itemId ? { ...item, text } : item
+      )
+    }));
+  }
+
+  function removeChecklistLine(itemId: string) {
+    setInput((current) => ({
+      ...current,
+      checklist: (current.checklist ?? []).filter((item) => item.id !== itemId)
+    }));
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -73,6 +120,8 @@ export function TaskForm({ buttonLabel, initialTask, onCancel, onSubmit }: TaskF
       setInput(defaultInput);
     }
   }
+
+  const checklist = input.checklist ?? [];
 
   return (
     <form className="quest-form" onSubmit={handleSubmit}>
@@ -129,6 +178,20 @@ export function TaskForm({ buttonLabel, initialTask, onCancel, onSubmit }: TaskF
             value={input.plannedForDate}
           />
         </label>
+        <label>
+          <span>Repeat</span>
+          <select
+            onChange={(event) => setRepeat(event.target.value)}
+            value={input.recurrence?.frequency ?? "none"}
+          >
+            <option value="none">None</option>
+            {recurrenceFrequencies.map((frequency) => (
+              <option key={frequency} value={frequency}>
+                {repeatLabels[frequency]}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       <fieldset className="tag-fieldset">
         <legend>Tags</legend>
@@ -144,6 +207,35 @@ export function TaskForm({ buttonLabel, initialTask, onCancel, onSubmit }: TaskF
             </label>
           ))}
         </div>
+      </fieldset>
+      <fieldset className="checklist-fieldset">
+        <legend>Checklist</legend>
+        {checklist.length > 0 ? (
+          <ul className="checklist-editor">
+            {checklist.map((item, index) => (
+              <li className="checklist-editor-row" key={item.id}>
+                <input
+                  aria-label={`Checklist step ${index + 1}`}
+                  onChange={(event) => setChecklistText(item.id, event.target.value)}
+                  placeholder="Small step"
+                  type="text"
+                  value={item.text}
+                />
+                <button
+                  aria-label={`Remove checklist step ${index + 1}`}
+                  className="checklist-remove"
+                  onClick={() => removeChecklistLine(item.id)}
+                  type="button"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <button className="checklist-add" onClick={addChecklistLine} type="button">
+          + Add step
+        </button>
       </fieldset>
       <div className="quest-form-actions">
         <button type="submit">{buttonLabel}</button>

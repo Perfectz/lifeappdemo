@@ -20,6 +20,18 @@ export type TaskTag =
   | "admin"
   | "learning";
 
+export type RecurrenceFrequency = "daily" | "weekdays" | "weekly" | "monthly";
+
+export type TaskRecurrence = {
+  frequency: RecurrenceFrequency;
+};
+
+export type ChecklistItem = {
+  id: string;
+  text: string;
+  done: boolean;
+};
+
 export type Task = TimestampedEntity & {
   title: string;
   description?: string;
@@ -30,6 +42,10 @@ export type Task = TimestampedEntity & {
   plannedForDate?: IsoDate;
   completedAt?: IsoDateTime;
   archivedAt?: IsoDateTime;
+  /** Optional repeat rule. Completing a recurring task spawns the next occurrence. */
+  recurrence?: TaskRecurrence;
+  /** Optional subtask checklist. Parent completion never requires all items done. */
+  checklist?: ChecklistItem[];
 };
 
 export type DailyPlanStatus = "planned" | "closed";

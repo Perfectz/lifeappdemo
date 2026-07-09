@@ -11,6 +11,7 @@ export type {
   BiometricKind,
   BiometricReading,
   BiometricSource,
+  ChecklistItem,
   EntityId,
   Equipment,
   EstimateConfidence,
@@ -35,9 +36,11 @@ export type {
   MetricSource,
   Note,
   NutritionEstimateSource,
+  RecurrenceFrequency,
   StrengthSet,
   Task,
   TaskPriority,
+  TaskRecurrence,
   TaskStatus,
   TaskTag,
   TimestampedEntity,
@@ -48,7 +51,8 @@ export type {
   WorkoutSource,
   WorkoutType
 } from "./types";
-export type { TaskGroups, TaskInput, TaskValidationResult } from "./tasks";
+export type { CompleteTaskResult, TaskGroups, TaskInput, TaskValidationResult } from "./tasks";
+export type { ActiveBucketId, ActiveBuckets, TaskFilters } from "./taskViews";
 export type { DashboardStats } from "./dashboard";
 export type { HeroStatus } from "./heroStatus";
 export type { NavStatus, NavStatusMap } from "./navStatus";
