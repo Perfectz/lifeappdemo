@@ -126,12 +126,72 @@ describe("getHeroStatus", () => {
     const status = getHeroStatus(tasks, metrics, today);
 
     expect(status.totalCompleted).toBe(6);
+    expect(status.totalXp).toBe(6);
     expect(status.level).toBe(2);
     expect(status.xpCurrent).toBe(1);
     expect(status.xpForNextLevel).toBe(5);
     expect(status.hp).toBe(4);
     expect(status.mp).toBe(5);
     expect(status.questsToday).toEqual({ planned: 2, completed: 1 });
+  });
+
+  it("REGRESSION: legacy tasks without difficulty produce the exact pre-XP levels", () => {
+    // Before difficulty existed: level = floor(totalCompleted / 5) + 1,
+    // xpCurrent = totalCompleted % 5. Every legacy fixture must still land
+    // on those numbers to the digit.
+    for (const completedCount of [0, 1, 4, 5, 6, 12, 25, 37]) {
+      const tasks = Array.from({ length: completedCount }, (_, index) =>
+        makeTask({
+          id: `legacy-${index}`,
+          status: "done",
+          completedAt: localIso(2026, 4, 1, 10)
+        })
+      );
+
+      const status = getHeroStatus(tasks, [], today);
+
+      expect(status.level).toBe(Math.floor(completedCount / 5) + 1);
+      expect(status.xpCurrent).toBe(completedCount % 5);
+      expect(status.totalXp).toBe(completedCount);
+      expect(status.totalCompleted).toBe(completedCount);
+    }
+  });
+
+  it("weights XP by difficulty: quick/standard 1, hard 2, epic 4", () => {
+    const tasks = [
+      makeTask({ id: "q", status: "done", difficulty: "quick", completedAt: localIso(2026, 4, 4, 9) }),
+      makeTask({ id: "s", status: "done", completedAt: localIso(2026, 4, 4, 10) }),
+      makeTask({ id: "h", status: "done", difficulty: "hard", completedAt: localIso(2026, 4, 4, 11) }),
+      makeTask({ id: "e", status: "done", difficulty: "epic", completedAt: localIso(2026, 4, 4, 12) }),
+      makeTask({ id: "open-epic", difficulty: "epic", plannedForDate: today })
+    ];
+
+    const status = getHeroStatus(tasks, [], today);
+
+    // 1 + 1 + 2 + 4 = 8 XP -> level 2 with 3 XP into the bar.
+    expect(status.totalXp).toBe(8);
+    expect(status.level).toBe(2);
+    expect(status.xpCurrent).toBe(3);
+    // Counts stay task-based: 4 completed today, 1 planned.
+    expect(status.totalCompleted).toBe(4);
+    expect(status.questsToday).toEqual({ planned: 1, completed: 4 });
+  });
+
+  it("an epic completion can jump a whole level in one clear", () => {
+    const before = [
+      makeTask({ id: "a", status: "done", completedAt: localIso(2026, 4, 3, 10) }),
+      makeTask({ id: "b", status: "done", completedAt: localIso(2026, 4, 3, 11) })
+    ];
+    const after = [
+      ...before,
+      makeTask({ id: "boss", status: "done", difficulty: "epic", completedAt: localIso(2026, 4, 4, 10) })
+    ];
+
+    // 2 XP -> level 1; +4 XP epic -> 6 XP -> level 2. AppShell's watcher
+    // compares consecutive getHeroStatus snapshots, so this delta is what
+    // fires the levelup celebration.
+    expect(getHeroStatus(before, [], today).level).toBe(1);
+    expect(getHeroStatus(after, [], today).level).toBe(2);
   });
 
   it("returns empty HP/MP and level 1 when no data exists", () => {

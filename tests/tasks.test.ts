@@ -13,9 +13,11 @@ import {
   nextOccurrenceDate,
   reopenTask,
   taskToInput,
+  taskXp,
   toggleChecklistItem,
   updateTask,
-  validateTaskInput
+  validateTaskInput,
+  xpForDifficulty
 } from "@/domain/tasks";
 
 const now = "2026-05-03T20:00:00.000Z";
@@ -192,6 +194,78 @@ describe("task domain", () => {
       recurrence: { frequency: "monthly" },
       checklist: [{ id: "c1", text: "Step", done: false }]
     });
+  });
+});
+
+describe("task difficulty", () => {
+  it("awards 1/1/2/4 XP per tier and treats absence as standard", () => {
+    expect(xpForDifficulty).toEqual({ quick: 1, standard: 1, hard: 2, epic: 4 });
+    expect(taskXp(makeTask())).toBe(1);
+    expect(taskXp(makeTask({ difficulty: "quick" }))).toBe(1);
+    expect(taskXp(makeTask({ difficulty: "standard" }))).toBe(1);
+    expect(taskXp(makeTask({ difficulty: "hard" }))).toBe(2);
+    expect(taskXp(makeTask({ difficulty: "epic" }))).toBe(4);
+  });
+
+  it("carries difficulty through createTask and normalizes standard to absence", () => {
+    const epic = createTask(
+      { title: "Slay the deadline", priority: "high", tags: [], difficulty: "epic" },
+      now
+    );
+    const standard = createTask(
+      { title: "Plain quest", priority: "low", tags: [], difficulty: "standard" },
+      now
+    );
+
+    expect(epic.difficulty).toBe("epic");
+    expect(standard.difficulty).toBeUndefined();
+  });
+
+  it("updateTask preserves difficulty when the input omits the key", () => {
+    const task = makeTask({ difficulty: "epic" });
+
+    const updated = updateTask(task, { title: "Renamed", priority: "high", tags: [] }, now);
+
+    expect(updated.difficulty).toBe("epic");
+  });
+
+  it("updateTask sets and clears difficulty when the key is present", () => {
+    const task = makeTask({ difficulty: "hard" });
+
+    const promoted = updateTask(
+      task,
+      { title: task.title, priority: task.priority, tags: task.tags, difficulty: "epic" },
+      now
+    );
+    const reset = updateTask(
+      task,
+      { title: task.title, priority: task.priority, tags: task.tags, difficulty: "standard" },
+      now
+    );
+
+    expect(promoted.difficulty).toBe("epic");
+    expect(reset.difficulty).toBeUndefined();
+  });
+
+  it("taskToInput carries difficulty for the edit form", () => {
+    expect(taskToInput(makeTask({ difficulty: "hard" })).difficulty).toBe("hard");
+  });
+
+  it("completing a recurring quest carries difficulty to the next occurrence", () => {
+    const { next } = completeTaskWithRecurrence(
+      makeTask({ difficulty: "epic", recurrence: { frequency: "daily" }, dueDate: "2026-05-03" }),
+      now,
+      "2026-05-03"
+    );
+
+    expect(next?.difficulty).toBe("epic");
+  });
+
+  it("isTask accepts absent or valid difficulty and rejects malformed values", () => {
+    expect(isTask(makeTask())).toBe(true);
+    expect(isTask(makeTask({ difficulty: "epic" }))).toBe(true);
+    expect(isTask(makeTask({ difficulty: "legendary" as never }))).toBe(false);
+    expect(isTask(makeTask({ difficulty: 4 as never }))).toBe(false);
   });
 });
 

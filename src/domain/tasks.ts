@@ -4,6 +4,7 @@ import type {
   IsoDateTime,
   RecurrenceFrequency,
   Task,
+  TaskDifficulty,
   TaskPriority,
   TaskRecurrence,
   TaskTag
@@ -24,6 +25,24 @@ export const recurrenceFrequencies: RecurrenceFrequency[] = [
   "weekly",
   "monthly"
 ];
+export const taskDifficulties: TaskDifficulty[] = ["quick", "standard", "hard", "epic"];
+
+/**
+ * XP earned for clearing a quest of each tier. Standard (and every legacy
+ * task without a difficulty) is worth exactly 1 XP so historic levels —
+ * floor(totalCompleted / 5) + 1 — are preserved to the digit.
+ */
+export const xpForDifficulty: Record<TaskDifficulty, number> = {
+  quick: 1,
+  standard: 1,
+  hard: 2,
+  epic: 4
+};
+
+/** XP a task is worth when completed; absent difficulty = standard = 1 XP. */
+export function taskXp(task: Pick<Task, "difficulty">): number {
+  return xpForDifficulty[task.difficulty ?? "standard"];
+}
 
 export type TaskInput = {
   title: string;
@@ -34,6 +53,7 @@ export type TaskInput = {
   plannedForDate?: IsoDate;
   recurrence?: TaskRecurrence;
   checklist?: ChecklistItem[];
+  difficulty?: TaskDifficulty;
 };
 
 export type TaskGroups = {
@@ -88,7 +108,10 @@ export function validateTaskInput(input: TaskInput): TaskValidationResult {
       dueDate: normalizeOptionalText(input.dueDate),
       plannedForDate: normalizeOptionalText(input.plannedForDate),
       recurrence: input.recurrence,
-      checklist: normalizeChecklist(input.checklist)
+      checklist: normalizeChecklist(input.checklist),
+      // "standard" is the implicit default — store it as absence so legacy
+      // and new tasks stay byte-compatible.
+      difficulty: input.difficulty === "standard" ? undefined : input.difficulty
     }
   };
 }
@@ -111,6 +134,7 @@ export function createTask(input: TaskInput, now: IsoDateTime = new Date().toISO
     plannedForDate: validation.value.plannedForDate,
     recurrence: validation.value.recurrence,
     checklist: validation.value.checklist,
+    difficulty: validation.value.difficulty,
     createdAt: now,
     updatedAt: now
   };
@@ -140,6 +164,7 @@ export function updateTask(
     // always includes the keys so it can clear them intentionally.
     recurrence: "recurrence" in input ? validation.value.recurrence : task.recurrence,
     checklist: "checklist" in input ? validation.value.checklist : task.checklist,
+    difficulty: "difficulty" in input ? validation.value.difficulty : task.difficulty,
     updatedAt: now
   };
 }
@@ -345,7 +370,8 @@ export function taskToInput(task: Task): TaskInput {
     dueDate: task.dueDate,
     plannedForDate: task.plannedForDate,
     recurrence: task.recurrence,
-    checklist: task.checklist
+    checklist: task.checklist,
+    difficulty: task.difficulty
   };
 }
 
@@ -368,6 +394,15 @@ function isValidRecurrence(value: Task["recurrence"]): boolean {
     value !== null &&
     recurrenceFrequencies.includes((value as TaskRecurrence).frequency)
   );
+}
+
+function isValidDifficulty(value: Task["difficulty"]): boolean {
+  // Optional: tasks stored before difficulty existed must keep loading.
+  if (value === undefined) {
+    return true;
+  }
+
+  return taskDifficulties.includes(value);
 }
 
 function isValidChecklist(value: Task["checklist"]): boolean {
@@ -409,6 +444,7 @@ export function isTask(value: unknown): value is Task {
     typeof task.createdAt === "string" &&
     typeof task.updatedAt === "string" &&
     isValidRecurrence(task.recurrence) &&
-    isValidChecklist(task.checklist)
+    isValidChecklist(task.checklist) &&
+    isValidDifficulty(task.difficulty)
   );
 }

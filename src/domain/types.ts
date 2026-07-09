@@ -22,6 +22,12 @@ export type TaskTag =
 
 export type RecurrenceFrequency = "daily" | "weekdays" | "weekly" | "monthly";
 
+/**
+ * Effort tier for a quest. Absent means "standard" — every task stored
+ * before difficulty existed keeps loading and is worth the classic 1 XP.
+ */
+export type TaskDifficulty = "quick" | "standard" | "hard" | "epic";
+
 export type TaskRecurrence = {
   frequency: RecurrenceFrequency;
 };
@@ -44,6 +50,8 @@ export type Task = TimestampedEntity & {
   archivedAt?: IsoDateTime;
   /** Optional repeat rule. Completing a recurring task spawns the next occurrence. */
   recurrence?: TaskRecurrence;
+  /** Optional effort tier. Absent = standard (1 XP); hard = 2 XP, epic = 4 XP. */
+  difficulty?: TaskDifficulty;
   /** Optional subtask checklist. Parent completion never requires all items done. */
   checklist?: ChecklistItem[];
 };

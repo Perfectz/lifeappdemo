@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { celebrate } from "@/client/celebrate";
+import { celebrate, questCompletionCelebration } from "@/client/celebrate";
 import { openQuickAdd } from "@/client/quickAdd";
 import { CharacterSprite } from "@/components/CharacterSprite";
 import { StatusPanel } from "@/components/StatusPanel";
@@ -89,12 +89,9 @@ export function QuestLog() {
       const replaced = replaceTask(current, completed);
       return next ? [next, ...replaced] : replaced;
     });
-    celebrate({
-      kind: "quest",
-      title: "QUEST COMPLETE!",
-      subtitle: task.title,
-      pose: "questComplete"
-    });
+    // Difficulty-aware payoff: epic quests fire the boss moment, hard
+    // quests call out the double XP, the rest keep the classic party.
+    celebrate(questCompletionCelebration(task));
   }
 
   function handleReopen(task: Task) {

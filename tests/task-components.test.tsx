@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { celebrateEventName, type CelebrationDetail } from "@/client/celebrate";
 import { QuestLog } from "@/components/QuestLog";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskForm } from "@/components/TaskForm";
@@ -101,6 +102,41 @@ describe("task components", () => {
     );
   });
 
+  it("submits a difficulty tier from the form and defaults to standard", () => {
+    const onSubmit = vi.fn();
+
+    render(<TaskForm buttonLabel="Add Quest" onSubmit={onSubmit} />);
+
+    const select = screen.getByLabelText("Difficulty");
+    expect(select).toHaveValue("standard");
+    expect(
+      within(select as HTMLElement).getByRole("option", { name: "Epic 👑 (+4 XP)" })
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Quest Title"), {
+      target: { value: "Slay the deadline" }
+    });
+    fireEvent.change(select, { target: { value: "epic" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add Quest" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Slay the deadline", difficulty: "epic" })
+    );
+  });
+
+  it("normalizes the default standard difficulty to absence on submit", () => {
+    const onSubmit = vi.fn();
+
+    render(<TaskForm buttonLabel="Add Quest" onSubmit={onSubmit} />);
+
+    fireEvent.change(screen.getByLabelText("Quest Title"), { target: { value: "Plain" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add Quest" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ difficulty: undefined })
+    );
+  });
+
   it("removes a checklist line before submitting", () => {
     const onSubmit = vi.fn();
 
@@ -172,6 +208,63 @@ describe("task card", () => {
         ]
       })
     );
+  });
+
+  function renderTask(taskOverrides: Partial<Task>, handlers: { onComplete?: ReturnType<typeof vi.fn> } = {}) {
+    render(
+      <ul>
+        <TaskCard
+          onArchive={vi.fn()}
+          onComplete={handlers.onComplete ?? vi.fn()}
+          onReopen={vi.fn()}
+          onUpdate={vi.fn()}
+          task={{ ...task, ...taskOverrides }}
+        />
+      </ul>
+    );
+  }
+
+  it("shows a difficulty badge for epic quests and none for standard", () => {
+    renderTask({ difficulty: "epic" });
+
+    expect(screen.getByRole("img", { name: "Epic quest, worth 4 XP" })).toBeVisible();
+  });
+
+  it("renders no difficulty badge on standard/legacy quests", () => {
+    renderTask({});
+
+    expect(screen.queryByRole("img", { name: /quest, worth/ })).not.toBeInTheDocument();
+  });
+
+  it("shows the earned XP on the cleared row of hard and epic quests", () => {
+    renderTask({
+      difficulty: "hard",
+      status: "done",
+      completedAt: "2026-05-04T10:00:00.000Z"
+    });
+
+    expect(screen.getByText("+2 XP")).toBeVisible();
+  });
+
+  it("completes the quest through the one-tap circle with an accessible name", () => {
+    const onComplete = vi.fn();
+    renderTask({ difficulty: "epic" }, { onComplete });
+
+    const tap = screen.getByRole("button", { name: "Complete Write the Quest Log" });
+    expect(tap.className).toContain("quest-complete-tap-epic");
+
+    fireEvent.click(tap);
+
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(onComplete.mock.calls[0][0]).toMatchObject({ id: "task-1", difficulty: "epic" });
+  });
+
+  it("hides the one-tap circle on completed quests", () => {
+    renderTask({ status: "done", completedAt: "2026-05-04T10:00:00.000Z" });
+
+    expect(
+      screen.queryByRole("button", { name: "Complete Write the Quest Log" })
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -317,6 +410,42 @@ describe("quest log view", () => {
     expect(storedTasks().map((t) => t.id)).toContain("coach");
     expect(screen.getByText("Coach-suggested quest")).toBeVisible();
     expect(storedTasks().find((t) => t.id === "mine")?.status).toBe("done");
+  });
+
+  it("one-tap circle completes through the same flow and fires the boss celebration", () => {
+    seedTasks([
+      makeTask({
+        id: "boss",
+        title: "Slay the launch",
+        difficulty: "epic",
+        recurrence: { frequency: "daily" },
+        dueDate: today
+      })
+    ]);
+    const celebrations: CelebrationDetail[] = [];
+    const listen = (event: Event) =>
+      celebrations.push((event as CustomEvent<CelebrationDetail>).detail);
+    window.addEventListener(celebrateEventName, listen);
+
+    render(<QuestLog />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Complete Slay the launch" }));
+
+    window.removeEventListener(celebrateEventName, listen);
+
+    // Same handler path as the Complete action: persists done AND spawns
+    // the recurrence's next occurrence.
+    const stored = storedTasks();
+    expect(stored.find((t) => t.id === "boss")?.status).toBe("done");
+    expect(stored.find((t) => t.id !== "boss")).toMatchObject({
+      title: "Slay the launch",
+      status: "todo",
+      difficulty: "epic"
+    });
+
+    expect(celebrations).toEqual([
+      expect.objectContaining({ kind: "boss", title: "BOSS QUEST CLEARED — +4 XP" })
+    ]);
   });
 
   it("completing a recurring quest spawns and persists the next occurrence", () => {

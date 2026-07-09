@@ -2,10 +2,18 @@
 
 import { type FormEvent, useState } from "react";
 
-import type { RecurrenceFrequency, Task, TaskInput, TaskPriority, TaskTag } from "@/domain";
+import type {
+  RecurrenceFrequency,
+  Task,
+  TaskDifficulty,
+  TaskInput,
+  TaskPriority,
+  TaskTag
+} from "@/domain";
 import {
   newChecklistItem,
   recurrenceFrequencies,
+  taskDifficulties,
   taskPriorities,
   taskTags,
   validateTaskInput
@@ -26,7 +34,8 @@ const defaultInput: TaskInput = {
   dueDate: "",
   plannedForDate: "",
   recurrence: undefined,
-  checklist: []
+  checklist: [],
+  difficulty: "standard"
 };
 
 const repeatLabels: Record<RecurrenceFrequency, string> = {
@@ -34,6 +43,14 @@ const repeatLabels: Record<RecurrenceFrequency, string> = {
   weekdays: "Weekdays",
   weekly: "Weekly",
   monthly: "Monthly"
+};
+
+/** Labels double as the XP hint so the payoff is visible at capture time. */
+const difficultyLabels: Record<TaskDifficulty, string> = {
+  quick: "Quick ⚡ (+1 XP)",
+  standard: "Standard (+1 XP)",
+  hard: "Hard 💀 (+2 XP)",
+  epic: "Epic 👑 (+4 XP)"
 };
 
 function getInitialInput(task?: Task): TaskInput {
@@ -49,7 +66,8 @@ function getInitialInput(task?: Task): TaskInput {
     dueDate: task.dueDate ?? "",
     plannedForDate: task.plannedForDate ?? "",
     recurrence: task.recurrence,
-    checklist: task.checklist ?? []
+    checklist: task.checklist ?? [],
+    difficulty: task.difficulty ?? "standard"
   };
 }
 
@@ -158,6 +176,19 @@ export function TaskForm({ buttonLabel, initialTask, onCancel, onSubmit }: TaskF
             {taskPriorities.map((priority) => (
               <option key={priority} value={priority}>
                 {priority}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Difficulty</span>
+          <select
+            onChange={(event) => setField("difficulty", event.target.value as TaskDifficulty)}
+            value={input.difficulty ?? "standard"}
+          >
+            {taskDifficulties.map((difficulty) => (
+              <option key={difficulty} value={difficulty}>
+                {difficultyLabels[difficulty]}
               </option>
             ))}
           </select>

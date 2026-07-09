@@ -3,8 +3,8 @@
 import { useState } from "react";
 
 import { TaskForm } from "@/components/TaskForm";
-import type { Task, TaskInput } from "@/domain";
-import { checklistProgress, taskToInput } from "@/domain/tasks";
+import type { Task, TaskDifficulty, TaskInput } from "@/domain";
+import { checklistProgress, taskToInput, taskXp } from "@/domain/tasks";
 
 type TaskCardProps = {
   onArchive: (task: Task) => void;
@@ -19,6 +19,13 @@ const repeatLabels: Record<string, string> = {
   weekdays: "Weekdays",
   weekly: "Weekly",
   monthly: "Monthly"
+};
+
+/** Standard has no marker — absence of a badge keeps the board quiet. */
+const difficultyMarks: Partial<Record<TaskDifficulty, { icon: string; label: string }>> = {
+  quick: { icon: "⚡", label: "Quick" },
+  hard: { icon: "💀", label: "Hard" },
+  epic: { icon: "👑", label: "Epic" }
 };
 
 export function TaskCard({
@@ -56,12 +63,36 @@ export function TaskCard({
     onUpdate(task, { ...taskToInput(task), checklist });
   }
 
+  const difficultyMark = difficultyMarks[task.difficulty ?? "standard"];
+  const xp = taskXp(task);
+
   return (
     <li className="quest-card">
-      <div>
+      <div className="quest-card-main">
+        {task.status === "todo" ? (
+          <button
+            aria-label={`Complete ${task.title}`}
+            className={`quest-complete-tap quest-complete-tap-${task.difficulty ?? "standard"}`}
+            onClick={() => onComplete(task)}
+            type="button"
+          >
+            <span aria-hidden="true">✓</span>
+          </button>
+        ) : null}
+        <div className="quest-card-content">
         <div className="quest-card-heading">
           <h3>
             <span className={`priority-gem priority-gem-${task.priority}`} aria-hidden="true" />
+            {difficultyMark ? (
+              <span
+                aria-label={`${difficultyMark.label} quest, worth ${xp} XP`}
+                className={`difficulty-badge difficulty-badge-${task.difficulty}`}
+                role="img"
+                title={`${difficultyMark.label} quest — +${xp} XP`}
+              >
+                {difficultyMark.icon}
+              </span>
+            ) : null}
             {task.title}
           </h3>
           <div className="quest-card-badges">
@@ -119,7 +150,10 @@ export function TaskCard({
           {task.completedAt ? (
             <div>
               <dt>Cleared</dt>
-              <dd>{new Date(task.completedAt).toLocaleDateString()}</dd>
+              <dd>
+                {new Date(task.completedAt).toLocaleDateString()}
+                {xp > 1 ? <span className="quest-xp-earned">+{xp} XP</span> : null}
+              </dd>
             </div>
           ) : null}
           {task.archivedAt ? (
@@ -136,6 +170,7 @@ export function TaskCard({
             ))}
           </div>
         ) : null}
+        </div>
       </div>
       <div className="quest-actions">
         <button className="quest-action-secondary" onClick={() => setIsEditing(true)} type="button">

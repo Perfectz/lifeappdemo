@@ -165,6 +165,55 @@ describe("AI task tools", () => {
     expect(archived.ok && archived.tasks[0].status).toBe("archived");
   });
 
+  it("lets the coach set difficulty and preserves it presence-based on update", () => {
+    // create_task with a difficulty carries the tier through.
+    const created = applyAITaskToolProposal(
+      makeProposal({
+        summary: "Create a boss quest.",
+        payload: { title: "Ship the launch", difficulty: "epic" }
+      }),
+      [],
+      now
+    );
+    expect(created.ok && created.tasks[0].difficulty).toBe("epic");
+
+    // An invalid difficulty is ignored, never fatal (lenient like priority).
+    const lenient = applyAITaskToolProposal(
+      makeProposal({
+        summary: "Create with a bogus tier.",
+        payload: { title: "Quest", difficulty: "legendary" }
+      }),
+      [],
+      now
+    );
+    expect(lenient.ok && lenient.tasks[0].difficulty).toBeUndefined();
+
+    // update_task WITHOUT difficulty must preserve the existing tier.
+    const preserved = applyAITaskToolProposal(
+      makeProposal({
+        toolName: "update_task",
+        summary: "Rename only.",
+        payload: { taskId: "task-1", title: "Renamed quest" }
+      }),
+      [makeTask({ difficulty: "epic" })],
+      now
+    );
+    expect(preserved.ok && preserved.tasks[0].title).toBe("Renamed quest");
+    expect(preserved.ok && preserved.tasks[0].difficulty).toBe("epic");
+
+    // update_task WITH difficulty sets the new tier.
+    const promoted = applyAITaskToolProposal(
+      makeProposal({
+        toolName: "update_task",
+        summary: "Promote to hard.",
+        payload: { taskId: "task-1", difficulty: "hard" }
+      }),
+      [makeTask()],
+      now
+    );
+    expect(promoted.ok && promoted.tasks[0].difficulty).toBe("hard");
+  });
+
   it("validates and applies metric and journal proposals", () => {
     const metric = applyAITaskToolProposal(
       makeProposal({

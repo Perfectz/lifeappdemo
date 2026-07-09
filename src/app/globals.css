@@ -8967,3 +8967,139 @@ h2 {
     transition: none;
   }
 }
+
+/* ---------- Quest difficulty tiers + boss celebrations ---------- */
+
+/* Royal purple-gold for epic (boss) quests. Overridden per theme where the
+   default would not read against the background. */
+:root {
+  --difficulty-epic: #c9a0ff;
+}
+
+html[data-theme="gameboy"] {
+  /* Light LCD: the pale purple washes out, use an ink-dark plum instead. */
+  --difficulty-epic: #4a1d5e;
+}
+
+/* Tiny effort marker beside the priority gem (standard renders nothing). */
+.difficulty-badge {
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.difficulty-badge-epic {
+  filter: drop-shadow(0 0 6px var(--difficulty-epic));
+}
+
+/* XP earned tag on the Cleared meta row of hard/epic quests. */
+.quest-xp-earned {
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.28rem;
+  vertical-align: 0.08em;
+}
+
+/* One-tap complete: Todoist-style leading circle on active quest rows. */
+.quest-card-main {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.7rem;
+}
+
+.quest-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.quest-complete-tap {
+  align-items: center;
+  background: transparent;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--accent);
+  cursor: pointer;
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 0.95rem;
+  height: 2.5rem; /* 40px touch target */
+  justify-content: center;
+  padding: 0;
+  width: 2.5rem;
+}
+
+.quest-complete-tap > span {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.quest-complete-tap:hover,
+.quest-complete-tap:focus-visible {
+  background: var(--menu-row-hover-bg);
+  border-color: var(--accent);
+}
+
+.quest-complete-tap:hover > span,
+.quest-complete-tap:focus-visible > span {
+  opacity: 1;
+}
+
+/* Difficulty color ring for hard/epic quests. */
+.quest-complete-tap-hard {
+  border-color: var(--danger);
+}
+
+.quest-complete-tap-epic {
+  border-color: var(--difficulty-epic);
+  box-shadow: 0 0 8px var(--difficulty-epic);
+}
+
+/* Boss celebration card: crown + royal border, mirroring the PR treatment. */
+.celebration-card-boss {
+  border-color: var(--difficulty-epic);
+  box-shadow:
+    var(--bevel-inset),
+    0 0 22px var(--difficulty-epic),
+    0 1.5rem 3rem rgba(0, 0, 0, 0.55);
+}
+
+.celebration-crown {
+  color: var(--menu-cursor);
+  font-size: 1.1rem;
+  letter-spacing: 0.35em;
+  margin: 0 0 0.15rem;
+  text-shadow: 0 0 10px var(--menu-cursor-glow);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .celebration-card-boss {
+    animation: boss-glow 1.1s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes boss-glow {
+  from {
+    box-shadow:
+      var(--bevel-inset),
+      0 0 14px var(--difficulty-epic),
+      0 1.5rem 3rem rgba(0, 0, 0, 0.55);
+  }
+  to {
+    box-shadow:
+      var(--bevel-inset),
+      0 0 30px var(--difficulty-epic),
+      0 1.5rem 3rem rgba(0, 0, 0, 0.55);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quest-complete-tap > span {
+    transition: none;
+  }
+}

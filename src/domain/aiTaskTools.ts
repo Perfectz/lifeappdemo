@@ -11,6 +11,7 @@ import type {
   MetricEntry,
   MetricLevel,
   Task,
+  TaskDifficulty,
   TaskPriority,
   TaskTag
 } from "@/domain/types";
@@ -32,6 +33,7 @@ import {
   archiveTask,
   completeTask,
   createTask,
+  taskDifficulties,
   taskPriorities,
   taskTags,
   updateTask
@@ -79,6 +81,7 @@ type UpdateTaskPayload = {
   tags?: TaskTag[];
   dueDate?: IsoDate;
   plannedForDate?: IsoDate;
+  difficulty?: TaskDifficulty;
 };
 
 type TaskIdPayload = {
@@ -147,6 +150,13 @@ function normalizePriority(value: unknown, fallback: TaskPriority): TaskPriority
   return taskPriorities.includes(value as TaskPriority) ? (value as TaskPriority) : fallback;
 }
 
+/** Lenient like priority: an unknown difficulty is ignored, never fatal. */
+function optionalDifficulty(value: unknown): TaskDifficulty | undefined {
+  return taskDifficulties.includes(value as TaskDifficulty)
+    ? (value as TaskDifficulty)
+    : undefined;
+}
+
 function validateTaskId(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
@@ -174,7 +184,8 @@ function validateCreateTaskPayload(payload: unknown): CreateTaskPayload | undefi
     priority: normalizePriority(payload.priority, "medium"),
     tags: tags ?? [],
     dueDate: optionalText(payload.dueDate),
-    plannedForDate: optionalText(payload.plannedForDate)
+    plannedForDate: optionalText(payload.plannedForDate),
+    difficulty: optionalDifficulty(payload.difficulty)
   };
 }
 
@@ -204,7 +215,8 @@ function validateUpdateTaskPayload(payload: unknown): UpdateTaskPayload | undefi
       : undefined,
     tags,
     dueDate: optionalText(payload.dueDate),
-    plannedForDate: optionalText(payload.plannedForDate)
+    plannedForDate: optionalText(payload.plannedForDate),
+    difficulty: optionalDifficulty(payload.difficulty)
   };
 }
 
@@ -617,7 +629,11 @@ export function applyAITaskToolProposal(
           priority: payload.priority ?? task.priority,
           tags: payload.tags ?? task.tags,
           dueDate: payload.dueDate ?? task.dueDate,
-          plannedForDate: payload.plannedForDate ?? task.plannedForDate
+          plannedForDate: payload.plannedForDate ?? task.plannedForDate,
+          // Presence-based, like recurrence/checklist: only include the key
+          // when the coach explicitly set a difficulty, so updateTask keeps
+          // the task's existing tier otherwise.
+          ...(payload.difficulty !== undefined ? { difficulty: payload.difficulty } : {})
         },
         now
       );

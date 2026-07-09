@@ -33,6 +33,11 @@ export function CelebrationOverlay() {
   return (
     <div className="celebration-overlay" role="status" aria-live="polite">
       <div className={`celebration-card celebration-card-${celebration.kind}`}>
+        {celebration.kind === "boss" ? (
+          <p className="celebration-crown" aria-hidden="true">
+            ✦ 👑 ✦
+          </p>
+        ) : null}
         <div className="celebration-sprite" aria-hidden="true">
           <CharacterSprite pose={pose} className="celebration-sprite-img" />
         </div>

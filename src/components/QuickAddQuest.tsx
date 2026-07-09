@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { celebrate } from "@/client/celebrate";
 import { openQuickAddEventName } from "@/client/quickAdd";
 import { createLocalTaskRepository } from "@/data/taskRepository";
 import { toLocalIsoDate } from "@/domain/dates";
+import {
+  formatParsedDate,
+  formatParsedRecurrence,
+  parseQuickAdd
+} from "@/domain/naturalLanguageQuest";
 import { createTask, taskTags } from "@/domain/tasks";
 import type { TaskPriority, TaskTag } from "@/domain";
 
@@ -17,7 +22,24 @@ export function QuickAddQuest() {
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [tag, setTag] = useState<TaskTag | "">("");
   const [planToday, setPlanToday] = useState(true);
+  /** The phrase the user tapped ✕ on — suppresses that parse until the text changes. */
+  const [rejectedPhrase, setRejectedPhrase] = useState<string | null>(null);
+  /** Once the user touches the checkbox themselves, stop auto-adjusting it. */
+  const planTouchedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const today = toLocalIsoDate();
+  const parsed = useMemo(() => parseQuickAdd(title, today), [title, today]);
+  const activeParse =
+    parsed.matchedPhrase && parsed.matchedPhrase !== rejectedPhrase ? parsed : null;
+  const parsedFutureDue = Boolean(activeParse?.dueDate && activeParse.dueDate > today);
+
+  // A future date phrase means "not today" — auto-uncheck the plan-today box
+  // (the user can re-check it, and their choice then sticks).
+  useEffect(() => {
+    if (planTouchedRef.current) return;
+    setPlanToday(!parsedFutureDue);
+  }, [parsedFutureDue]);
 
   useEffect(() => {
     function onOpen() {
@@ -45,24 +67,29 @@ export function QuickAddQuest() {
     setPriority("medium");
     setTag("");
     setPlanToday(true);
+    setRejectedPhrase(null);
+    planTouchedRef.current = false;
   }
 
   function submit() {
     const trimmed = title.trim();
     if (!trimmed) return;
+    const questTitle = activeParse ? activeParse.title : trimmed;
     const repo = createLocalTaskRepository(window.localStorage);
     const tasks = repo.load();
     const task = createTask({
-      title: trimmed,
+      title: questTitle,
       priority,
       tags: tag ? [tag] : [],
-      plannedForDate: planToday ? toLocalIsoDate() : undefined
+      dueDate: activeParse?.dueDate,
+      recurrence: activeParse?.recurrence,
+      plannedForDate: planToday ? today : undefined
     });
     repo.save([task, ...tasks]);
     celebrate({
       kind: "quest",
       title: "QUEST ADDED",
-      subtitle: trimmed,
+      subtitle: questTitle,
       pose: "questComplete"
     });
     reset();
@@ -112,6 +139,37 @@ export function QuickAddQuest() {
             maxLength={140}
           />
         </label>
+        {activeParse && (
+          <div
+            className="quest-filter-chips"
+            aria-live="polite"
+            style={{ alignItems: "center" }}
+          >
+            {activeParse.dueDate && (
+              <span className="quest-filter-chip quest-filter-chip-active">
+                📅 {formatParsedDate(activeParse.dueDate)}
+              </span>
+            )}
+            {activeParse.recurrence && (
+              <span className="quest-filter-chip quest-filter-chip-active">
+                ↻ {formatParsedRecurrence(activeParse.recurrence)}
+              </span>
+            )}
+            <button
+              type="button"
+              className="quest-filter-chip"
+              aria-label="Ignore detected date"
+              title="Keep text as written"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setRejectedPhrase(activeParse.matchedPhrase ?? null)}
+            >
+              ✕
+            </button>
+            <span className="quick-add-hint" style={{ margin: 0 }}>
+              “{activeParse.title}”
+            </span>
+          </div>
+        )}
         <div className="quick-add-row">
           <label className="quick-add-select">
             <span>Priority</span>
@@ -142,7 +200,10 @@ export function QuickAddQuest() {
           <input
             type="checkbox"
             checked={planToday}
-            onChange={(event) => setPlanToday(event.target.checked)}
+            onChange={(event) => {
+              planTouchedRef.current = true;
+              setPlanToday(event.target.checked);
+            }}
           />
           <span>Plan for today</span>
         </label>

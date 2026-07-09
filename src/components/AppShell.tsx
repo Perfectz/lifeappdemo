@@ -72,6 +72,7 @@ type AppShellProps = {
 const emptyHeroStatus: HeroStatus = {
   level: 1,
   totalCompleted: 0,
+  totalXp: 0,
   xpCurrent: 0,
   xpForNextLevel: 5,
   hp: undefined,

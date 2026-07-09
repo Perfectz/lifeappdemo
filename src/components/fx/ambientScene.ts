@@ -32,7 +32,8 @@ const BURST_COLORS: Record<CelebrationDetail["kind"], string> = {
   levelup: "#f6c768", // gold
   quest: "#6ee7b7", // accent green fallback; replaced by live --accent
   streak: "#fff3e0", // warm white
-  pr: "#ffd76a" // brighter gold for personal records
+  pr: "#ffd76a", // brighter gold for personal records
+  boss: "#c9a0ff" // royal purple-gold for epic (boss) quests
 };
 
 type ThemeColors = {

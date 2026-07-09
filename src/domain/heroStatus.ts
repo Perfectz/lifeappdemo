@@ -1,6 +1,7 @@
 import type { IsoDate, MetricEntry, MetricLevel, Task } from "@/domain";
 import { isIsoTimestampOnDate, toLocalIsoDate } from "@/domain/dates";
 import { getLatestMetricEntry } from "@/domain/metrics";
+import { taskXp } from "@/domain/tasks";
 
 /**
  * Status pulled from tasks + metrics for the JRPG-style hero card.
@@ -10,6 +11,8 @@ import { getLatestMetricEntry } from "@/domain/metrics";
 export type HeroStatus = {
   level: number;
   totalCompleted: number;
+  /** Lifetime XP across all cleared quests (difficulty-weighted; legacy = 1 each). */
+  totalXp: number;
   xpCurrent: number;
   xpForNextLevel: number;
   hp: MetricLevel | undefined;
@@ -20,12 +23,17 @@ export type HeroStatus = {
   questsToday: { planned: number; completed: number };
 };
 
-const TASKS_PER_LEVEL = 5;
+const XP_PER_LEVEL = 5;
 
 export function getHeroStatus(tasks: Task[], metrics: MetricEntry[], today: IsoDate): HeroStatus {
-  const totalCompleted = tasks.filter((task) => Boolean(task.completedAt)).length;
-  const level = Math.floor(totalCompleted / TASKS_PER_LEVEL) + 1;
-  const xpCurrent = totalCompleted % TASKS_PER_LEVEL;
+  const completedTasks = tasks.filter((task) => Boolean(task.completedAt));
+  const totalCompleted = completedTasks.length;
+  // Difficulty-weighted XP. Every task without a difficulty (all legacy data)
+  // is worth exactly 1 XP, so with 5 XP per level the historic
+  // floor(totalCompleted / 5) + 1 levels are preserved to the digit.
+  const totalXp = completedTasks.reduce((sum, task) => sum + taskXp(task), 0);
+  const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
+  const xpCurrent = totalXp % XP_PER_LEVEL;
 
   const latestMetric = getLatestMetricEntry(metrics);
 
@@ -39,8 +47,9 @@ export function getHeroStatus(tasks: Task[], metrics: MetricEntry[], today: IsoD
   return {
     level,
     totalCompleted,
+    totalXp,
     xpCurrent,
-    xpForNextLevel: TASKS_PER_LEVEL,
+    xpForNextLevel: XP_PER_LEVEL,
     hp: latestMetric?.energyLevel,
     mp: latestMetric?.moodLevel,
     hpMax: 5,

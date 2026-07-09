@@ -39,6 +39,7 @@ export type {
   RecurrenceFrequency,
   StrengthSet,
   Task,
+  TaskDifficulty,
   TaskPriority,
   TaskRecurrence,
   TaskStatus,
