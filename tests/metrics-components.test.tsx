@@ -87,6 +87,19 @@ describe("MetricsCheckIn", () => {
     expect(JSON.parse(window.localStorage.getItem(metricStorageKey) ?? "[]")).toHaveLength(0);
   });
 
+  it("no longer captures blood pressure or glucose — points to Vitals instead", () => {
+    render(<MetricsCheckIn />);
+
+    expect(screen.queryByLabelText(/Blood pressure/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Glucose/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/systolic/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/diastolic/i)).not.toBeInTheDocument();
+
+    const vitalsLink = screen.getByRole("link", { name: /Vitals/ });
+    expect(vitalsLink).toHaveAttribute("href", "/vitals");
+    expect(screen.getByText(/Blood pressure & glucose live in/)).toBeVisible();
+  });
+
   it("renders recent entries and the health boundary", async () => {
     window.localStorage.setItem(
       metricStorageKey,

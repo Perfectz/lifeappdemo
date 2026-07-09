@@ -16,6 +16,7 @@ import {
   loadReferenceInputs,
   type HydratedReference
 } from "@/client/timelineReferences";
+import { seedAboutMeForPatrick } from "@/client/aboutMeSeed";
 import { seedTimelineForPatrick } from "@/client/timelineSeed";
 import {
   addTimelineCheckin,
@@ -165,6 +166,7 @@ export function TimelineMirror() {
     };
     reloadCheckins();
     loadReferences();
+    void seedAboutMeForPatrick();
     void seedTimelineForPatrick().then((res) => {
       if (cancelled || !res.seeded) return;
       setSeedNote(

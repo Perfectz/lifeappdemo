@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { MedicationQuickLog } from "@/components/MedicationQuickLog";
 import { SupplementLog } from "@/components/SupplementLog";
 import { Vitals } from "@/components/Vitals";
 
@@ -18,7 +17,6 @@ export default function VitalsPage() {
           <p>Log glucose, blood pressure, weight, meds &amp; supplements.</p>
         </div>
       </header>
-      <MedicationQuickLog />
       <Vitals />
       <SupplementLog />
     </div>

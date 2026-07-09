@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { CharacterSprite } from "@/components/CharacterSprite";
@@ -22,8 +23,6 @@ type MetricFormState = {
   kettlebellSwingsTotal: string;
   karateClass: boolean;
   distanceWalkedMiles: string;
-  bloodPressureSystolic: string;
-  bloodPressureDiastolic: string;
   notes: string;
 };
 
@@ -43,8 +42,6 @@ function emptyForm(): MetricFormState {
     kettlebellSwingsTotal: "",
     karateClass: false,
     distanceWalkedMiles: "",
-    bloodPressureSystolic: "",
-    bloodPressureDiastolic: "",
     notes: ""
   };
 }
@@ -70,8 +67,6 @@ function buildMetricInput(form: MetricFormState): MetricInput {
     kettlebellSwingsTotal: optionalNumber(form.kettlebellSwingsTotal),
     karateClass: form.karateClass,
     distanceWalkedMiles: optionalNumber(form.distanceWalkedMiles),
-    bloodPressureSystolic: optionalNumber(form.bloodPressureSystolic),
-    bloodPressureDiastolic: optionalNumber(form.bloodPressureDiastolic),
     notes: form.notes
   };
 }
@@ -290,26 +285,6 @@ export function MetricsCheckIn() {
                 />
                 <span>Karate class</span>
               </label>
-              <label>
-                <span>Blood pressure systolic</span>
-                <input
-                  inputMode="numeric"
-                  onChange={(event) => setField("bloodPressureSystolic", event.target.value)}
-                  placeholder="120"
-                  type="number"
-                  value={form.bloodPressureSystolic}
-                />
-              </label>
-              <label>
-                <span>Blood pressure diastolic</span>
-                <input
-                  inputMode="numeric"
-                  onChange={(event) => setField("bloodPressureDiastolic", event.target.value)}
-                  placeholder="80"
-                  type="number"
-                  value={form.bloodPressureDiastolic}
-                />
-              </label>
             </div>
 
             <label>
@@ -331,6 +306,9 @@ export function MetricsCheckIn() {
             </label>
             <button type="submit">Save Metrics</button>
           </form>
+          <p className="reminders-help">
+            Blood pressure &amp; glucose live in <Link href="/vitals">Vitals →</Link>
+          </p>
         </section>
 
         <aside className="dashboard-section" aria-label="Recent metric entries">

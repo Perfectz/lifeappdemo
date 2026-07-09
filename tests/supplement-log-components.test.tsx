@@ -2,8 +2,10 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import React from "react";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { SupplementLog } from "@/components/SupplementLog";
-import { supplementStorageKey } from "@/data/supplementRepository";
+import { QUICK_MED_NAME, SupplementLog } from "@/components/SupplementLog";
+import { createLocalSupplementRepository, supplementStorageKey } from "@/data/supplementRepository";
+import { toLocalIsoDate } from "@/domain/dates";
+import { isSupplementLogEntry, isSupplementTaken } from "@/domain/supplements";
 
 describe("SupplementLog", () => {
   beforeEach(() => window.localStorage.clear());
@@ -62,5 +64,70 @@ describe("SupplementLog", () => {
     fireEvent.click(checkbox);
     await waitFor(() => expect(checkbox).not.toBeChecked());
     expect(JSON.parse(window.localStorage.getItem(supplementStorageKey) ?? "[]")).toHaveLength(0);
+  });
+
+  describe("quick-tap meds row (absorbed from MedicationQuickLog)", () => {
+    it("one tap logs the morning med; tapping again undoes it", () => {
+      render(<SupplementLog />);
+      const today = toLocalIsoDate();
+
+      const morning = screen.getByRole("button", { name: /Morning meds/ });
+      expect(morning).toHaveAttribute("aria-pressed", "false");
+
+      fireEvent.click(morning);
+      expect(
+        isSupplementTaken(
+          createLocalSupplementRepository(window.localStorage).load(),
+          today,
+          "morning",
+          QUICK_MED_NAME
+        )
+      ).toBe(true);
+      expect(screen.getByRole("button", { name: /Morning meds/ })).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+
+      // undo
+      fireEvent.click(screen.getByRole("button", { name: /Morning meds/ }));
+      expect(
+        isSupplementTaken(
+          createLocalSupplementRepository(window.localStorage).load(),
+          today,
+          "morning",
+          QUICK_MED_NAME
+        )
+      ).toBe(false);
+    });
+
+    it("morning and night are independent", () => {
+      render(<SupplementLog />);
+      fireEvent.click(screen.getByRole("button", { name: /Night meds/ }));
+      const entries = createLocalSupplementRepository(window.localStorage).load();
+      const today = toLocalIsoDate();
+      expect(isSupplementTaken(entries, today, "bedtime", QUICK_MED_NAME)).toBe(true);
+      expect(isSupplementTaken(entries, today, "morning", QUICK_MED_NAME)).toBe(false);
+    });
+
+    it("writes the same entry shape the detailed checklist reads", async () => {
+      render(<SupplementLog />);
+      const today = toLocalIsoDate();
+
+      fireEvent.click(screen.getByRole("button", { name: /Morning meds/ }));
+
+      const stored = JSON.parse(window.localStorage.getItem(supplementStorageKey) ?? "[]");
+      expect(stored).toHaveLength(1);
+      expect(stored[0]).toMatchObject({ name: QUICK_MED_NAME, slot: "morning", date: today });
+      expect(isSupplementLogEntry(stored[0])).toBe(true);
+
+      // The detailed checklist reads the quick-tap entry: "Medication" shows
+      // up as a checked item in the Morning slot.
+      const morningSlot = screen.getByLabelText("Morning");
+      await waitFor(() => {
+        expect(
+          within(morningSlot).getByRole("checkbox", { name: /Medication Morning/i })
+        ).toBeChecked();
+      });
+    });
   });
 });

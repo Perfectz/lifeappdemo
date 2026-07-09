@@ -7,37 +7,21 @@ import { CharacterSprite } from "@/components/CharacterSprite";
 import { CommandButton } from "@/components/CommandButton";
 import { SectionHeader } from "@/components/SectionHeader";
 import { VitalsAlertBanner } from "@/components/VitalsAlertBanner";
+import { VitalsQuickForm } from "@/components/VitalsQuickForm";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
-import { glucoseContexts } from "@/domain/biometrics";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import { toLocalIsoDate } from "@/domain/dates";
-import { createMetricEntry, type MetricInput } from "@/domain/metrics";
-import {
-  bloodPressureCategoryLabel,
-  latestBloodPressure,
-  latestGlucose,
-  latestWeight
-} from "@/domain/vitals";
-import type { DailyPlan, GlucoseContext, MetricEntry, Workout } from "@/domain";
-
-function num(value: string): number | undefined {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
+import { latestBloodPressure, latestGlucose, latestWeight } from "@/domain/vitals";
+import type { DailyPlan, MetricEntry, Workout } from "@/domain";
 
 export function MorningStandup() {
   const [metrics, setMetrics] = useState<MetricEntry[]>([]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [now, setNow] = useState<Date | null>(null);
 
-  const [glucose, setGlucose] = useState("");
-  const [glucoseContext, setGlucoseContext] = useState("fasting");
-  const [systolic, setSystolic] = useState("");
-  const [diastolic, setDiastolic] = useState("");
-  const [weight, setWeight] = useState("");
   const [intention, setIntention] = useState("");
   const [status, setStatus] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
@@ -67,50 +51,7 @@ export function MorningStandup() {
   const bp = latestBloodPressure(todayMetrics);
   const gl = latestGlucose(todayMetrics);
   const wt = latestWeight(todayMetrics);
-
-  function logVitals() {
-    const sys = num(systolic);
-    const dia = num(diastolic);
-    const w = num(weight);
-    const glucoseMg = num(glucose);
-
-    if (!sys && !dia && !w && !glucoseMg) {
-      setStatus({ tone: "error", text: "Enter a glucose, blood pressure, or weight value." });
-      return;
-    }
-    if ((sys && !dia) || (dia && !sys)) {
-      setStatus({ tone: "error", text: "Enter both systolic and diastolic." });
-      return;
-    }
-
-    const input: MetricInput = {
-      date: today,
-      checkInType: "morning",
-      bloodGlucoseMgDl: glucoseMg,
-      glucoseContext:
-        glucoseMg && glucoseContexts.includes(glucoseContext as GlucoseContext)
-          ? (glucoseContext as GlucoseContext)
-          : undefined,
-      bloodPressureSystolic: sys ? Math.round(sys) : undefined,
-      bloodPressureDiastolic: dia ? Math.round(dia) : undefined,
-      weightLbs: w,
-      notes: "Morning vitals"
-    };
-
-    try {
-      const entry = createMetricEntry(input);
-      const repo = createLocalMetricRepository(window.localStorage);
-      repo.save([entry, ...repo.load()]);
-      setMetrics(repo.load());
-      setGlucose("");
-      setSystolic("");
-      setDiastolic("");
-      setWeight("");
-      setStatus({ tone: "ok", text: "Morning vitals logged." });
-    } catch (error) {
-      setStatus({ tone: "error", text: error instanceof Error ? error.message : "Couldn't save vitals." });
-    }
-  }
+  const vitalsLogged = Boolean(gl || bp || wt);
 
   function saveIntention() {
     const repo = createLocalDailyPlanRepository(window.localStorage);
@@ -171,55 +112,32 @@ export function MorningStandup() {
         </p>
       ) : null}
 
-      {/* Step 1 — Vitals */}
+      {/* Step 1 — Vitals. Once anything is logged today, collapse to a summary
+          so the standup doesn't invite a duplicate entry — /vitals stays the
+          place for additional readings. */}
       <section className="dashboard-section" aria-label="Morning vitals">
         <SectionHeader eyebrow="Step 1" title="Log this morning's vitals" />
-        {bp || gl || wt ? (
-          <p className="reminders-help">
-            Today so far:
-            {gl ? ` glucose ${gl.mgDl} mg/dL ·` : ""}
-            {bp ? ` BP ${bp.systolic}/${bp.diastolic} (${bloodPressureCategoryLabel[bp.category]}) ·` : ""}
-            {wt ? ` weight ${wt.weightLbs} lb` : ""}
+        {vitalsLogged ? (
+          <p className="reminders-help standup-vitals-summary">
+            Vitals logged ✓ (
+            {[
+              gl ? `glucose ${gl.mgDl} mg/dL` : null,
+              bp ? `BP ${bp.systolic}/${bp.diastolic}` : null,
+              wt ? `weight ${wt.weightLbs} lb` : null
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            )
           </p>
         ) : (
-          <p className="reminders-help">No vitals logged yet today.</p>
+          <>
+            <p className="reminders-help">No vitals logged yet today.</p>
+            <VitalsQuickForm
+              checkInType="morning"
+              onSaved={() => setStatus({ tone: "ok", text: "Morning vitals logged." })}
+            />
+          </>
         )}
-        <div className="vitals-form">
-          <div className="vitals-bp-inputs">
-            <label className="fitness-label">
-              Glucose (mg/dL)
-              <input type="number" inputMode="numeric" min={1} className="fitness-input" placeholder="e.g. 95" value={glucose} onChange={(e) => setGlucose(e.target.value)} />
-            </label>
-            <label className="fitness-label">
-              When
-              <select className="fitness-input" value={glucoseContext} onChange={(e) => setGlucoseContext(e.target.value)}>
-                {glucoseContexts.map((context) => (
-                  <option key={context} value={context}>
-                    {context.replace(/_/g, " ")}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="vitals-bp-inputs">
-            <label className="fitness-label">
-              Systolic
-              <input type="number" inputMode="numeric" min={1} className="fitness-input" placeholder="e.g. 122" value={systolic} onChange={(e) => setSystolic(e.target.value)} />
-            </label>
-            <span className="vitals-slash" aria-hidden="true">/</span>
-            <label className="fitness-label">
-              Diastolic
-              <input type="number" inputMode="numeric" min={1} className="fitness-input" placeholder="e.g. 78" value={diastolic} onChange={(e) => setDiastolic(e.target.value)} />
-            </label>
-          </div>
-          <label className="fitness-label">
-            Weight (lb)
-            <input type="number" inputMode="decimal" min={1} step="0.1" className="fitness-input" placeholder="e.g. 230" value={weight} onChange={(e) => setWeight(e.target.value)} />
-          </label>
-          <button type="button" className="login-submit" onClick={logVitals}>
-            <span>Log vitals</span>
-          </button>
-        </div>
       </section>
 
       {/* Step 2 — Training */}

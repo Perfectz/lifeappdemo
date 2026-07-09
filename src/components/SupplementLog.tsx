@@ -19,6 +19,18 @@ import {
 
 const DATALIST_ID = "supplement-known-names";
 
+/**
+ * Fixed name used by the one-tap "Morning meds" / "Night meds" buttons so
+ * they round-trip with isSupplementTaken. Same value the (now removed)
+ * MedicationQuickLog component wrote — existing history keeps working.
+ */
+export const QUICK_MED_NAME = "Medication";
+
+const QUICK_SLOTS: { slot: SupplementSlot; label: string; icon: string }[] = [
+  { slot: "morning", label: "Morning meds", icon: "☀️" },
+  { slot: "bedtime", label: "Night meds", icon: "🌙" }
+];
+
 export function SupplementLog() {
   const [entries, setEntries] = useState<SupplementLogEntry[]>([]);
   const [drafts, setDrafts] = useState<Record<SupplementSlot, { name: string; dose: string }>>({
@@ -57,6 +69,32 @@ export function SupplementLog() {
     setEntries(repo.load());
   }
 
+  /**
+   * One-tap toggle for the generic "Medication" entry. Kept exactly as
+   * MedicationQuickLog behaved: un-logging removes every matching entry for
+   * the day + slot (case-insensitive), logging prepends a fresh entry.
+   */
+  function toggleQuickMed(slot: SupplementSlot) {
+    const repo = createLocalSupplementRepository(window.localStorage);
+    const current = repo.load();
+    if (isSupplementTaken(current, today, slot, QUICK_MED_NAME)) {
+      repo.save(
+        current.filter(
+          (entry) =>
+            !(
+              entry.date === today &&
+              entry.slot === slot &&
+              entry.name.trim().toLowerCase() === QUICK_MED_NAME.toLowerCase()
+            )
+        )
+      );
+    } else {
+      repo.save([createSupplementLogEntry({ date: today, slot, name: QUICK_MED_NAME }), ...current]);
+      playDing();
+    }
+    setEntries(repo.load());
+  }
+
   function addNew(slot: SupplementSlot) {
     const draft = drafts[slot];
     const name = draft.name.trim();
@@ -73,6 +111,27 @@ export function SupplementLog() {
       <p className="reminders-help">
         Check off what you took. New items are remembered — pick them from the list next time.
       </p>
+
+      <div className="med-quick-buttons">
+        {QUICK_SLOTS.map(({ slot, label, icon }) => {
+          const taken = isSupplementTaken(entries, today, slot, QUICK_MED_NAME);
+          return (
+            <button
+              key={slot}
+              type="button"
+              className={`med-quick-btn${taken ? " is-taken" : ""}`}
+              aria-pressed={taken}
+              onClick={() => toggleQuickMed(slot)}
+            >
+              <span className="med-quick-icon" aria-hidden="true">
+                {taken ? "✓" : icon}
+              </span>
+              <span className="med-quick-label">{label}</span>
+              <span className="med-quick-state">{taken ? "Taken · tap to undo" : "Tap when taken"}</span>
+            </button>
+          );
+        })}
+      </div>
 
       <datalist id={DATALIST_ID}>
         {known.map((item) => (

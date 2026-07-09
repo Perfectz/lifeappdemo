@@ -2,14 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { playDing } from "@/client/sfx";
 import { SectionHeader } from "@/components/SectionHeader";
 import { VitalsAlertBanner } from "@/components/VitalsAlertBanner";
+import { VitalsQuickForm } from "@/components/VitalsQuickForm";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { toLocalIsoDate } from "@/domain/dates";
-import { glucoseContexts } from "@/domain/biometrics";
-import { createMetricEntry, type MetricInput } from "@/domain/metrics";
 import {
   bloodPressureCategoryLabel,
   getVitalsReadings,
@@ -19,12 +17,7 @@ import {
   latestGlucose,
   latestWeight
 } from "@/domain/vitals";
-import type { GlucoseContext, MetricEntry } from "@/domain";
-
-function num(value: string): number | undefined {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
+import type { MetricEntry } from "@/domain";
 
 function formatWhen(iso: string): string {
   const parsed = Date.parse(iso);
@@ -33,68 +26,18 @@ function formatWhen(iso: string): string {
 
 export function Vitals() {
   const [entries, setEntries] = useState<MetricEntry[]>([]);
-  const [glucose, setGlucose] = useState("");
-  const [glucoseContext, setGlucoseContext] = useState("");
-  const [systolic, setSystolic] = useState("");
-  const [diastolic, setDiastolic] = useState("");
-  const [weight, setWeight] = useState("");
-  const [status, setStatus] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
   const reload = useCallback(() => {
     setEntries(createLocalMetricRepository(window.localStorage).load());
   }, []);
 
   useEffect(() => {
+    // Repository saves (including VitalsQuickForm's) dispatch
+    // dataChangedEventName, so the cards and trends below stay live.
     reload();
     window.addEventListener(dataChangedEventName, reload);
     return () => window.removeEventListener(dataChangedEventName, reload);
   }, [reload]);
-
-  function logVitals() {
-    const glucoseMg = num(glucose);
-    const sys = num(systolic);
-    const dia = num(diastolic);
-    const w = num(weight);
-
-    if (!w && !sys && !dia && !glucoseMg) {
-      setStatus({ tone: "error", text: "Enter a glucose, blood pressure, or weight value." });
-      return;
-    }
-    if ((sys && !dia) || (dia && !sys)) {
-      setStatus({ tone: "error", text: "Enter both systolic and diastolic." });
-      return;
-    }
-
-    const input: MetricInput = {
-      date: toLocalIsoDate(new Date()),
-      checkInType: "freeform",
-      bloodGlucoseMgDl: glucoseMg,
-      glucoseContext:
-        glucoseMg && glucoseContexts.includes(glucoseContext as GlucoseContext)
-          ? (glucoseContext as GlucoseContext)
-          : undefined,
-      bloodPressureSystolic: sys ? Math.round(sys) : undefined,
-      bloodPressureDiastolic: dia ? Math.round(dia) : undefined,
-      weightLbs: w,
-      notes: "Daily vitals"
-    };
-
-    try {
-      const entry = createMetricEntry(input);
-      const repo = createLocalMetricRepository(window.localStorage);
-      repo.save([entry, ...repo.load()]);
-      setEntries(repo.load());
-      setGlucose("");
-      setGlucoseContext("");
-      setSystolic("");
-      setDiastolic("");
-      setWeight("");
-      setStatus({ tone: "ok", text: "Logged today's vitals." });
-      playDing();
-    } catch (error) {
-      setStatus({ tone: "error", text: error instanceof Error ? error.message : "Couldn't save vitals." });
-    }
-  }
 
   const gl = latestGlucose(entries);
   const bp = latestBloodPressure(entries);
@@ -162,90 +105,7 @@ export function Vitals() {
         </div>
       </div>
 
-      <div className="vitals-form">
-        <div className="vitals-bp-inputs">
-          <label className="fitness-label">
-            Glucose (mg/dL)
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              className="fitness-input"
-              placeholder="e.g. 95"
-              value={glucose}
-              onChange={(event) => setGlucose(event.target.value)}
-            />
-          </label>
-          <label className="fitness-label">
-            When
-            <select
-              className="fitness-input"
-              value={glucoseContext}
-              onChange={(event) => setGlucoseContext(event.target.value)}
-            >
-              <option value="">—</option>
-              {glucoseContexts.map((context) => (
-                <option key={context} value={context}>
-                  {context.replace(/_/g, " ")}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="vitals-bp-inputs">
-          <label className="fitness-label">
-            Systolic
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              className="fitness-input"
-              placeholder="e.g. 122"
-              value={systolic}
-              onChange={(event) => setSystolic(event.target.value)}
-            />
-          </label>
-          <span className="vitals-slash" aria-hidden="true">
-            /
-          </span>
-          <label className="fitness-label">
-            Diastolic
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              className="fitness-input"
-              placeholder="e.g. 78"
-              value={diastolic}
-              onChange={(event) => setDiastolic(event.target.value)}
-            />
-          </label>
-        </div>
-        <label className="fitness-label">
-          Weight (lb)
-          <input
-            type="number"
-            inputMode="decimal"
-            min={1}
-            step="0.1"
-            className="fitness-input"
-            placeholder="e.g. 184.5"
-            value={weight}
-            onChange={(event) => setWeight(event.target.value)}
-          />
-        </label>
-        <button type="button" className="login-submit" onClick={logVitals}>
-          <span>Log vitals</span>
-        </button>
-        {status ? (
-          <p
-            className={status.tone === "error" ? "data-backup-status form-error" : "data-backup-status"}
-            role={status.tone === "error" ? "alert" : "status"}
-          >
-            {status.text}
-          </p>
-        ) : null}
-      </div>
+      <VitalsQuickForm checkInType="freeform" />
 
       {history.length > 0 ? (
         <div className="vitals-trends">

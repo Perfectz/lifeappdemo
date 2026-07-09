@@ -143,7 +143,7 @@ export const navigationGroups: NavigationGroup[] = [
       {
         label: "Notes",
         href: "/notes",
-        description: "Quick field notes",
+        description: "Reference notes & saved knowledge",
         icon: "journal"
       },
       {
