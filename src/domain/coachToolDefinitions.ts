@@ -32,6 +32,23 @@ export const COACH_TOOL_DEFINITIONS: ToolDef[] = [
   {
     type: "function",
     function: {
+      name: "create_email_draft",
+      description:
+        "Create a reviewable Gmail draft after the user explicitly confirms. This never sends email. Use only when Gmail context says the connector is available.",
+      parameters: {
+        type: "object",
+        properties: {
+          to: { type: "string", description: "One recipient email address." },
+          subject: { type: "string" },
+          body: { type: "string", description: "Plain-text draft body." }
+        },
+        required: ["to", "subject", "body"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "log_food",
       description:
         "Log a food or meal the user ate. Estimate calories/macros when not given. sodiumMg is in MILLIGRAMS (a label's 0.6 g = 600 mg), never grams.",

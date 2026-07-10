@@ -21,15 +21,19 @@ describe("SetupWizard", () => {
     fireEvent.change(screen.getByLabelText("What outcome matters most right now?"), {
       target: { value: "Build sustainable health" }
     });
+    fireEvent.change(screen.getByLabelText("Which part of life does that outcome belong to?"), {
+      target: { value: "professional" }
+    });
     fireEvent.change(
       screen.getByLabelText("Injuries, schedule limits, or equipment constraints — optional"),
       { target: { value: "Protect the right knee" } }
     );
     fireEvent.click(screen.getByRole("button", { name: "Skip budget & finish" }));
 
-    expect(createLocalGoalRepository(window.localStorage).load()[0].title).toBe(
-      "Build sustainable health"
-    );
+    expect(createLocalGoalRepository(window.localStorage).load()[0]).toMatchObject({
+      title: "Build sustainable health",
+      pillar: "professional"
+    });
     const profile = loadTrainingProfile(window.localStorage);
     expect(profile.weeklySchedule?.sun).toEqual([]);
     expect(profile.weeklySchedule?.mon).toEqual(["strength", "cardio"]);

@@ -9,6 +9,7 @@ import { foodEntryStorageKey } from "@/data/foodEntryRepository";
 import { metricStorageKey } from "@/data/metricRepository";
 import { taskStorageKey } from "@/data/taskRepository";
 import { workoutStorageKey } from "@/data/workoutRepository";
+import { bodyProfileStorageKey } from "@/data/bodyProfileRepository";
 import type { DailyPlan, FoodEntry, MetricEntry, Task, Workout } from "@/domain";
 import type { DailyNutritionTarget } from "@/domain/dailyNutritionTarget";
 
@@ -111,6 +112,13 @@ function makeMetricEntry(overrides: Partial<MetricEntry> = {}): MetricEntry {
   };
 }
 
+function completeSetup() {
+  window.localStorage.setItem(
+    bodyProfileStorageKey,
+    JSON.stringify({ setupCompleted: true, updatedAt: "2026-05-04T08:00:00.000Z" })
+  );
+}
+
 describe("Dashboard", () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -204,8 +212,9 @@ describe("Dashboard", () => {
     render(<Dashboard />);
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Today's Training — 0/3" })).toBeVisible();
+      expect(screen.getByRole("heading", { name: "Choose your training rhythm" })).toBeVisible();
     });
+    expect(screen.queryByText(/behind on training/i)).not.toBeInTheDocument();
 
     const healthRow = document.querySelector(".dashboard-health-row");
     const questsLayout = document.querySelector(".dashboard-layout");
@@ -221,6 +230,7 @@ describe("Dashboard", () => {
 describe("TodayTrainingCard (via Dashboard)", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    completeSetup();
   });
 
   it("shows the three training buckets with logged workouts marked done", async () => {

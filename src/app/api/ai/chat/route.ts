@@ -9,6 +9,7 @@ import {
 import { toLocalIsoDate } from "@/domain/dates";
 import { completeReadOnlyCoachChat } from "@/server/ai/openaiClient";
 import { handleAIRoute } from "@/server/ai/aiRoute";
+import { gmailContextForPrompt } from "@/server/integrations/gmail";
 
 // Allow the coach response (OpenAI call) up to 60s on Vercel; the Hobby tier
 // default is 10s, which would cut off the in-code 30s OpenAI timeout.
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
         "AI coach isn't configured. The deterministic app works fully without it — add an OpenAI API key to enable coaching.",
       unavailableError: "AI coach is unavailable right now. Try again in a moment."
     },
-    async (body) => {
+    async (body, user) => {
       const validation = validateAIChatRequestBody(body);
 
       if (!validation.ok) {
@@ -35,9 +36,11 @@ export async function POST(request: Request) {
       const usedContext = summarizeAIAppContext(context);
 
       const contextText = formatAIContextForPrompt(context);
-      const fullContext = validation.value.aboutMe
+      const baseContext = validation.value.aboutMe
         ? `About the user (their self-profile):\n${validation.value.aboutMe}\n\n${contextText}`
         : contextText;
+      const gmailContext = await gmailContextForPrompt(user.id, validation.value.message);
+      const fullContext = gmailContext ? `${baseContext}\n\n${gmailContext}` : baseContext;
 
       const completion = await completeReadOnlyCoachChat({
         message: validation.value.message,

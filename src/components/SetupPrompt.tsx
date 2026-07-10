@@ -28,8 +28,8 @@ export function SetupPrompt() {
   return (
     <Link href="/setup" className="setup-prompt">
       <div>
-        <strong>Finish setting up (2 min)</strong>
-        <p>Set your weight goal and calorie budget so the dashboard works for you.</p>
+        <strong>Personalize your plan (2 min)</strong>
+        <p>Choose your direction, training rhythm, and constraints before LifeQuest starts scoring the day.</p>
       </div>
       <span aria-hidden="true">→</span>
     </Link>

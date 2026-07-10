@@ -9,9 +9,24 @@ import { createLocalGoalRepository } from "@/data/goalRepository";
 import { createLocalMemoryRepository } from "@/data/memoryRepository";
 import { createLocalNoteRepository } from "@/data/noteRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
+import { createLocalJournalRepository } from "@/data/journalRepository";
+import { createLocalMetricRepository } from "@/data/metricRepository";
+import { createLocalWorkoutRepository } from "@/data/workoutRepository";
+import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
+import { loadTrainingProfile } from "@/data/trainingProfileRepository";
 import { toLocalIsoDate } from "@/domain/dates";
 import type { MemoryEntry } from "@/domain/memory";
-import type { DailyPlan, Goal, Note, Task } from "@/domain/types";
+import type { TrainingProfile } from "@/domain/trainingProfile";
+import type {
+  DailyPlan,
+  FoodEntry,
+  Goal,
+  JournalEntry,
+  MetricEntry,
+  Note,
+  Task,
+  Workout
+} from "@/domain/types";
 
 export type AgentMode = "coach" | "assistant" | "planning" | "review";
 
@@ -56,9 +71,25 @@ type HarnessState = {
   memories: MemoryEntry[];
   notes: Note[];
   plans: DailyPlan[];
+  journals: JournalEntry[];
+  metrics: MetricEntry[];
+  workouts: Workout[];
+  foods: FoodEntry[];
+  trainingProfile: TrainingProfile | null;
 };
 
-const emptyState: HarnessState = { goals: [], tasks: [], memories: [], notes: [], plans: [] };
+const emptyState: HarnessState = {
+  goals: [],
+  tasks: [],
+  memories: [],
+  notes: [],
+  plans: [],
+  journals: [],
+  metrics: [],
+  workouts: [],
+  foods: [],
+  trainingProfile: null
+};
 
 export function AgentHarnessPanel({ mode, onPrompt }: AgentHarnessPanelProps) {
   const [state, setState] = useState<HarnessState>(emptyState);
@@ -70,7 +101,12 @@ export function AgentHarnessPanel({ mode, onPrompt }: AgentHarnessPanelProps) {
       tasks: createLocalTaskRepository(storage).load(),
       memories: createLocalMemoryRepository(storage).load(),
       notes: createLocalNoteRepository(storage).load(),
-      plans: createLocalDailyPlanRepository(storage).load()
+      plans: createLocalDailyPlanRepository(storage).load(),
+      journals: createLocalJournalRepository(storage).load(),
+      metrics: createLocalMetricRepository(storage).load(),
+      workouts: createLocalWorkoutRepository(storage).load(),
+      foods: createLocalFoodEntryRepository(storage).load(),
+      trainingProfile: loadTrainingProfile(storage)
     });
   }, []);
 
@@ -93,45 +129,62 @@ export function AgentHarnessPanel({ mode, onPrompt }: AgentHarnessPanelProps) {
 
   return (
     <aside className="agent-harness" aria-label="Agent context harness">
-      <div className="agent-harness-head">
-        <div>
-          <p className="eyebrow">Active mode</p>
-          <h2>{config.label}</h2>
-          <p>{config.description}</p>
+      <details className="agent-context-details">
+        <summary>
+          <span className="agent-ready"><span aria-hidden="true" /> Context loaded</span>
+          <span className="agent-context-summary">
+            {activeGoals.length} goals · {openTasks.length} quests · {state.memories.length} memories
+          </span>
+          <span className="agent-context-toggle">Inspect</span>
+        </summary>
+        <div className="agent-context-body">
+          <p className="agent-context-mode"><strong>{config.label}:</strong> {config.description}</p>
+          <div className="agent-context-grid">
+            <Link href="/goals" className="agent-context-card">
+              <span>Active goals</span>
+              <strong>{activeGoals.length}</strong>
+              <small>{activeGoals[0]?.title ?? "Set your first direction"}</small>
+            </Link>
+            <Link href="/tasks" className="agent-context-card">
+              <span>Open quests</span>
+              <strong>{openTasks.length}</strong>
+              <small>{todayPlan ? "Daily plan loaded · 8 newest sent" : "No daily plan · 8 newest sent"}</small>
+            </Link>
+            <Link href="/profile" className="agent-context-card">
+              <span>Durable memories</span>
+              <strong>{state.memories.length}</strong>
+              <small>User-reported preferences and safety constraints</small>
+            </Link>
+            <Link href="/notes" className="agent-context-card">
+              <span>Reference notes</span>
+              <strong>{state.notes.length}</strong>
+              <small>Up to 8 recently updated notes are sent</small>
+            </Link>
+            <Link href="/fitness" className="agent-context-card">
+              <span>Training profile</span>
+              <strong>{state.trainingProfile?.weeklySchedule ? "7d" : "Daily"}</strong>
+              <small>{state.trainingProfile?.notes?.trim() || "Equipment, schedule, and coaching style"}</small>
+            </Link>
+            <Link href="/metrics" className="agent-context-card">
+              <span>Health & activity</span>
+              <strong>{state.metrics.length + state.workouts.length + state.foods.length}</strong>
+              <small>Latest 5 check-ins plus today&apos;s food and training</small>
+            </Link>
+            <Link href="/journal" className="agent-context-card">
+              <span>Reflection</span>
+              <strong>{state.journals.length}</strong>
+              <small>Up to 5 recent journal entries are sent</small>
+            </Link>
+          </div>
+          <p className="agent-safety-note">
+            Nothing is sent until you submit a message. Proposed changes require approval before they apply.
+          </p>
         </div>
-        <span className="agent-ready"><span aria-hidden="true" /> Context loaded</span>
-      </div>
-
-      <div className="agent-context-grid">
-        <Link href="/goals" className="agent-context-card">
-          <span>Active goals</span>
-          <strong>{activeGoals.length}</strong>
-          <small>{activeGoals[0]?.title ?? "Set your first direction"}</small>
-        </Link>
-        <Link href="/tasks" className="agent-context-card">
-          <span>Open quests</span>
-          <strong>{openTasks.length}</strong>
-          <small>{todayPlan ? "Today's plan is loaded" : "No daily plan yet"}</small>
-        </Link>
-        <Link href="/profile" className="agent-context-card">
-          <span>Durable memories</span>
-          <strong>{state.memories.length}</strong>
-          <small>Preferences, constraints, and known facts</small>
-        </Link>
-        <Link href="/notes" className="agent-context-card">
-          <span>Reference notes</span>
-          <strong>{state.notes.length}</strong>
-          <small>Recent notes are available to the agent</small>
-        </Link>
-      </div>
-
+      </details>
       <button type="button" className="agent-starter" onClick={() => onPrompt(config.prompt)}>
-        <span>Suggested request</span>
+        <span>Try this request</span>
         <strong>{config.prompt}</strong>
       </button>
-      <p className="agent-safety-note">
-        Reads stay local until you send a message. Proposed changes appear as approval cards before they apply.
-      </p>
     </aside>
   );
 }

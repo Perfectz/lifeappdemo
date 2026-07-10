@@ -21,11 +21,18 @@ import {
   type CalorieBudget
 } from "@/domain/calorieBudget";
 import { toLocalIsoDate } from "@/domain/dates";
-import { createGoal } from "@/domain/goals";
+import { createGoal, goalPillars } from "@/domain/goals";
 import { withGoalEdits } from "@/domain/healthGoals";
 import { createMetricEntry } from "@/domain/metrics";
 import { withNutritionGoalEdits } from "@/domain/nutritionGoals";
 import { balancedWeeklySchedule } from "@/domain/trainingProfile";
+import type { GoalPillar } from "@/domain";
+
+const goalPillarLabel: Record<GoalPillar, string> = {
+  fitness: "Health & fitness",
+  personal: "Personal life",
+  professional: "Professional"
+};
 
 function num(value: string): number | undefined {
   const parsed = Number(value);
@@ -43,6 +50,7 @@ export function SetupWizard() {
   const [currentWeight, setCurrentWeight] = useState("");
   const [targetWeight, setTargetWeight] = useState("");
   const [primaryGoal, setPrimaryGoal] = useState("");
+  const [goalPillar, setGoalPillar] = useState<GoalPillar>("personal");
   const [trainingSchedule, setTrainingSchedule] = useState<"balanced" | "daily">("balanced");
   const [constraints, setConstraints] = useState("");
   const [budget, setBudget] = useState<CalorieBudget | null>(null);
@@ -95,7 +103,7 @@ export function SetupWizard() {
           goalRepository.save([
             createGoal({
               title: primaryGoal,
-              pillar: "fitness",
+              pillar: goalPillar,
               horizon: "quarterly",
               description: "Primary outcome chosen during setup."
             }),
@@ -186,6 +194,21 @@ export function SetupWizard() {
           value={primaryGoal}
           onChange={(event) => setPrimaryGoal(event.target.value)}
         />
+      </label>
+
+      <label className="fitness-label">
+        Which part of life does that outcome belong to?
+        <select
+          className="fitness-input"
+          value={goalPillar}
+          onChange={(event) => setGoalPillar(event.target.value as GoalPillar)}
+        >
+          {goalPillars.map((pillar) => (
+            <option key={pillar} value={pillar}>
+              {goalPillarLabel[pillar]}
+            </option>
+          ))}
+        </select>
       </label>
 
       <div className="setup-grid">

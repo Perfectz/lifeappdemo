@@ -7,8 +7,8 @@ import type { IsoDateTime } from "@/domain/types";
  * flexible, append-as-you-go notebook the coach fills by *talking* to you, so
  * you never have to manage a profile form.
  *
- * Facts are categorized so the coach can treat the safety-critical ones
- * (medications, conditions, injuries) as ground truth and so the user can scan
+ * Facts are categorized so the coach can respect the safety-sensitive ones
+ * (medications, conditions, injuries) as user-reported constraints and the user can scan
  * "what the coach knows" at a glance.
  */
 
@@ -43,7 +43,7 @@ export const memoryCategoryLabel: Record<MemoryCategory, string> = {
   general: "General"
 };
 
-/** Categories the coach must treat as safety ground truth. */
+/** Categories the coach must respect as user-reported safety constraints. */
 export const SAFETY_CRITICAL_CATEGORIES: MemoryCategory[] = ["medication", "condition", "injury"];
 
 export const DEFAULT_MEMORY_CATEGORY: MemoryCategory = "general";

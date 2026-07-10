@@ -1,12 +1,13 @@
 "use client";
 
-import { type FormEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import {
   confirmAIToolProposal,
   sendAIChatRequest
 } from "@/client/aiApiClient";
 import { getAuthHeaders } from "@/client/authToken";
+import { createGmailDraft } from "@/client/gmailIntegration";
 import { createClientId } from "@/client/clientIds";
 import { fileToDownscaledDataUrl } from "@/client/imageDownscale";
 import { loadWiki } from "@/data/wikiRepository";
@@ -104,6 +105,9 @@ function proposalDetails(proposal: AIToolProposal): string {
     proposal.payload && typeof proposal.payload === "object"
       ? (proposal.payload as Record<string, unknown>)
       : {};
+  if (proposal.toolName === "create_email_draft") {
+    return `To ${String(payload.to ?? "")} · ${String(payload.subject ?? "")}`;
+  }
   if (proposal.toolName === "log_metric") {
     return [
       payload.date,
@@ -156,6 +160,7 @@ export function AICoachPanel() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -166,7 +171,10 @@ export function AICoachPanel() {
   // proposal apply) — loading or reopening a thread must not re-save it.
   const dirtyRef = useRef(false);
   const isOnline = useNetworkStatus();
-  const speechSupported = useMemo(() => getSpeechRecognitionCtor() !== null, []);
+
+  useEffect(() => {
+    setSpeechSupported(getSpeechRecognitionCtor() !== null);
+  }, []);
 
   // Load saved threads on mount and reopen the most recent conversation.
   useEffect(() => {
@@ -495,6 +503,26 @@ export function AICoachPanel() {
     // Memory writes are local — apply directly, no server round-trip.
     if (proposal.toolName === "save_memory") {
       applyMemoryProposal(messageId, proposal);
+      return;
+    }
+
+    if (proposal.toolName === "create_email_draft") {
+      const payload = proposal.payload as { to?: unknown; subject?: unknown; body?: unknown };
+      try {
+        await createGmailDraft({
+          to: typeof payload.to === "string" ? payload.to : "",
+          subject: typeof payload.subject === "string" ? payload.subject : "",
+          body: typeof payload.body === "string" ? payload.body : ""
+        });
+        setProposalStatus(messageId, proposal.id, "applied");
+        setMessages((current) => [
+          ...current,
+          { id: createMessageId("coach"), role: "coach", content: "✓ Draft created in Gmail. Nothing was sent." }
+        ]);
+      } catch (draftError) {
+        setProposalStatus(messageId, proposal.id, "failed");
+        setError(draftError instanceof Error ? draftError.message : "The Gmail draft could not be created.");
+      }
       return;
     }
 

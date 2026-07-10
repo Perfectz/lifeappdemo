@@ -5,7 +5,7 @@ Features are grouped by area. Routes are App Router paths under `src/app/`. Navi
 ## Today
 
 ### Dashboard + AI daily brief
-The day's command center. Shows a deterministic **daily brief** that lists exactly what still needs the user today — vitals, scheduled training, overdue quests, protein, water, and whether today is planned — each as a focus item with a one-tap CTA and deep link. Active strategic goals and their next linked quests appear directly on the dashboard. When an OpenAI key is present, a short coach-written briefing sentence is layered on top of the deterministic facts.
+The day's command center. After setup, a deterministic **daily brief** lists exactly what still needs the user today — vitals, scheduled training, overdue quests, protein, water, and whether today is planned — each as a focus item with a one-tap CTA and deep link. Before setup is complete, the dashboard invites calibration instead of marking unconfigured behavior overdue. Active strategic goals and their next linked quests appear directly on the dashboard. When an OpenAI key is present, a short coach-written briefing sentence is layered on top of the deterministic facts.
 - Route: `/dashboard`
 - Logic: [`src/domain/dailyBrief.ts`](../src/domain/dailyBrief.ts), component [`src/components/Dashboard.tsx`](../src/components/Dashboard.tsx)
 
@@ -79,14 +79,17 @@ Generate and export a daily report (markdown) summarizing the day — built dete
 - Domain: [`src/domain/reports.ts`](../src/domain/reports.ts), [`src/domain/dailyPlans.ts`](../src/domain/dailyPlans.ts); component [`src/components/DailyReportExport.tsx`](../src/components/DailyReportExport.tsx)
 
 ### LifeQuest Agent (coach + personal assistant)
-A multi-turn personal intelligence workspace with four explicit operating modes: **Life Coach** for behavior and decisions, **Assistant** for organizing commitments, **Planner** for realistic daily execution, and **Review** for patterns and lessons. Its visible context harness shows the goals, open quests, durable memories, notes, and daily plan that ground the conversation. The agent can propose task/data changes (create/update/complete/defer/archive task, log metric, create journal entry, propose a daily plan, generate a report) that the user must confirm before they apply. The panel also integrates photo capture and voice.
+A multi-turn personal intelligence workspace with four explicit operating modes: **Life Coach** for behavior and decisions, **Assistant** for organizing commitments, **Planner** for realistic daily execution, and **Review** for patterns and lessons. Its compact, expandable context inspector shows exactly which goals, quests, memories, notes, recent activity, and training constraints ground the conversation. The agent can propose task/data changes (create/update/complete/defer/archive task, log metric, create journal entry, propose a daily plan, generate a report) that the user must confirm before they apply. The composer remains reachable while scrolling, and the panel also integrates photo capture and voice.
 - Route: `/coach`
 - Component: [`src/components/AICoachPanel.tsx`](../src/components/AICoachPanel.tsx); API `POST /api/ai/chat`, confirm `POST /api/ai/tools/confirm`
 
-### Capture (photo → update via vision)
-Take or upload a photo (a steps screenshot, watch summary, BP monitor, a meal, a whiteboard note) and let AI vision extract loggable data, returning confirmation-gated proposals (log metric, log cardio/strength/martial arts, create quest, add journal entry). Ambiguous reads come back with a clarifying question.
+### Capture (universal inbox)
+Drop a commitment, reference note, or reflection into one fast working surface. The first line becomes the title for quests and notes; captures are stored immediately in their native repository so the Agent can organize them later. Photo-to-update vision remains available from the LifeQuest Agent attachment button and returns confirmation-gated proposals.
 - Route: `/capture`
-- Domain: [`src/domain/visionUpdates.ts`](../src/domain/visionUpdates.ts); component [`src/components/ImageUpdate.tsx`](../src/components/ImageUpdate.tsx); API `POST /api/ai/vision`
+- Component: [`src/components/CaptureWorkspace.tsx`](../src/components/CaptureWorkspace.tsx); photo parsing [`src/domain/visionUpdates.ts`](../src/domain/visionUpdates.ts); API `POST /api/ai/vision`
+
+### Gmail assistant
+Connect or disconnect Gmail from Settings, load a recent unread inbox digest on demand, and ask the Agent about current email. The Agent can propose a Gmail draft, but it is created only after confirmation and remains in Gmail for review. There is no automatic-send endpoint. OAuth refresh tokens are encrypted server-side and never stored in the browser.
 
 ### Voice agent (realtime)
 A hands-free realtime voice coach over WebRTC against the OpenAI Realtime model. It can read context and act through voice tools: create/complete quests, log strength/cardio/martial-arts workouts, log check-ins, add journal entries, save notes, read notes/about-me, and navigate screens. Scope is intentionally additive and safe (no delete/archive over voice).

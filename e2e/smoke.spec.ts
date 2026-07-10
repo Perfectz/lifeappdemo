@@ -25,6 +25,7 @@ test.describe("smoke: core screens load", () => {
     { path: "/goals", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: "Goals", exact: true }) },
     { path: "/progress", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: "Progress Photos", exact: true }) },
     { path: "/coach", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: "LifeQuest Agent" }) },
+    { path: "/capture", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: "Capture", exact: true }) },
     { path: "/standup/morning", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: /Good morning/i }) }
   ];
 
@@ -76,5 +77,14 @@ test.describe("smoke: AI coach chat shell", () => {
     await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Assistant/ })).toBeVisible();
     await expect(page.getByText("Context loaded")).toBeVisible();
+  });
+});
+
+test.describe("smoke: Gmail assistant settings", () => {
+  test("shows a safe configuration state before OAuth secrets are added", async ({ page }) => {
+    await page.goto("/settings");
+    await expect(page.getByRole("heading", { name: "Gmail Assistant" })).toBeVisible();
+    await expect(page.getByText("Deployment configuration required")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Connect Gmail" })).toBeDisabled();
   });
 });

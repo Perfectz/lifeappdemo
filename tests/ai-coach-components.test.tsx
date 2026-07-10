@@ -82,7 +82,7 @@ describe("AICoachPanel", () => {
     expect(screen.getByText("Context loaded")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: /Assistant/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Suggested request/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Try this request/ }));
     expect((screen.getByLabelText("Message") as HTMLTextAreaElement).value).toContain(
       "organize, defer, or archive"
     );

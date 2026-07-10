@@ -6,11 +6,13 @@ import { CommandButton } from "@/components/CommandButton";
 import { SectionHeader } from "@/components/SectionHeader";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
+import { loadBodyProfile } from "@/data/bodyProfileRepository";
 import { loadTrainingProfile } from "@/data/trainingProfileRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import type { Workout, WorkoutType } from "@/domain";
 import { toLocalIsoDate } from "@/domain/dates";
 import { workoutTypesForDate } from "@/domain/trainingProfile";
+import { hasCompletedSetup } from "@/domain/bodyProfile";
 
 const TRAINING_BUCKETS: { type: WorkoutType; label: string; fallbackTitle: string }[] = [
   { type: "strength", label: "Strength", fallbackTitle: "Strength session" },
@@ -33,10 +35,12 @@ export function TodayTrainingCard() {
     TRAINING_BUCKETS.map((bucket) => bucket.type)
   );
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [setupComplete, setSetupComplete] = useState(false);
 
   const reload = useCallback(() => {
     const storage = window.localStorage;
     const today = toLocalIsoDate();
+    setSetupComplete(hasCompletedSetup(loadBodyProfile(storage)));
     setExpectedTypes(workoutTypesForDate(loadTrainingProfile(storage), today));
     setTodaysWorkouts(
       createLocalWorkoutRepository(storage)
@@ -74,17 +78,28 @@ export function TodayTrainingCard() {
       <SectionHeader
         eyebrow="Training"
         title={
-          expectedTypes.length === 0
+          hasLoaded && !setupComplete
+            ? "Choose your training rhythm"
+            : expectedTypes.length === 0
             ? "Today's Training — Recovery"
             : `Today's Training — ${doneCount}/${expectedTypes.length}`
         }
       />
-      {expectedTypes.length === 0 ? (
+      {hasLoaded && !setupComplete ? (
+        <div className="dashboard-empty dashboard-empty-action">
+          <strong>No training target yet.</strong>
+          <p>Choose a realistic weekly rhythm before LifeQuest starts measuring the day.</p>
+          <CommandButton href="/setup" icon="morning">
+            Personalize training
+          </CommandButton>
+        </div>
+      ) : null}
+      {setupComplete && expectedTypes.length === 0 ? (
         <p className="training-empty-hint">
           Nothing is required today. Recover well; optional movement counts as bonus.
         </p>
       ) : null}
-      <ul className="training-slots">
+      {setupComplete ? <ul className="training-slots">
         {slots.map((slot) => (
           <li
             key={slot.type}
@@ -96,17 +111,17 @@ export function TodayTrainingCard() {
             </span>
           </li>
         ))}
-      </ul>
-      {hasLoaded && expectedTypes.length > 0 && doneCount === 0 ? (
+      </ul> : null}
+      {hasLoaded && setupComplete && expectedTypes.length > 0 && doneCount === 0 ? (
         <p className="training-empty-hint">
           Fresh log today — one session puts your first slot on the board.
         </p>
       ) : null}
-      <div className="dashboard-card-cta">
+      {setupComplete ? <div className="dashboard-card-cta">
         <CommandButton href="/fitness" icon="metrics">
           Open Training
         </CommandButton>
-      </div>
+      </div> : null}
     </section>
   );
 }

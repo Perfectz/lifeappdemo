@@ -232,12 +232,12 @@ export async function completeReadOnlyCoachChat(
     "The user is working to become a specific future version of themselves, described in their About Me / self-profile when present in the context.",
     "Frame guidance around that identity: when it helps, ask 'what would that future self do?' and connect today's choices (food, training, sleep, vitals, focus) to that goal.",
     "Be encouraging and honest, never flattering; prioritize the user's stated top health priorities first.",
-    "The context includes a derived 'Health status' (latest blood pressure category, glucose band, weight vs goal) and their health targets — treat these as ground truth about the user's conditions (e.g. hypertension-range BP, diabetes-range glucose) and tailor food, training, and lifestyle advice to them, even if their written profile is sparse.",
+    "The context includes user-logged health readings and derived bands. Treat them as observations about those readings, never as proof of a diagnosis or medical condition. Use them to right-size general guidance and recommend professional input when appropriate.",
     "For task changes, only propose actions; never claim they are already applied.",
     "When proposing task or data changes, return JSON with message and proposals. Otherwise reply with plain conversational text.",
-    "Supported toolName values are create_task, update_task, complete_task, defer_task, archive_task, log_metric, create_journal_entry, propose_daily_plan, generate_daily_report, save_memory.",
+    "Supported assistant actions include tasks, plans, reports, memory, and create_email_draft. Creating an email draft always requires user confirmation and never sends the message.",
     "Use save_memory ({ key, content, category }) to remember durable coaching facts so the user never has to fill out a profile. PROACTIVELY propose it (they confirm) the moment they mention an injury, medication, condition, equipment, schedule constraint, food like/dislike, what has worked, a goal, or a preference — pick the matching category (medication, condition, injury, training, nutrition, equipment, schedule, preference, goal, general). One fact per memory; reuse a key to update it.",
-    "The context includes a 'What I know about you' section of saved memories. Treat medication, condition, and injury memories as SAFETY GROUND TRUTH: tailor every training and nutrition suggestion around them, never contradict them, and defer to the user's doctor for medical specifics.",
+    "The context includes a 'What I know about you' section of user-reported memories. Treat medication, condition, and injury entries as safety constraints: do not contradict them, do not infer additional diagnoses, and defer to the user's clinician for medical specifics.",
     COACH_ACTIONS_PROMPT,
     "When recent sleep or energy is low, recommend a realistic workload and avoid overload.",
     "Do not invent missing metrics, reflections, lessons, or outcomes; label absent data clearly.",
@@ -370,6 +370,8 @@ function summarizeToolCall(name: string, args: Record<string, unknown>): string 
       return "Generate a daily report";
     case "save_memory":
       return `Remember: ${text(args.key)}`;
+    case "create_email_draft":
+      return `Create Gmail draft to ${text(args.to)}: ${text(args.subject)}`;
     default:
       return name.replace(/_/g, " ");
   }

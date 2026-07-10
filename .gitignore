@@ -48,3 +48,5 @@ coverage
 /patrick-ai-writing-voice-guide.md
 /takeonme-intro-scene-breakdown.md
 /vox-style-asset-plan.md
+.vercel
+.env*

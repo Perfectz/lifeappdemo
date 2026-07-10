@@ -145,6 +145,8 @@ export type AIAppContext = {
   todaysNutrition?: string;
   /** Today's training status + recent workouts. */
   todaysTraining?: string;
+  /** User-reported equipment, schedule, coaching style, and constraints. */
+  trainingProfile?: string;
   /** Derived health status from latest vitals (BP category, glucose band, weight). */
   healthStatus?: string;
   /** The user's health targets (BP, glucose, weight, sleep). */
@@ -163,7 +165,8 @@ export type AITaskToolName =
   | "create_journal_entry"
   | "propose_daily_plan"
   | "generate_daily_report"
-  | "save_memory";
+  | "save_memory"
+  | "create_email_draft";
 
 export type AIToolProposal = TimestampedEntity & {
   toolName: AITaskToolName | CoachActionToolName;

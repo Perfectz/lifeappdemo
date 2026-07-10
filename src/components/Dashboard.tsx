@@ -25,6 +25,7 @@ import { createLocalTaskRepository } from "@/data/taskRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import { createLocalWaterRepository } from "@/data/waterRepository";
 import { loadTrainingProfile } from "@/data/trainingProfileRepository";
+import { loadBodyProfile } from "@/data/bodyProfileRepository";
 import { createLocalMemoryRepository } from "@/data/memoryRepository";
 import { loadWiki } from "@/data/wikiRepository";
 import type { DailyPlan, FoodEntry, MetricEntry, Task, Workout, WorkoutType } from "@/domain";
@@ -39,6 +40,7 @@ import { countDemoData, hasDemoData } from "@/domain/demoData";
 import { getLatestMetricEntry } from "@/domain/metrics";
 import { workoutTypesForDate } from "@/domain/trainingProfile";
 import { getWaterForDate } from "@/domain/waterTracking";
+import { hasCompletedSetup } from "@/domain/bodyProfile";
 
 const FOCUS_ICON: Record<string, JrpgIconName> = {
   "/vitals": "metrics",
@@ -60,6 +62,7 @@ export function Dashboard() {
   const [requiredWorkoutTypes, setRequiredWorkoutTypes] = useState<WorkoutType[] | undefined>();
   const [now, setNow] = useState<Date | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [setupComplete, setSetupComplete] = useState(false);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const heroName = useHeroName();
   // Derive dates from the mounted `now` state so the statically prerendered
@@ -112,7 +115,7 @@ export function Dashboard() {
       : 0;
   const brief = useMemo(
     () =>
-      now
+      now && setupComplete
         ? buildDailyBrief({
             today,
             nowMinutes: now.getHours() * 60 + now.getMinutes(),
@@ -126,7 +129,7 @@ export function Dashboard() {
             requiredWorkoutTypes
           })
         : null,
-    [now, today, tasks, workouts, metricEntries, plans, foodEntries, nutritionTarget, waterOz, requiredWorkoutTypes]
+    [now, setupComplete, today, tasks, workouts, metricEntries, plans, foodEntries, nutritionTarget, waterOz, requiredWorkoutTypes]
   );
 
   useEffect(() => {
@@ -144,6 +147,7 @@ export function Dashboard() {
       setRequiredWorkoutTypes(
         workoutTypesForDate(loadTrainingProfile(storage), currentToday)
       );
+      setSetupComplete(hasCompletedSetup(loadBodyProfile(storage)));
       setNow(stamp);
       setHasLoaded(true);
     }

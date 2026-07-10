@@ -7,6 +7,7 @@ import {
   summarizeAIAppContext,
   validateAIChatRequestBody
 } from "@/domain/aiContext";
+import { balancedWeeklySchedule, defaultTrainingProfile } from "@/domain/trainingProfile";
 
 const today = "2026-05-04";
 const now = "2026-05-04T10:00:00.000Z";
@@ -180,7 +181,12 @@ describe("AI context", () => {
             createdAt: foodNow,
             updatedAt: foodNow
           }
-        ]
+        ],
+        trainingProfile: {
+          ...defaultTrainingProfile(now),
+          weeklySchedule: balancedWeeklySchedule(),
+          notes: "Protect the right knee and avoid jumping."
+        }
       },
       today
     );
@@ -193,7 +199,25 @@ describe("AI context", () => {
     expect(prompt).toContain("Nutrition today:");
     expect(prompt).toContain("1480 remaining"); // 1800 - 320
     expect(prompt).toContain("Training today:");
+    expect(prompt).toContain("1/2 scheduled");
     expect(prompt).toContain("cardio done");
+    expect(prompt).toContain("Protect the right knee and avoid jumping.");
+  });
+
+  it("tells the agent when today is scheduled recovery instead of demanding three sessions", () => {
+    const context = buildAIAppContext(
+      {
+        workouts: [],
+        trainingProfile: {
+          ...defaultTrainingProfile(now),
+          weeklySchedule: balancedWeeklySchedule()
+        }
+      },
+      "2026-05-03"
+    );
+
+    expect(context.todaysTraining).toContain("scheduled recovery day");
+    expect(context.todaysTraining).not.toContain("/3");
   });
 
   it("includes derived behavioral patterns so the coach is history-aware", () => {

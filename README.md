@@ -12,6 +12,8 @@ LifeQuest OS is a **Next.js + React personal operating system** prototype with a
 - Metrics, journal capture, trends, character progression, and report export.
 - LifeQuest Agent with dedicated coaching, personal-assistant, planning, and review modes.
 - Context harness grounded in goals, quests, health data, notes, and durable memories, with approval-gated actions.
+- Universal Capture inbox for quickly saving quests, notes, and reflections.
+- Optional Gmail assistant connection for on-demand inbox digests and reviewable drafts; LifeQuest never sends mail automatically.
 - Realtime voice coaching and hands-free capture foundations.
 - PWA install + offline shell support.
 

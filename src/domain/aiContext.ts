@@ -40,6 +40,12 @@ import { isDailyReport } from "@/domain/reports";
 import { isTask } from "@/domain/tasks";
 import { isWorkout } from "@/domain/workouts";
 import { isGoal } from "@/domain/goals";
+import {
+  formatTrainingProfileForPrompt,
+  isTrainingProfile,
+  workoutTypesForDate,
+  type TrainingProfile
+} from "@/domain/trainingProfile";
 
 export const aiChatModes: AIChatMode[] = [
   "general",
@@ -63,6 +69,7 @@ export type AIStoredAppData = {
   healthGoals?: HealthGoals;
   goals?: Goal[];
   notes?: Note[];
+  trainingProfile?: TrainingProfile;
 };
 
 export type CoachHistoryTurn = { role: "user" | "assistant"; content: string };
@@ -110,7 +117,8 @@ function normalizeStoredAppData(value: unknown): AIStoredAppData | undefined {
     nutritionGoals: isNutritionGoals(value.nutritionGoals) ? value.nutritionGoals : undefined,
     healthGoals: isHealthGoals(value.healthGoals) ? value.healthGoals : undefined,
     goals: Array.isArray(value.goals) ? value.goals.filter(isGoal) : undefined,
-    notes: Array.isArray(value.notes) ? value.notes.filter(isNote) : undefined
+    notes: Array.isArray(value.notes) ? value.notes.filter(isNote) : undefined,
+    trainingProfile: isTrainingProfile(value.trainingProfile) ? value.trainingProfile : undefined
   };
 }
 
@@ -223,7 +231,10 @@ export function buildAIAppContext(
       data.nutritionGoals,
       today
     ),
-    todaysTraining: buildTrainingSummary(asArray(data.workouts), today),
+    todaysTraining: buildTrainingSummary(asArray(data.workouts), today, data.trainingProfile),
+    trainingProfile: data.trainingProfile
+      ? formatTrainingProfileForPrompt(data.trainingProfile)
+      : undefined,
     healthStatus: buildHealthStatus(asArray(data.metricEntries), data.healthGoals),
     goalsSummary: buildGoalsSummary(data.healthGoals, asArray(data.goals))
   };
@@ -320,13 +331,20 @@ function buildNutritionSummary(
   ].join("\n");
 }
 
-function buildTrainingSummary(workouts: Workout[], today: IsoDate): string {
-  const status = getDailyFitnessStatus(workouts, today);
-  const todayLine = `Training today ${status.completedCount}/3 — strength ${
-    status.byType.strength ? "done" : "to do"
-  }, cardio ${status.byType.cardio ? "done" : "to do"}, martial arts ${
-    status.byType.martial_arts ? "done" : "to do"
-  }.`;
+function buildTrainingSummary(
+  workouts: Workout[],
+  today: IsoDate,
+  trainingProfile?: TrainingProfile
+): string {
+  const expectedTypes = trainingProfile
+    ? workoutTypesForDate(trainingProfile, today)
+    : undefined;
+  const status = getDailyFitnessStatus(workouts, today, expectedTypes);
+  const todayLine = status.isRestDay
+    ? "Training today: scheduled recovery day. Optional movement is bonus, not required."
+    : `Training today ${status.completedCount}/${status.expectedCount} scheduled — ${status.expectedTypes
+        .map((type) => `${type.replace("_", " ")} ${status.byType[type] ? "done" : "to do"}`)
+        .join(", ")}.`;
   const recent = [...workouts]
     .sort((left, right) => timestamp(right.recordedAt) - timestamp(left.recordedAt))
     .slice(0, 5)
@@ -393,6 +411,8 @@ export function formatAIContextForPrompt(context: AIAppContext): string {
     context.todaysNutrition ?? "- Not available",
     "Training today:",
     context.todaysTraining ?? "- Not available",
+    "User-reported training profile and constraints:",
+    context.trainingProfile ?? "- Not available",
     "Recent journal entries:",
     journalLines.length > 0 ? journalLines.join("\n") : "- None",
     "Recent notes and reference material:",

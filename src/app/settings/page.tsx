@@ -10,6 +10,7 @@ import { InstallReadinessPanel } from "@/components/InstallReadinessPanel";
 import { MemberApprovalPanel } from "@/components/MemberApprovalPanel";
 import { ProfilePanel } from "@/components/ProfilePanel";
 import { FxPanel } from "@/components/FxPanel";
+import { GmailIntegrationPanel } from "@/components/GmailIntegrationPanel";
 import { RemindersPanel } from "@/components/RemindersPanel";
 import { SoundPanel } from "@/components/SoundPanel";
 import { ThemePicker } from "@/components/ThemePicker";
@@ -53,6 +54,10 @@ export default function SettingsPage() {
         <section className="dashboard-section">
           <h2>Cloud Sync</h2>
           <CloudSyncPanel />
+        </section>
+        <section className="dashboard-section">
+          <h2>Gmail Assistant</h2>
+          <GmailIntegrationPanel />
         </section>
         {pushNotificationsEnabled ? (
           <section className="dashboard-section">

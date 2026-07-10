@@ -1,0 +1,15 @@
+.claude
+.agents
+.codex
+agent
+hyperframes-skills
+content
+output
+playwright-report
+test-results
+coverage
+reference images
+*.mp4
+*.mov
+*.md
+!README.md
