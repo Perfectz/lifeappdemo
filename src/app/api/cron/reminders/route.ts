@@ -5,9 +5,11 @@ import webpush from "web-push";
 import { pushNotificationsEnabled } from "@/config/features";
 import { metricStorageKey } from "@/data/metricRepository";
 import { workoutStorageKey } from "@/data/workoutRepository";
+import { trainingProfileStorageKey } from "@/data/trainingProfileRepository";
 import { isMetricEntry } from "@/domain/metrics";
 import { isWorkout } from "@/domain/workouts";
 import { getDueReminders } from "@/domain/pushReminders";
+import { isTrainingProfile, workoutTypesForDate } from "@/domain/trainingProfile";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -91,7 +93,16 @@ export async function GET(request: Request) {
         : [];
 
       const { today, nowMinutes } = localNow(row.timezone || "America/New_York");
-      const due = getDueReminders({ today, nowMinutes, metrics, workouts });
+      const trainingProfile = snapshot[trainingProfileStorageKey];
+      const due = getDueReminders({
+        today,
+        nowMinutes,
+        metrics,
+        workouts,
+        requiredWorkoutTypes: isTrainingProfile(trainingProfile)
+          ? workoutTypesForDate(trainingProfile, today)
+          : undefined
+      });
 
       for (const reminder of due) {
         await webpush.sendNotification(

@@ -9,10 +9,10 @@ import { CharacterSprite } from "@/components/CharacterSprite";
 import { createLocalTaskRepository } from "@/data/taskRepository";
 
 const STEPS = [
-  { icon: "🌅", title: "Plan", text: "Open a Morning Stand-Up and pick one Main Quest." },
-  { icon: "⚔️", title: "Clear", text: "Work your Quest Log and complete quests to earn XP." },
-  { icon: "🌙", title: "Reflect", text: "Close the day by journaling wins and lessons." },
-  { icon: "📈", title: "Grow", text: "Watch Trends reveal your patterns over time." }
+  { icon: "🧭", title: "Choose direction", text: "Set a goal that defines the future you are building." },
+  { icon: "🌅", title: "Plan today", text: "Pick the quests, training, and health actions that matter now." },
+  { icon: "⚔️", title: "Act and log", text: "Clear quests and capture food, vitals, training, and lessons." },
+  { icon: "📈", title: "Review and adapt", text: "Use trends and weekly reviews to adjust the next plan." }
 ];
 
 export function OnboardingWelcome() {
@@ -50,7 +50,7 @@ export function OnboardingWelcome() {
           LifeQuest OS
         </h2>
         <p className="onboarding-lead">
-          Turn your day into a quest log. Here&apos;s the loop:
+          Turn your long-term direction into a plan you can execute today:
         </p>
         <ol className="onboarding-steps">
           {STEPS.map((step) => (
@@ -66,23 +66,23 @@ export function OnboardingWelcome() {
           ))}
         </ol>
         <div className="onboarding-actions">
+          <Link
+            href="/setup"
+            className="command-button"
+            onClick={dismiss}
+          >
+            <span>Personalize my plan</span>
+          </Link>
           <button
             type="button"
-            className="command-button"
+            className="onboarding-secondary"
             onClick={() => {
               dismiss();
               openQuickAdd();
             }}
           >
-            <span>Add your first quest</span>
+            Add a quest first
           </button>
-          <Link
-            href="/standup/morning"
-            className="onboarding-secondary"
-            onClick={dismiss}
-          >
-            Start a morning stand-up
-          </Link>
         </div>
         <button type="button" className="onboarding-skip" onClick={dismiss}>
           Skip for now

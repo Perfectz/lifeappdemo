@@ -7,6 +7,7 @@ The canonical entity types live in [`src/domain/types.ts`](../src/domain/types.t
 | Entity | Module | Storage | Cloud-synced? |
 | --- | --- | --- | --- |
 | `Task` | `tasks.ts` | `localStorage` (`lifequest.tasks.v1`) | Yes |
+| `Goal` | `goals.ts` | `localStorage` (`lifequest.goals.v1`) | Yes |
 | `MetricEntry` | `metrics.ts` | `localStorage` (`lifequest.metricEntries.v1`) | Yes |
 | `Workout` | `workouts.ts` | `localStorage` (`lifequest.workouts.v1`) | Yes |
 | `JournalEntry` | `journal.ts` | `localStorage` (`lifequest.journalEntries.v1`) | Yes |
@@ -39,7 +40,7 @@ A single physique photo. Fields: `id`, `date`, `angle` (`front`/`profile`/`face`
 The day's plan. Fields: `date`, `mainQuestTaskId?`, `sideQuestTaskIds[]`, `intention?`, `status` (`planned`/`closed`). Produced by the morning stand-up and referenced by reports. Validation limits side quests (e.g. ≤ 3) and prevents the main quest from also being a side quest.
 
 ### Task
-A quest. Fields: `title`, `description?`, `status` (`todo`/`done`/`archived`), `priority` (`low`/`medium`/`high`), `tags[]` (`health`/`work`/`content`/`social`/`admin`/`learning`), `dueDate?`, `plannedForDate?`, `completedAt?`, `archivedAt?`. Lifecycle helpers: `createTask`, `updateTask`, `completeTask`, `archiveTask`.
+A quest. Fields include `title`, `description?`, lifecycle status, priority, difficulty, tags, recurrence, checklist, due/planned dates, and `linkedGoalId?`. Completing a recurring quest produces its next occurrence while preserving the strategic goal link.
 
 ### JournalEntry
 A reflection/lesson. Fields: `date`, `type` (`morning_intention`/`evening_reflection`/`lesson`/`freeform`), `prompt?`, `content`, `linkedDailyPlanId?`, `linkedPostmortemId?`, `source` (`manual`/`ai_assisted`/`voice_transcript`/`demo`).
@@ -55,6 +56,7 @@ The user-authored identity context. Shape: `{ sections: Record<WikiSectionId, st
 
 ### Goal
 OKR-style goal hierarchy. Fields: `pillar` (`fitness`/`personal`/`professional`), `horizon` (`vision`/`yearly`/`quarterly`/`weekly`), `title`, `description?`, `parentGoalId?` (the vision → yearly → quarterly → weekly cascade), `targetDate?`, optional measurable target (`metricName`, `targetValue`, `currentValue`, `unit`), and `status` (`active`/`achieved`/`paused`/`dropped`).
+Goals without a numeric metric derive progress from their non-archived linked quests.
 
 ### FoodEntry / Macros (nutrition)
 A logged meal. Fields: `date`, `mealType` (`breakfast`/`lunch`/`dinner`/`snack`), `description`, `macros` (`calories`, `proteinG`, `carbsG`, `fatG`, `fiberG`), `estimateSource` (`manual`/`photo_ai`/`barcode`/`restaurant_db`), `confidence?`, `photoRef?`, `recordedAt`.

@@ -9,6 +9,7 @@ import { CharacterSprite } from "@/components/CharacterSprite";
 import { CommandButton } from "@/components/CommandButton";
 import { DashboardQuestCard } from "@/components/DashboardQuestCard";
 import { FuelCard } from "@/components/FuelCard";
+import { GoalProgressCard } from "@/components/GoalProgressCard";
 import type { JrpgIconName } from "@/components/JrpgIcon";
 import { NorthStarCard } from "@/components/NorthStarCard";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -16,13 +17,19 @@ import { SetupPrompt } from "@/components/SetupPrompt";
 import { TodayTrainingCard } from "@/components/TodayTrainingCard";
 import { VitalsAlertBanner } from "@/components/VitalsAlertBanner";
 import { dataChangedEventName } from "@/data/createLocalRepository";
+import { getTargetForDate } from "@/data/dailyNutritionTargetRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
+import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
+import { createLocalWaterRepository } from "@/data/waterRepository";
+import { loadTrainingProfile } from "@/data/trainingProfileRepository";
+import { loadBodyProfile } from "@/data/bodyProfileRepository";
 import { createLocalMemoryRepository } from "@/data/memoryRepository";
 import { loadWiki } from "@/data/wikiRepository";
-import type { DailyPlan, MetricEntry, Task, Workout } from "@/domain";
+import type { DailyPlan, FoodEntry, MetricEntry, Task, Workout, WorkoutType } from "@/domain";
+import type { DailyNutritionTarget } from "@/domain/dailyNutritionTarget";
 import { buildDailyBrief } from "@/domain/dailyBrief";
 import { formatMemoriesForPrompt } from "@/domain/memory";
 import { formatWikiForPrompt } from "@/domain/personalWiki";
@@ -31,13 +38,17 @@ import { getActiveDailyPlanForDate } from "@/domain/dailyPlans";
 import { formatReadableDate, toLocalIsoDate } from "@/domain/dates";
 import { countDemoData, hasDemoData } from "@/domain/demoData";
 import { getLatestMetricEntry } from "@/domain/metrics";
+import { workoutTypesForDate } from "@/domain/trainingProfile";
+import { getWaterForDate } from "@/domain/waterTracking";
+import { hasCompletedSetup } from "@/domain/bodyProfile";
 
 const FOCUS_ICON: Record<string, JrpgIconName> = {
   "/vitals": "metrics",
   "/fitness": "metrics",
   "/metrics": "metrics",
   "/standup/morning": "morning",
-  "/tasks": "tasks"
+  "/tasks": "tasks",
+  "/nutrition": "metrics"
 };
 
 export function Dashboard() {
@@ -45,8 +56,13 @@ export function Dashboard() {
   const [plans, setPlans] = useState<DailyPlan[]>([]);
   const [metricEntries, setMetricEntries] = useState<MetricEntry[]>([]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
+  const [nutritionTarget, setNutritionTarget] = useState<DailyNutritionTarget | undefined>();
+  const [waterOz, setWaterOz] = useState(0);
+  const [requiredWorkoutTypes, setRequiredWorkoutTypes] = useState<WorkoutType[] | undefined>();
   const [now, setNow] = useState<Date | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [setupComplete, setSetupComplete] = useState(false);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const heroName = useHeroName();
   // Derive dates from the mounted `now` state so the statically prerendered
@@ -99,17 +115,21 @@ export function Dashboard() {
       : 0;
   const brief = useMemo(
     () =>
-      now
+      now && setupComplete
         ? buildDailyBrief({
             today,
             nowMinutes: now.getHours() * 60 + now.getMinutes(),
             tasks,
             workouts,
             metrics: metricEntries,
-            dailyPlans: plans
+            dailyPlans: plans,
+            foodEntries,
+            nutritionTarget,
+            waterOz,
+            requiredWorkoutTypes
           })
         : null,
-    [now, today, tasks, workouts, metricEntries, plans]
+    [now, setupComplete, today, tasks, workouts, metricEntries, plans, foodEntries, nutritionTarget, waterOz, requiredWorkoutTypes]
   );
 
   useEffect(() => {
@@ -119,7 +139,16 @@ export function Dashboard() {
       setPlans(createLocalDailyPlanRepository(storage).load());
       setMetricEntries(createLocalMetricRepository(storage).load());
       setWorkouts(createLocalWorkoutRepository(storage).load());
-      setNow(new Date());
+      setFoodEntries(createLocalFoodEntryRepository(storage).load());
+      const stamp = new Date();
+      const currentToday = toLocalIsoDate(stamp);
+      setNutritionTarget(getTargetForDate(storage, currentToday));
+      setWaterOz(getWaterForDate(createLocalWaterRepository(storage).load(), currentToday));
+      setRequiredWorkoutTypes(
+        workoutTypesForDate(loadTrainingProfile(storage), currentToday)
+      );
+      setSetupComplete(hasCompletedSetup(loadBodyProfile(storage)));
+      setNow(stamp);
       setHasLoaded(true);
     }
     refresh();
@@ -375,6 +404,7 @@ export function Dashboard() {
         </aside>
       </div>
 
+      {hasLoaded ? <GoalProgressCard /> : null}
       {hasLoaded ? <NorthStarCard /> : null}
     </section>
   );

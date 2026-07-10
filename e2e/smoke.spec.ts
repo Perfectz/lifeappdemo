@@ -22,8 +22,10 @@ test.describe("smoke: core screens load", () => {
     { path: "/nutrition", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: "Breakfast" }) },
     { path: "/fitness", check: (p: import("@playwright/test").Page) => p.getByText("0/3").first() },
     { path: "/character", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: "Attributes" }) },
+    { path: "/goals", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: "Goals", exact: true }) },
     { path: "/progress", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: "Progress Photos", exact: true }) },
-    { path: "/coach", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: "AI Coach" }) },
+    { path: "/coach", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: "LifeQuest Agent" }) },
+    { path: "/capture", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: "Capture", exact: true }) },
     { path: "/standup/morning", check: (p: import("@playwright/test").Page) => p.getByRole("heading", { name: /Good morning/i }) }
   ];
 
@@ -52,6 +54,17 @@ test.describe("smoke: core daily flows persist", () => {
     await breakfast.getByRole("button", { name: /Add to Breakfast/i }).click();
     await expect(breakfast.getByText("Oatmeal")).toBeVisible();
   });
+
+  test("goal creates a linked next quest", async ({ page }) => {
+    await page.goto("/goals");
+    await page.getByLabel("Goal", { exact: true }).fill("Build consistency");
+    await page.getByRole("button", { name: "Create goal" }).click();
+    await expect(page.getByRole("heading", { name: "Build consistency" })).toBeVisible();
+    await page.getByLabel("Next quest for Build consistency").fill("Schedule tomorrow's workout");
+    await page.getByRole("button", { name: "Add for today" }).click();
+    await page.goto("/tasks");
+    await expect(page.getByText("Schedule tomorrow's workout")).toBeVisible();
+  });
 });
 
 test.describe("smoke: AI coach chat shell", () => {
@@ -62,5 +75,16 @@ test.describe("smoke: AI coach chat shell", () => {
     // Role-scoped: getByLabel("Message") substring-matches the dictation
     // button ("Dictate your message") too when speech recognition exists.
     await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Assistant/ })).toBeVisible();
+    await expect(page.getByText("Context loaded")).toBeVisible();
+  });
+});
+
+test.describe("smoke: Gmail assistant settings", () => {
+  test("shows a safe configuration state before OAuth secrets are added", async ({ page }) => {
+    await page.goto("/settings");
+    await expect(page.getByRole("heading", { name: "Gmail Assistant" })).toBeVisible();
+    await expect(page.getByText("Deployment configuration required")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Connect Gmail" })).toBeDisabled();
   });
 });

@@ -6,9 +6,11 @@ import { useState } from "react";
 import { readProfile, writeHeroName } from "@/client/profile";
 import { SectionHeader } from "@/components/SectionHeader";
 import { createLocalMetricRepository } from "@/data/metricRepository";
+import { createLocalGoalRepository } from "@/data/goalRepository";
 import { loadBodyProfile, saveBodyProfile } from "@/data/bodyProfileRepository";
 import { loadHealthGoals, saveHealthGoals } from "@/data/healthGoalsRepository";
 import { loadNutritionGoals, saveNutritionGoals } from "@/data/nutritionGoalsRepository";
+import { loadTrainingProfile, saveTrainingProfile } from "@/data/trainingProfileRepository";
 import { withBodyProfileEdits } from "@/domain/bodyProfile";
 import {
   activityLevelLabel,
@@ -19,9 +21,18 @@ import {
   type CalorieBudget
 } from "@/domain/calorieBudget";
 import { toLocalIsoDate } from "@/domain/dates";
+import { createGoal, goalPillars } from "@/domain/goals";
 import { withGoalEdits } from "@/domain/healthGoals";
 import { createMetricEntry } from "@/domain/metrics";
 import { withNutritionGoalEdits } from "@/domain/nutritionGoals";
+import { balancedWeeklySchedule } from "@/domain/trainingProfile";
+import type { GoalPillar } from "@/domain";
+
+const goalPillarLabel: Record<GoalPillar, string> = {
+  fitness: "Health & fitness",
+  personal: "Personal life",
+  professional: "Professional"
+};
 
 function num(value: string): number | undefined {
   const parsed = Number(value);
@@ -38,6 +49,10 @@ export function SetupWizard() {
   const [activity, setActivity] = useState<ActivityLevel>("light");
   const [currentWeight, setCurrentWeight] = useState("");
   const [targetWeight, setTargetWeight] = useState("");
+  const [primaryGoal, setPrimaryGoal] = useState("");
+  const [goalPillar, setGoalPillar] = useState<GoalPillar>("personal");
+  const [trainingSchedule, setTrainingSchedule] = useState<"balanced" | "daily">("balanced");
+  const [constraints, setConstraints] = useState("");
   const [budget, setBudget] = useState<CalorieBudget | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -81,6 +96,22 @@ export function SetupWizard() {
 
       writeHeroName(name);
 
+      if (primaryGoal.trim()) {
+        const goalRepository = createLocalGoalRepository(storage);
+        const existingGoals = goalRepository.load();
+        if (!existingGoals.some((goal) => goal.title.toLowerCase() === primaryGoal.trim().toLowerCase())) {
+          goalRepository.save([
+            createGoal({
+              title: primaryGoal,
+              pillar: goalPillar,
+              horizon: "quarterly",
+              description: "Primary outcome chosen during setup."
+            }),
+            ...existingGoals
+          ]);
+        }
+      }
+
       saveBodyProfile(
         storage,
         withBodyProfileEdits(loadBodyProfile(storage), {
@@ -99,6 +130,14 @@ export function SetupWizard() {
           weightTargetLbs: num(targetWeight)
         })
       );
+
+      const currentTrainingProfile = loadTrainingProfile(storage);
+      saveTrainingProfile(storage, {
+        ...currentTrainingProfile,
+        weeklySchedule: trainingSchedule === "balanced" ? balancedWeeklySchedule() : undefined,
+        notes: constraints.trim() || currentTrainingProfile.notes,
+        updatedAt: now
+      });
 
       if (budget) {
         saveNutritionGoals(
@@ -147,6 +186,31 @@ export function SetupWizard() {
         <input className="fitness-input" value={name} onChange={(e) => setName(e.target.value)} />
       </label>
 
+      <label className="fitness-label">
+        What outcome matters most right now?
+        <input
+          className="fitness-input"
+          placeholder="e.g. Reach 180 lb while keeping my strength"
+          value={primaryGoal}
+          onChange={(event) => setPrimaryGoal(event.target.value)}
+        />
+      </label>
+
+      <label className="fitness-label">
+        Which part of life does that outcome belong to?
+        <select
+          className="fitness-input"
+          value={goalPillar}
+          onChange={(event) => setGoalPillar(event.target.value as GoalPillar)}
+        >
+          {goalPillars.map((pillar) => (
+            <option key={pillar} value={pillar}>
+              {goalPillarLabel[pillar]}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <div className="setup-grid">
         <label className="fitness-label">
           Sex (for calorie math)
@@ -185,7 +249,29 @@ export function SetupWizard() {
             ))}
           </select>
         </label>
+        <label className="fitness-label setup-activity">
+          Training rhythm
+          <select
+            className="fitness-input"
+            value={trainingSchedule}
+            onChange={(event) => setTrainingSchedule(event.target.value as "balanced" | "daily")}
+          >
+            <option value="balanced">Balanced week with a recovery day</option>
+            <option value="daily">Legacy three-session daily target</option>
+          </select>
+        </label>
       </div>
+
+      <label className="fitness-label">
+        Injuries, schedule limits, or equipment constraints — optional
+        <textarea
+          className="fitness-input"
+          rows={3}
+          placeholder="The coach will plan around this context."
+          value={constraints}
+          onChange={(event) => setConstraints(event.target.value)}
+        />
+      </label>
 
       <button type="button" className="nutri-mini-btn" onClick={calculate}>
         Calculate my calorie budget

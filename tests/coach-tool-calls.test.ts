@@ -46,4 +46,48 @@ describe("coach tool calls → proposals", () => {
     expect(toolCallsToProposals(undefined)).toEqual([]);
     expect(toolCallsToProposals(null)).toEqual([]);
   });
+
+  it("turns strategic goal creation into a confirmable proposal", () => {
+    const proposals = toolCallsToProposals([
+      toolCall("create_goal", { title: "Finish the launch", pillar: "professional", horizon: "quarterly" })
+    ]);
+    expect(proposals[0]).toMatchObject({
+      toolName: "create_goal",
+      summary: "Create a strategic goal"
+    });
+  });
+
+  it("turns assistant task maintenance into confirmable proposals", () => {
+    const proposals = toolCallsToProposals([
+      toolCall("defer_task", { taskId: "task-1", plannedForDate: "2026-05-08" }),
+      toolCall("archive_task", { taskId: "task-2" })
+    ]);
+
+    expect(proposals).toHaveLength(2);
+    expect(proposals[0]).toMatchObject({
+      toolName: "defer_task",
+      payload: { taskId: "task-1", plannedForDate: "2026-05-08" }
+    });
+    expect(proposals[1]).toMatchObject({
+      toolName: "archive_task",
+      payload: { taskId: "task-2" }
+    });
+  });
+
+  it("turns a planned day into an approval-gated proposal", () => {
+    const proposals = toolCallsToProposals([
+      toolCall("propose_daily_plan", {
+        date: "2026-05-04",
+        mainQuestTaskId: "task-1",
+        sideQuestTaskIds: ["task-2"],
+        intention: "Finish the important work before adding more.",
+        rationale: "The launch task is the highest-leverage commitment."
+      })
+    ]);
+
+    expect(proposals[0]).toMatchObject({
+      toolName: "propose_daily_plan",
+      summary: "Propose a daily plan"
+    });
+  });
 });

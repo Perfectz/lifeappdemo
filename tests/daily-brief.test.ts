@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { DailyPlan, MetricEntry } from "@/domain";
 import { buildDailyBrief, type DailyBriefInput } from "@/domain/dailyBrief";
 import { createWorkout } from "@/domain/workouts";
+import { createFoodEntry } from "@/domain/nutrition";
+import { createTask } from "@/domain/tasks";
 
 const today = "2026-06-17";
 
@@ -98,5 +100,52 @@ describe("daily brief", () => {
     expect(brief.timeOfDay).toBe("evening");
     expect(brief.allClear).toBe(true);
     expect(brief.focus).toEqual([]);
+  });
+
+  it("treats a scheduled recovery day as complete without workouts", () => {
+    const brief = buildDailyBrief(
+      base({
+        metrics: [metricToday({ weightLbs: 184 })],
+        dailyPlans: [planToday],
+        requiredWorkoutTypes: []
+      })
+    );
+    expect(brief.focus.map((item) => item.id)).not.toContain("fitness");
+  });
+
+  it("surfaces overdue quests, protein, and water in the afternoon", () => {
+    const brief = buildDailyBrief(
+      base({
+        nowMinutes: 14 * 60,
+        tasks: [
+          createTask(
+            { title: "Book appointment", priority: "high", tags: ["health"], dueDate: "2026-06-16" },
+            `${today}T08:00:00.000Z`
+          )
+        ],
+        metrics: [metricToday({ weightLbs: 184 })],
+        workouts: [
+          createWorkout({ date: today, type: "strength" }, `${today}T06:00:00.000Z`),
+          createWorkout({ date: today, type: "cardio" }, `${today}T07:00:00.000Z`),
+          createWorkout({ date: today, type: "martial_arts" }, `${today}T08:00:00.000Z`)
+        ],
+        dailyPlans: [planToday],
+        foodEntries: [
+          createFoodEntry({ date: today, mealType: "breakfast", description: "Toast", macros: { proteinG: 5 } })
+        ],
+        nutritionTarget: {
+          date: today,
+          calorieTarget: 2000,
+          proteinTargetG: 150,
+          carbsTargetG: 200,
+          fatTargetG: 70,
+          rationale: "test",
+          source: "computed",
+          createdAt: `${today}T06:00:00.000Z`
+        },
+        waterOz: 8
+      })
+    );
+    expect(brief.focus.map((item) => item.id)).toEqual(["overdue-quests", "protein", "water"]);
   });
 });

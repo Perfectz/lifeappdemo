@@ -11,15 +11,18 @@ import { VitalsQuickForm } from "@/components/VitalsQuickForm";
 import { dataChangedEventName } from "@/data/createLocalRepository";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
+import { loadTrainingProfile } from "@/data/trainingProfileRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import { toLocalIsoDate } from "@/domain/dates";
+import { workoutTypesForDate, type TrainingProfile } from "@/domain/trainingProfile";
 import { latestBloodPressure, latestGlucose, latestWeight } from "@/domain/vitals";
 import type { DailyPlan, MetricEntry, Workout } from "@/domain";
 
 export function MorningStandup() {
   const [metrics, setMetrics] = useState<MetricEntry[]>([]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [trainingProfile, setTrainingProfile] = useState<TrainingProfile | null>(null);
   const [now, setNow] = useState<Date | null>(null);
 
   const [intention, setIntention] = useState("");
@@ -31,6 +34,7 @@ export function MorningStandup() {
     const storage = window.localStorage;
     setMetrics(createLocalMetricRepository(storage).load());
     setWorkouts(createLocalWorkoutRepository(storage).load());
+    setTrainingProfile(loadTrainingProfile(storage));
   }, []);
 
   useEffect(() => {
@@ -47,7 +51,15 @@ export function MorningStandup() {
 
   const today = now ? toLocalIsoDate(now) : toLocalIsoDate(new Date());
   const todayMetrics = useMemo(() => metrics.filter((m) => m.date === today), [metrics, today]);
-  const fitness = useMemo(() => getDailyFitnessStatus(workouts, today), [workouts, today]);
+  const fitness = useMemo(
+    () =>
+      getDailyFitnessStatus(
+        workouts,
+        today,
+        trainingProfile ? workoutTypesForDate(trainingProfile, today) : undefined
+      ),
+    [workouts, today, trainingProfile]
+  );
   const bp = latestBloodPressure(todayMetrics);
   const gl = latestGlucose(todayMetrics);
   const wt = latestWeight(todayMetrics);
@@ -83,10 +95,10 @@ export function MorningStandup() {
   }
 
   const sessionRows = [
-    { label: "Strength", done: Boolean(fitness.byType.strength) },
-    { label: "Cardio", done: Boolean(fitness.byType.cardio) },
-    { label: "Martial arts", done: Boolean(fitness.byType.martial_arts) }
-  ];
+    { type: "strength" as const, label: "Strength", done: Boolean(fitness.byType.strength) },
+    { type: "cardio" as const, label: "Cardio", done: Boolean(fitness.byType.cardio) },
+    { type: "martial_arts" as const, label: "Martial arts", done: Boolean(fitness.byType.martial_arts) }
+  ].filter((session) => fitness.expectedTypes.includes(session.type));
 
   return (
     <section className="standup-page morning-checkin" aria-labelledby="morning-standup-title">
@@ -142,7 +154,15 @@ export function MorningStandup() {
 
       {/* Step 2 — Training */}
       <section className="dashboard-section" aria-label="Today's training">
-        <SectionHeader eyebrow="Step 2" title={`Today's training — ${fitness.completedCount}/3`} />
+        <SectionHeader
+          eyebrow="Step 2"
+          title={
+            fitness.isRestDay
+              ? "Today's training — recovery day"
+              : `Today's training — ${fitness.completedCount}/${fitness.expectedCount}`
+          }
+        />
+        {fitness.isRestDay ? <p className="quest-empty">No sessions are required today.</p> : null}
         <ul className="checkin-sessions">
           {sessionRows.map((row) => (
             <li key={row.label} className={row.done ? "checkin-session checkin-session-done" : "checkin-session"}>

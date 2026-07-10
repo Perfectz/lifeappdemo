@@ -2,7 +2,8 @@ import { cardioOptions, martialArtsOptions, strengthVariants } from "@/config/fi
 import { journalEntryTypes } from "@/domain/journal";
 import { checkInTypes } from "@/domain/metrics";
 import { mealTypes } from "@/domain/nutrition";
-import { taskPriorities, taskTags } from "@/domain/tasks";
+import { taskDifficulties, taskPriorities, taskTags } from "@/domain/tasks";
+import { goalHorizons, goalPillars } from "@/domain/goals";
 
 /**
  * OpenAI Chat Completions tool definitions for the AI coach. Mirrors the voice
@@ -28,6 +29,23 @@ type ToolDef = {
 const num = { type: "number" } as const;
 
 export const COACH_TOOL_DEFINITIONS: ToolDef[] = [
+  {
+    type: "function",
+    function: {
+      name: "create_email_draft",
+      description:
+        "Create a reviewable Gmail draft after the user explicitly confirms. This never sends email. Use only when Gmail context says the connector is available.",
+      parameters: {
+        type: "object",
+        properties: {
+          to: { type: "string", description: "One recipient email address." },
+          subject: { type: "string" },
+          body: { type: "string", description: "Plain-text draft body." }
+        },
+        required: ["to", "subject", "body"]
+      }
+    }
+  },
   {
     type: "function",
     function: {
@@ -248,6 +266,126 @@ export const COACH_TOOL_DEFINITIONS: ToolDef[] = [
           fastingGlucoseTarget: num,
           sleepHoursTarget: num
         }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_goal",
+      description: "Create a strategic goal that quests can support.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          pillar: { type: "string", enum: goalPillars },
+          horizon: { type: "string", enum: goalHorizons },
+          description: { type: "string" },
+          targetDate: { type: "string", description: "ISO date YYYY-MM-DD" },
+          metricName: { type: "string" },
+          targetValue: num,
+          currentValue: num,
+          unit: { type: "string" }
+        },
+        required: ["title"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_task",
+      description: "Update an open task by its id from app context.",
+      parameters: {
+        type: "object",
+        properties: {
+          taskId: { type: "string" },
+          title: { type: "string" },
+          description: { type: "string" },
+          priority: { type: "string", enum: taskPriorities },
+          tags: { type: "array", items: { type: "string", enum: taskTags } },
+          dueDate: { type: "string", description: "ISO date YYYY-MM-DD" },
+          plannedForDate: { type: "string", description: "ISO date YYYY-MM-DD" },
+          difficulty: { type: "string", enum: taskDifficulties }
+        },
+        required: ["taskId"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "defer_task",
+      description: "Move an open task to another planned date.",
+      parameters: {
+        type: "object",
+        properties: {
+          taskId: { type: "string" },
+          plannedForDate: { type: "string", description: "ISO date YYYY-MM-DD" }
+        },
+        required: ["taskId", "plannedForDate"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "archive_task",
+      description: "Archive an open task that is no longer relevant.",
+      parameters: {
+        type: "object",
+        properties: { taskId: { type: "string" } },
+        required: ["taskId"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "propose_daily_plan",
+      description: "Propose today's main quest, side quests, and intention using task ids from context.",
+      parameters: {
+        type: "object",
+        properties: {
+          date: { type: "string", description: "ISO date YYYY-MM-DD" },
+          mainQuestTaskId: { type: "string" },
+          sideQuestTaskIds: { type: "array", items: { type: "string" } },
+          intention: { type: "string" },
+          rationale: { type: "string" }
+        },
+        required: ["date", "sideQuestTaskIds", "rationale"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_journal_entry",
+      description: "Capture a reflection or lesson in the journal.",
+      parameters: {
+        type: "object",
+        properties: {
+          date: { type: "string", description: "ISO date YYYY-MM-DD" },
+          type: { type: "string", enum: journalEntryTypes },
+          content: { type: "string" },
+          prompt: { type: "string" }
+        },
+        required: ["date", "type", "content"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_daily_report",
+      description: "Generate and save a daily report from the app's stored data.",
+      parameters: {
+        type: "object",
+        properties: {
+          date: { type: "string", description: "ISO date YYYY-MM-DD" },
+          style: { type: "string", enum: ["deterministic", "ai_assisted"] }
+        },
+        required: ["date", "style"]
       }
     }
   },

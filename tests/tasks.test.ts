@@ -44,7 +44,8 @@ describe("task domain", () => {
         priority: "low",
         tags: ["admin"],
         dueDate: "2026-05-04",
-        plannedForDate: "2026-05-03"
+        plannedForDate: "2026-05-03",
+        linkedGoalId: "goal-1"
       },
       now
     );
@@ -57,6 +58,7 @@ describe("task domain", () => {
       tags: ["admin"],
       dueDate: "2026-05-04",
       plannedForDate: "2026-05-03",
+      linkedGoalId: "goal-1",
       createdAt: now,
       updatedAt: now
     });

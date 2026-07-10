@@ -12,6 +12,8 @@ import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 import { loadHealthGoals, saveHealthGoals } from "@/data/healthGoalsRepository";
 import { loadNutritionGoals } from "@/data/nutritionGoalsRepository";
+import { loadTrainingProfile } from "@/data/trainingProfileRepository";
+import { loadBodyProfile } from "@/data/bodyProfileRepository";
 import { goalImageChangedEvent, loadGoalImage, saveGoalImage } from "@/data/goalImageStore";
 import { computeDailyAlignment } from "@/domain/alignment";
 import { getTransformation, type TransformationStage } from "@/domain/transformation";
@@ -20,6 +22,7 @@ import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import { toLocalIsoDate } from "@/domain/dates";
 import { weightGoalProgressPercent, withGoalEdits, type HealthGoals } from "@/domain/healthGoals";
 import { type NutritionGoals } from "@/domain/nutritionGoals";
+import { workoutTypesForDate, type TrainingProfile } from "@/domain/trainingProfile";
 import {
   bloodPressureCategoryLabel,
   glucoseBandLabel,
@@ -28,6 +31,7 @@ import {
   latestWeight
 } from "@/domain/vitals";
 import type { FoodEntry, MetricEntry, Workout } from "@/domain";
+import { hasCompletedSetup } from "@/domain/bodyProfile";
 
 function num(value: string): number | undefined {
   const parsed = Number(value);
@@ -48,6 +52,8 @@ export function NorthStarCard() {
   const [foods, setFoods] = useState<FoodEntry[]>([]);
   const [goals, setGoals] = useState<HealthGoals | null>(null);
   const [nutritionGoals, setNutritionGoals] = useState<NutritionGoals | null>(null);
+  const [trainingProfile, setTrainingProfile] = useState<TrainingProfile | null>(null);
+  const [setupComplete, setSetupComplete] = useState(false);
   const [editingWeight, setEditingWeight] = useState(false);
   const [weightTargetDraft, setWeightTargetDraft] = useState("");
   const [goalImage, setGoalImage] = useState<string | null>(null);
@@ -62,6 +68,8 @@ export function NorthStarCard() {
     setFoods(createLocalFoodEntryRepository(storage).load());
     setGoals(loadHealthGoals(storage));
     setNutritionGoals(loadNutritionGoals(storage));
+    setTrainingProfile(loadTrainingProfile(storage));
+    setSetupComplete(hasCompletedSetup(loadBodyProfile(storage)));
   }, []);
 
   useEffect(() => {
@@ -97,7 +105,15 @@ export function NorthStarCard() {
       .sort((a, b) => Date.parse(b.recordedAt) - Date.parse(a.recordedAt))[0];
     return withSleep?.sleepHours;
   }, [metrics]);
-  const fitness = useMemo(() => getDailyFitnessStatus(workouts, today), [workouts, today]);
+  const fitness = useMemo(
+    () =>
+      getDailyFitnessStatus(
+        workouts,
+        today,
+        trainingProfile ? workoutTypesForDate(trainingProfile, today) : undefined
+      ),
+    [workouts, today, trainingProfile]
+  );
 
   const alignment = useMemo(
     () =>
@@ -108,13 +124,14 @@ export function NorthStarCard() {
             workouts,
             goals,
             foods,
-            nutritionGoals: nutritionGoals ?? undefined
+            nutritionGoals: nutritionGoals ?? undefined,
+            requiredWorkoutTypes: fitness.expectedTypes
           })
         : null,
-    [goals, today, metrics, workouts, foods, nutritionGoals]
+    [goals, today, metrics, workouts, foods, nutritionGoals, fitness.expectedTypes]
   );
 
-  if (!goals || !alignment) {
+  if (!setupComplete || !goals || !alignment) {
     return null;
   }
 
@@ -224,7 +241,9 @@ export function NorthStarCard() {
         </div>
         <div className="north-star-score-text">
           <p className="north-star-level">{alignment.label}</p>
-          <p className="reminders-help">Today&apos;s alignment — vitals logged and in range, plus your three sessions.</p>
+          <p className="reminders-help">
+            Today&apos;s alignment — vitals, nutrition, and {fitness.isRestDay ? "scheduled recovery" : `${fitness.expectedCount} scheduled training session${fitness.expectedCount === 1 ? "" : "s"}`}.
+          </p>
           <div className="north-star-meter" aria-hidden="true">
             <span style={{ width: `${alignment.percent}%` }} />
           </div>
@@ -297,7 +316,9 @@ export function NorthStarCard() {
 
         <li className="north-star-row">
           <span className="north-star-row-label">Training today</span>
-          <span className="north-star-row-value">{fitness.completedCount}/{goals.dailyWorkoutsTarget}</span>
+          <span className="north-star-row-value">
+            {fitness.isRestDay ? "Recovery" : `${fitness.completedCount}/${fitness.expectedCount}`}
+          </span>
           <span className="north-star-row-target">{fitness.isComplete ? "Complete ✓" : "In progress"}</span>
         </li>
       </ul>

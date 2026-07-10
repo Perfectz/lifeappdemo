@@ -63,6 +63,8 @@ export type HealthQuestSuggestionsInput = {
   /** Tasks used for dedupe — non-todo entries are ignored defensively. */
   openTasks: Task[];
   dailyPlans: DailyPlan[];
+  /** Schedule-aware session types expected today. Defaults to legacy all-three. */
+  requiredWorkoutTypes?: WorkoutType[];
 };
 
 /** Titles match TodayTrainingCard's fallback session titles. */
@@ -121,16 +123,17 @@ export function buildHealthQuestSuggestions(
   }
 
   // --- Missing training sessions vs the rolling deadlines ------------------
-  const fitness = getDailyFitnessStatus(workouts, today);
+  const expectedTypes = input.requiredWorkoutTypes ?? requiredSessionTypes;
+  const fitness = getDailyFitnessStatus(workouts, today, expectedTypes);
   const karateLogged = metrics.some(
     (entry) => entry.date === today && entry.karateClass === true
   );
   const sessionDone = (type: WorkoutType): boolean =>
     Boolean(fitness.byType[type]) || (type === "martial_arts" && karateLogged);
-  const doneCount = requiredSessionTypes.filter(sessionDone).length;
+  const doneCount = expectedTypes.filter(sessionDone).length;
 
   let missingIndex = 0;
-  for (const type of requiredSessionTypes) {
+  for (const type of expectedTypes) {
     if (sessionDone(type)) {
       continue;
     }
@@ -143,8 +146,8 @@ export function buildHealthQuestSuggestions(
       key: `session-${type}`,
       title: SESSION_TITLE[type],
       reason: overdue
-        ? `Behind schedule — this session's ${formatTime(deadline)} window has passed with ${doneCount}/3 done.`
-        : `${doneCount}/3 sessions done${deadline !== undefined ? ` — this one's window closes at ${formatTime(deadline)}` : ""}.`,
+        ? `Behind schedule — this session's ${formatTime(deadline)} window has passed with ${doneCount}/${expectedTypes.length} done.`
+        : `${doneCount}/${expectedTypes.length} sessions done${deadline !== undefined ? ` — this one's window closes at ${formatTime(deadline)}` : ""}.`,
       priority: overdue ? "high" : "medium",
       tag: "health",
       rank: overdue ? 1 : 5

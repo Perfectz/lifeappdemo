@@ -6,9 +6,11 @@ import {
   trainingProfileStorageKey
 } from "@/data/trainingProfileRepository";
 import {
+  balancedWeeklySchedule,
   defaultTrainingProfile,
   formatTrainingProfileForPrompt,
-  isTrainingProfile
+  isTrainingProfile,
+  workoutTypesForDate
 } from "@/domain/trainingProfile";
 
 describe("trainingProfile domain", () => {
@@ -51,6 +53,13 @@ describe("trainingProfile domain", () => {
     expect(text).toContain("Vinny");
     expect(text).toContain("Strength days per week: 3");
     expect(text).toContain("karate Tue/Thu");
+  });
+
+  it("uses a weekly schedule and preserves recovery days", () => {
+    const profile = { ...defaultTrainingProfile(), weeklySchedule: balancedWeeklySchedule() };
+    expect(workoutTypesForDate(profile, "2026-07-06")).toEqual(["strength", "cardio"]);
+    expect(workoutTypesForDate(profile, "2026-07-05")).toEqual([]);
+    expect(isTrainingProfile(profile)).toBe(true);
   });
 });
 

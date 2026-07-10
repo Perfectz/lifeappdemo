@@ -54,6 +54,8 @@ export type Task = TimestampedEntity & {
   difficulty?: TaskDifficulty;
   /** Optional subtask checklist. Parent completion never requires all items done. */
   checklist?: ChecklistItem[];
+  /** Strategic goal this quest advances. Optional for backward compatibility. */
+  linkedGoalId?: EntityId;
 };
 
 export type DailyPlanStatus = "planned" | "closed";
@@ -120,7 +122,14 @@ export type DailyReport = TimestampedEntity & {
   generatedBy: "deterministic" | "ai";
 };
 
-export type AIChatMode = "general" | "morning" | "evening" | "report";
+export type AIChatMode =
+  | "general"
+  | "assistant"
+  | "planning"
+  | "review"
+  | "morning"
+  | "evening"
+  | "report";
 
 export type AIAppContext = {
   today: IsoDate;
@@ -128,6 +137,7 @@ export type AIAppContext = {
   todaysPlan?: DailyPlan;
   recentMetrics: MetricEntry[];
   recentJournalEntries: JournalEntry[];
+  recentNotes: Note[];
   latestReport?: DailyReport;
   /** Derived behavioral patterns so the coach can reference real history. */
   insightHighlights: string[];
@@ -135,6 +145,8 @@ export type AIAppContext = {
   todaysNutrition?: string;
   /** Today's training status + recent workouts. */
   todaysTraining?: string;
+  /** User-reported equipment, schedule, coaching style, and constraints. */
+  trainingProfile?: string;
   /** Derived health status from latest vitals (BP category, glucose band, weight). */
   healthStatus?: string;
   /** The user's health targets (BP, glucose, weight, sleep). */
@@ -153,7 +165,8 @@ export type AITaskToolName =
   | "create_journal_entry"
   | "propose_daily_plan"
   | "generate_daily_report"
-  | "save_memory";
+  | "save_memory"
+  | "create_email_draft";
 
 export type AIToolProposal = TimestampedEntity & {
   toolName: AITaskToolName | CoachActionToolName;

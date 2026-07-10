@@ -1,12 +1,13 @@
 "use client";
 
-import { type FormEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import {
   confirmAIToolProposal,
   sendAIChatRequest
 } from "@/client/aiApiClient";
 import { getAuthHeaders } from "@/client/authToken";
+import { createGmailDraft } from "@/client/gmailIntegration";
 import { createClientId } from "@/client/clientIds";
 import { fileToDownscaledDataUrl } from "@/client/imageDownscale";
 import { loadWiki } from "@/data/wikiRepository";
@@ -16,11 +17,15 @@ import { formatMemoriesForPrompt, isMemoryCategory, upsertMemory } from "@/domai
 import { persistAIToolResult } from "@/client/persistAIToolResult";
 import { readProfile } from "@/client/profile";
 import { loadStoredAppData } from "@/client/storedAppData";
-import { useHeroName } from "@/client/useHeroName";
 import { executeVoiceTool } from "@/client/voiceTools";
 import { isCoachActionTool } from "@/domain/coachActions";
 import { parseVisionResult, type VisionProposal } from "@/domain/visionUpdates";
 import { OfflineBoundary, aiNetworkRequiredMessage, useNetworkStatus } from "@/components/OfflineBoundary";
+import {
+  AgentHarnessPanel,
+  agentModeConfig,
+  type AgentMode
+} from "@/components/AgentHarnessPanel";
 import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { createLocalDailyReportRepository } from "@/data/dailyReportRepository";
 import { createLocalJournalRepository } from "@/data/journalRepository";
@@ -35,7 +40,7 @@ import {
   type ChatMessageRecord,
   type ChatThread
 } from "@/domain/chat";
-import type { AIToolProposal } from "@/domain";
+import type { AIChatMode, AIToolProposal } from "@/domain";
 
 type ChatMessage = {
   id: string;
@@ -53,7 +58,14 @@ type VisionProposalCard = VisionProposal & {
 
 const WELCOME_ID = "coach-welcome";
 const WELCOME_TEXT =
-  "Hey — I'm your coach. Ask me anything, talk it through, or share a photo (a meal, a BP reading, your steps). I can also log things for you — I'll show the change and you confirm before it saves.";
+  "I'm your LifeQuest agent: life coach, planner, and personal assistant. I can reason from your goals, commitments, health data, notes, and durable memories. When an action would change your data, I show an approval card first.";
+
+const apiModeForAgentMode: Record<AgentMode, AIChatMode> = {
+  coach: "general",
+  assistant: "assistant",
+  planning: "planning",
+  review: "review"
+};
 
 function welcomeMessage(): ChatMessage {
   return { id: WELCOME_ID, role: "coach", content: WELCOME_TEXT };
@@ -93,6 +105,9 @@ function proposalDetails(proposal: AIToolProposal): string {
     proposal.payload && typeof proposal.payload === "object"
       ? (proposal.payload as Record<string, unknown>)
       : {};
+  if (proposal.toolName === "create_email_draft") {
+    return `To ${String(payload.to ?? "")} · ${String(payload.subject ?? "")}`;
+  }
   if (proposal.toolName === "log_metric") {
     return [
       payload.date,
@@ -141,10 +156,13 @@ export function AICoachPanel() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [draft, setDraft] = useState("");
+  const [agentMode, setAgentMode] = useState<AgentMode>("coach");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const activeIdRef = useRef<string | null>(null);
@@ -153,8 +171,10 @@ export function AICoachPanel() {
   // proposal apply) — loading or reopening a thread must not re-save it.
   const dirtyRef = useRef(false);
   const isOnline = useNetworkStatus();
-  const heroName = useHeroName();
-  const speechSupported = useMemo(() => getSpeechRecognitionCtor() !== null, []);
+
+  useEffect(() => {
+    setSpeechSupported(getSpeechRecognitionCtor() !== null);
+  }, []);
 
   // Load saved threads on mount and reopen the most recent conversation.
   useEffect(() => {
@@ -294,7 +314,7 @@ export function AICoachPanel() {
     try {
       const payload = await sendAIChatRequest({
         message: trimmed,
-        mode: "general",
+        mode: apiModeForAgentMode[agentMode],
         appData: loadStoredAppData(window.localStorage),
         heroName: readProfile(window.localStorage).heroName,
         aboutMe:
@@ -321,6 +341,11 @@ export function AICoachPanel() {
     } finally {
       setIsSending(false);
     }
+  }
+
+  function useStarterPrompt(prompt: string) {
+    setDraft(prompt);
+    window.requestAnimationFrame(() => composerRef.current?.focus());
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -481,6 +506,26 @@ export function AICoachPanel() {
       return;
     }
 
+    if (proposal.toolName === "create_email_draft") {
+      const payload = proposal.payload as { to?: unknown; subject?: unknown; body?: unknown };
+      try {
+        await createGmailDraft({
+          to: typeof payload.to === "string" ? payload.to : "",
+          subject: typeof payload.subject === "string" ? payload.subject : "",
+          body: typeof payload.body === "string" ? payload.body : ""
+        });
+        setProposalStatus(messageId, proposal.id, "applied");
+        setMessages((current) => [
+          ...current,
+          { id: createMessageId("coach"), role: "coach", content: "✓ Draft created in Gmail. Nothing was sent." }
+        ]);
+      } catch (draftError) {
+        setProposalStatus(messageId, proposal.id, "failed");
+        setError(draftError instanceof Error ? draftError.message : "The Gmail draft could not be created.");
+      }
+      return;
+    }
+
     // Nutrition / workout / note / goal actions run client-side via the shared
     // voice-tool layer (same as the voice agent) — no server round-trip.
     if (isCoachActionTool(proposal.toolName)) {
@@ -554,8 +599,9 @@ export function AICoachPanel() {
     <section className="chat-shell" aria-labelledby="coach-title">
       <header className="chat-topbar">
         <div>
-          <h1 id="coach-title">AI Coach</h1>
-          <p>Chat, talk, or share a photo. Changes need your confirm.</p>
+          <p className="eyebrow">Personal intelligence layer</p>
+          <h1 id="coach-title">LifeQuest Agent</h1>
+          <p>Life coaching and personal assistance, grounded in your actual goals and data.</p>
         </div>
         <div className="chat-topbar-actions">
           <button type="button" className="chat-topbar-btn" onClick={newChat}>
@@ -571,6 +617,23 @@ export function AICoachPanel() {
           </button>
         </div>
       </header>
+
+      <nav className="agent-mode-tabs" aria-label="Agent mode">
+        {(Object.keys(agentModeConfig) as AgentMode[]).map((mode) => (
+          <button
+            type="button"
+            key={mode}
+            aria-pressed={agentMode === mode}
+            className={agentMode === mode ? "agent-mode-tab agent-mode-tab-active" : "agent-mode-tab"}
+            onClick={() => setAgentMode(mode)}
+          >
+            <strong>{agentModeConfig[mode].label}</strong>
+            <span>{agentModeConfig[mode].description}</span>
+          </button>
+        ))}
+      </nav>
+
+      <AgentHarnessPanel mode={agentMode} onPrompt={useStarterPrompt} />
 
       {showHistory ? (
         <div className="chat-history" aria-label="Saved conversations">
@@ -762,9 +825,10 @@ export function AICoachPanel() {
           </button>
         ) : null}
         <textarea
+          ref={composerRef}
           className="chat-input"
           rows={1}
-          placeholder={`Message your coach, ${heroName}…`}
+          placeholder={agentModeConfig[agentMode].placeholder}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onComposerKeyDown}

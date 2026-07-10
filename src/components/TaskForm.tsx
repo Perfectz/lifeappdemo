@@ -1,9 +1,13 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
+
+import { dataChangedEventName } from "@/data/createLocalRepository";
+import { createLocalGoalRepository } from "@/data/goalRepository";
 
 import type {
   RecurrenceFrequency,
+  Goal,
   Task,
   TaskDifficulty,
   TaskInput,
@@ -35,7 +39,8 @@ const defaultInput: TaskInput = {
   plannedForDate: "",
   recurrence: undefined,
   checklist: [],
-  difficulty: "standard"
+  difficulty: "standard",
+  linkedGoalId: ""
 };
 
 const repeatLabels: Record<RecurrenceFrequency, string> = {
@@ -67,13 +72,28 @@ function getInitialInput(task?: Task): TaskInput {
     plannedForDate: task.plannedForDate ?? "",
     recurrence: task.recurrence,
     checklist: task.checklist ?? [],
-    difficulty: task.difficulty ?? "standard"
+    difficulty: task.difficulty ?? "standard",
+    linkedGoalId: task.linkedGoalId ?? ""
   };
 }
 
 export function TaskForm({ buttonLabel, initialTask, onCancel, onSubmit }: TaskFormProps) {
   const [input, setInput] = useState<TaskInput>(() => getInitialInput(initialTask));
   const [error, setError] = useState<string | null>(null);
+  const [goals, setGoals] = useState<Goal[]>([]);
+
+  useEffect(() => {
+    function reloadGoals() {
+      setGoals(
+        createLocalGoalRepository(window.localStorage)
+          .load()
+          .filter((goal) => goal.status === "active")
+      );
+    }
+    reloadGoals();
+    window.addEventListener(dataChangedEventName, reloadGoals);
+    return () => window.removeEventListener(dataChangedEventName, reloadGoals);
+  }, []);
 
   function setField<Key extends keyof TaskInput>(key: Key, value: TaskInput[Key]) {
     setInput((current) => ({
@@ -219,6 +239,20 @@ export function TaskForm({ buttonLabel, initialTask, onCancel, onSubmit }: TaskF
             {recurrenceFrequencies.map((frequency) => (
               <option key={frequency} value={frequency}>
                 {repeatLabels[frequency]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Supports Goal</span>
+          <select
+            onChange={(event) => setField("linkedGoalId", event.target.value)}
+            value={input.linkedGoalId ?? ""}
+          >
+            <option value="">No goal link</option>
+            {goals.map((goal) => (
+              <option key={goal.id} value={goal.id}>
+                {goal.title}
               </option>
             ))}
           </select>

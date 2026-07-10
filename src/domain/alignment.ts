@@ -1,4 +1,4 @@
-import type { FoodEntry, IsoDate, MetricEntry, Workout } from "@/domain/types";
+import type { FoodEntry, IsoDate, MetricEntry, Workout, WorkoutType } from "@/domain/types";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import type { HealthGoals } from "@/domain/healthGoals";
 import type { NutritionGoals } from "@/domain/nutritionGoals";
@@ -50,13 +50,14 @@ export function computeDailyAlignment(input: {
   goals: HealthGoals;
   foods?: FoodEntry[];
   nutritionGoals?: NutritionGoals;
+  requiredWorkoutTypes?: WorkoutType[];
 }): DailyAlignment {
   const { today, metrics, workouts, goals, foods = [], nutritionGoals } = input;
   const todayMetrics = metrics.filter((entry) => entry.date === today);
   const bp = latestBloodPressure(todayMetrics);
   const glucose = latestGlucose(todayMetrics);
   const weight = latestWeight(todayMetrics);
-  const fitness = getDailyFitnessStatus(workouts, today);
+  const fitness = getDailyFitnessStatus(workouts, today, input.requiredWorkoutTypes);
 
   const bpInRange =
     bp !== undefined && bp.systolic <= goals.bpSystolicTarget && bp.diastolic <= goals.bpDiastolicTarget;
@@ -87,19 +88,17 @@ export function computeDailyAlignment(input: {
       points: 5,
       earned: todayFoods.length > 0 ? 5 : 0
     },
-    {
-      key: "strength",
-      label: "Strength session",
-      points: 15,
-      earned: fitness.byType.strength ? 15 : 0
-    },
-    { key: "cardio", label: "Cardio session", points: 15, earned: fitness.byType.cardio ? 15 : 0 },
-    {
-      key: "martial_arts",
-      label: "Martial arts session",
-      points: 20,
-      earned: fitness.byType.martial_arts ? 20 : 0
-    }
+    ...fitness.expectedTypes.map((type) => ({
+      key: type,
+      label:
+        type === "strength"
+          ? "Strength session"
+          : type === "cardio"
+            ? "Cardio session"
+            : "Martial arts session",
+      points: type === "martial_arts" ? 20 : 15,
+      earned: fitness.byType[type] ? (type === "martial_arts" ? 20 : 15) : 0
+    }))
   ];
 
   // Only score the calorie budget once the user has set one.

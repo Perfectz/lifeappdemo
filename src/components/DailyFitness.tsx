@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { celebrate } from "@/client/celebrate";
 import { playDing, playVictory } from "@/client/sfx";
 import { dataChangedEventName } from "@/data/createLocalRepository";
+import { loadTrainingProfile } from "@/data/trainingProfileRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import {
   cardioOptions,
@@ -17,6 +18,7 @@ import {
 } from "@/config/fitness";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import { toLocalIsoDate } from "@/domain/dates";
+import { workoutTypesForDate, type TrainingProfile } from "@/domain/trainingProfile";
 import {
   detectNewRecords,
   formatRecordTitle,
@@ -151,6 +153,7 @@ function PrescriptionList({ prescriptions }: { prescriptions: ExercisePrescripti
 
 export function DailyFitness() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [trainingProfile, setTrainingProfile] = useState<TrainingProfile | null>(null);
   const [now, setNow] = useState<Date | null>(null);
   const [viewedDate, setViewedDate] = useState<string | null>(null);
 
@@ -169,6 +172,7 @@ export function DailyFitness() {
 
   const reload = useCallback(() => {
     setWorkouts(createLocalWorkoutRepository(window.localStorage).load());
+    setTrainingProfile(loadTrainingProfile(window.localStorage));
   }, []);
 
   useEffect(() => {
@@ -181,7 +185,14 @@ export function DailyFitness() {
   const todayIso = now ? toLocalIsoDate(now) : toLocalIsoDate(new Date());
   const viewed = viewedDate ?? todayIso;
   const isToday = viewed === todayIso;
-  const status = useMemo(() => getDailyFitnessStatus(workouts, viewed), [workouts, viewed]);
+  const expectedTypes = useMemo(
+    () => (trainingProfile ? workoutTypesForDate(trainingProfile, viewed) : undefined),
+    [trainingProfile, viewed]
+  );
+  const status = useMemo(
+    () => getDailyFitnessStatus(workouts, viewed, expectedTypes),
+    [workouts, viewed, expectedTypes]
+  );
 
   // "PR" badges for the logged strength rows — recomputed from history, never persisted.
   const loggedStrength = status.byType.strength;
@@ -419,9 +430,11 @@ export function DailyFitness() {
           </button>
         </div>
         <p className="fitness-sub">
-          {isToday
-            ? "Log all three sessions to close the day."
-            : "Viewing a past day — you can still log a missed session."}
+          {status.isRestDay
+            ? "Recovery day — movement is optional and still earns bonus credit."
+            : isToday
+              ? `Complete ${status.expectedCount} scheduled session${status.expectedCount === 1 ? "" : "s"} to close the day.`
+              : "Viewing a past day — you can still log a missed session."}
           {!isToday ? (
             <button
               type="button"
@@ -435,20 +448,26 @@ export function DailyFitness() {
         <div
           className="fitness-pips"
           role="img"
-          aria-label={`${status.completedCount} of 3 sessions complete`}
+          aria-label={`${status.completedCount} of ${status.expectedCount} scheduled sessions complete`}
         >
-          {(["strength", "cardio", "martial_arts"] as const).map((type) => (
+          {status.expectedTypes.map((type) => (
             <span
               key={type}
               className={status.byType[type] ? "fitness-pip fitness-pip-done" : "fitness-pip"}
             />
           ))}
-          <strong className="fitness-count">{status.completedCount}/3</strong>
+          <strong className="fitness-count">
+            {status.isRestDay ? "REST" : `${status.completedCount}/${status.expectedCount}`}
+          </strong>
         </div>
         {status.isGoodDay ? (
           <p className="fitness-complete">
             ✓ Good day{status.bonusCount > 0 ? ` · +${status.bonusCount} bonus` : ""}
-            {status.isComplete ? " — all three! 🔥" : ""}
+            {status.isComplete && !status.isRestDay
+              ? status.expectedCount === 3
+                ? " — all three! 🔥"
+                : " — schedule complete! 🔥"
+              : ""}
           </p>
         ) : null}
         {!status.isComplete && previousDay ? (

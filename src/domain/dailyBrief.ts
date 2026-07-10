@@ -1,5 +1,6 @@
 import type {
   DailyPlan,
+  FoodEntry,
   IsoDate,
   MetricEntry,
   Task,
@@ -7,6 +8,9 @@ import type {
   WorkoutType
 } from "@/domain/types";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
+import type { DailyNutritionTarget } from "@/domain/dailyNutritionTarget";
+import { getFoodEntriesForDate, sumMacros } from "@/domain/nutrition";
+import { DEFAULT_WATER_GOAL_OZ } from "@/domain/waterTracking";
 
 /**
  * A coach-style "what needs you today" briefing for the dashboard. Pure +
@@ -48,6 +52,10 @@ export type DailyBriefInput = {
   workouts: Workout[];
   metrics: MetricEntry[];
   dailyPlans: DailyPlan[];
+  foodEntries?: FoodEntry[];
+  nutritionTarget?: DailyNutritionTarget;
+  waterOz?: number;
+  requiredWorkoutTypes?: WorkoutType[];
 };
 
 function vitalsLoggedToday(metrics: MetricEntry[], today: IsoDate): boolean {
@@ -71,7 +79,7 @@ function formatTime(minutes: number): string {
 }
 
 export function buildDailyBrief(input: DailyBriefInput): DailyBrief {
-  const { today, nowMinutes, workouts, metrics, dailyPlans } = input;
+  const { today, nowMinutes, tasks, workouts, metrics, dailyPlans } = input;
   const hour = Math.floor(nowMinutes / 60);
   const focus: FocusItem[] = [];
 
@@ -88,23 +96,69 @@ export function buildDailyBrief(input: DailyBriefInput): DailyBrief {
     });
   }
 
-  const fitness = getDailyFitnessStatus(workouts, today);
+  const fitness = getDailyFitnessStatus(workouts, today, input.requiredWorkoutTypes);
   if (!fitness.isComplete) {
     const done = fitness.completedCount;
     const expectedByNow = WORKOUT_DEADLINES_MIN.filter((deadline) => nowMinutes > deadline).length;
-    const overdue = done < expectedByNow;
-    const missing = (Object.keys(fitness.byType) as WorkoutType[])
-      .filter((type) => !fitness.byType[type])
+    const overdue = done < Math.min(expectedByNow, fitness.expectedCount);
+    const missing = fitness.expectedTypes.filter((type) => !fitness.byType[type])
       .map((type) => SESSION_LABEL[type]);
     const nextDeadline = WORKOUT_DEADLINES_MIN[done];
     focus.push({
       id: "fitness",
       overdue,
       message: overdue
-        ? `You're behind on workouts — ${expectedByNow} should be done by now, but only ${done}/3 are${missing.length ? ` (still need ${missing.join(", ")})` : ""}.`
-        : `${done}/3 workouts done${nextDeadline !== undefined ? ` — next by ${formatTime(nextDeadline)}` : ""}.`,
+        ? `You're behind on training — ${Math.min(expectedByNow, fitness.expectedCount)} should be done by now, but only ${done}/${fitness.expectedCount} are${missing.length ? ` (still need ${missing.join(", ")})` : ""}.`
+        : `${done}/${fitness.expectedCount} scheduled sessions done${nextDeadline !== undefined ? ` — next by ${formatTime(nextDeadline)}` : ""}.`,
       ctaLabel: "Open Fitness",
       href: "/fitness"
+    });
+  }
+
+  const overdueTasks = tasks
+    .filter(
+      (task) =>
+        task.status === "todo" &&
+        ((task.dueDate !== undefined && task.dueDate < today) ||
+          (task.plannedForDate !== undefined && task.plannedForDate < today))
+    )
+    .sort((a, b) =>
+      (a.dueDate ?? a.plannedForDate ?? "").localeCompare(
+        b.dueDate ?? b.plannedForDate ?? ""
+      )
+    );
+  if (overdueTasks.length > 0) {
+    focus.push({
+      id: "overdue-quests",
+      overdue: true,
+      message: `${overdueTasks.length} quest${overdueTasks.length === 1 ? " is" : "s are"} overdue — start with “${overdueTasks[0].title}”.`,
+      ctaLabel: "Review quests",
+      href: "/tasks"
+    });
+  }
+
+  if (nowMinutes > 12 * 60 && input.nutritionTarget && input.foodEntries) {
+    const protein = sumMacros(getFoodEntriesForDate(input.foodEntries, today)).proteinG;
+    if (protein < input.nutritionTarget.proteinTargetG * 0.6) {
+      focus.push({
+        id: "protein",
+        message: `${Math.round(protein)}g of ${Math.round(input.nutritionTarget.proteinTargetG)}g protein logged — plan the next protein-forward meal.`,
+        ctaLabel: "Open food diary",
+        href: "/nutrition"
+      });
+    }
+  }
+
+  if (
+    nowMinutes > 12 * 60 &&
+    input.waterOz !== undefined &&
+    input.waterOz < DEFAULT_WATER_GOAL_OZ / 2
+  ) {
+    focus.push({
+      id: "water",
+      message: `${Math.round(input.waterOz)} oz of ${DEFAULT_WATER_GOAL_OZ} oz water logged — catch up this afternoon.`,
+      ctaLabel: "Log water",
+      href: "/nutrition"
     });
   }
 

@@ -10,6 +10,7 @@ import { InstallReadinessPanel } from "@/components/InstallReadinessPanel";
 import { MemberApprovalPanel } from "@/components/MemberApprovalPanel";
 import { ProfilePanel } from "@/components/ProfilePanel";
 import { FxPanel } from "@/components/FxPanel";
+import { GmailIntegrationPanel } from "@/components/GmailIntegrationPanel";
 import { RemindersPanel } from "@/components/RemindersPanel";
 import { SoundPanel } from "@/components/SoundPanel";
 import { ThemePicker } from "@/components/ThemePicker";
@@ -23,10 +24,10 @@ export default function SettingsPage() {
     <PlaceholderPage
       title="Settings"
       kicker="Configuration"
-      body="Install LifeQuest OS as a PWA and keep the local shell available when the network drops. AI still requires network access."
+      body="Personalize your hero, reminders, presentation, backup, cloud sync, and installed-app experience."
       icon="settings"
       pose="thinking"
-      statusText="PWA install and stale-safe offline shell. No product sync or offline AI is enabled."
+      statusText="Local-first by default, with optional cloud backup and sync. AI features still require network access."
     >
       <div className="settings-install-grid">
         <MemberApprovalPanel />
@@ -53,6 +54,10 @@ export default function SettingsPage() {
         <section className="dashboard-section">
           <h2>Cloud Sync</h2>
           <CloudSyncPanel />
+        </section>
+        <section className="dashboard-section">
+          <h2>Gmail Assistant</h2>
+          <GmailIntegrationPanel />
         </section>
         {pushNotificationsEnabled ? (
           <section className="dashboard-section">

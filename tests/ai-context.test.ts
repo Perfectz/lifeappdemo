@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import type { DailyReport, JournalEntry, MetricEntry, Task } from "@/domain";
+import type { DailyReport, JournalEntry, MetricEntry, Note, Task } from "@/domain";
 import {
   buildAIAppContext,
   formatAIContextForPrompt,
   summarizeAIAppContext,
   validateAIChatRequestBody
 } from "@/domain/aiContext";
+import { balancedWeeklySchedule, defaultTrainingProfile } from "@/domain/trainingProfile";
 
 const today = "2026-05-04";
 const now = "2026-05-04T10:00:00.000Z";
@@ -67,6 +68,18 @@ function makeReport(overrides: Partial<DailyReport> = {}): DailyReport {
   };
 }
 
+function makeNote(overrides: Partial<Note> = {}): Note {
+  return {
+    id: "note-1",
+    title: "Planning reference",
+    content: "Protect Friday afternoon for the launch review.",
+    tags: ["schedule"],
+    createdAt: now,
+    updatedAt: now,
+    ...overrides
+  };
+}
+
 describe("AI context", () => {
   it("validates chat request bodies", () => {
     expect(validateAIChatRequestBody({ message: " Help ", mode: "general" })).toEqual({
@@ -81,6 +94,10 @@ describe("AI context", () => {
       ok: false,
       message: "Mode is invalid."
     });
+    expect(validateAIChatRequestBody({ message: "Organize my day", mode: "assistant" })).toMatchObject({
+      ok: true,
+      value: { mode: "assistant" }
+    });
   });
 
   it("builds compact recent context and excludes archived tasks", () => {
@@ -92,7 +109,8 @@ describe("AI context", () => {
         ],
         metricEntries: [makeMetric({ id: "metric-old", recordedAt: "2026-05-03T10:00:00.000Z" }), makeMetric()],
         journalEntries: [makeJournal()],
-        dailyReports: [makeReport()]
+        dailyReports: [makeReport()],
+        notes: [makeNote()]
       },
       today
     );
@@ -100,6 +118,7 @@ describe("AI context", () => {
     expect(context.openTasks.map((task) => task.id)).toEqual(["active-task"]);
     expect(context.recentMetrics.map((metric) => metric.id)).toEqual(["metric-1", "metric-old"]);
     expect(context.recentJournalEntries).toHaveLength(1);
+    expect(context.recentNotes.map((note) => note.id)).toEqual(["note-1"]);
     expect(context.latestReport?.id).toBe("report-1");
     expect(summarizeAIAppContext(context)).toEqual({
       openTaskCount: 1,
@@ -113,7 +132,8 @@ describe("AI context", () => {
       {
         tasks: [makeTask(), makeTask({ id: "archived", status: "archived", title: "Do not include" })],
         metricEntries: [makeMetric()],
-        journalEntries: [makeJournal()]
+        journalEntries: [makeJournal()],
+        notes: [makeNote()]
       },
       today
     );
@@ -126,6 +146,8 @@ describe("AI context", () => {
     expect(prompt).toContain("karate class");
     expect(prompt).toContain("2 mi walked");
     expect(prompt).toContain("Keep the AI read-only first.");
+    expect(prompt).toContain("Planning reference");
+    expect(prompt).toContain("Protect Friday afternoon for the launch review.");
     expect(prompt).not.toContain("Do not include");
     expect(prompt).not.toContain("OPENAI_API_KEY");
   });
@@ -159,7 +181,12 @@ describe("AI context", () => {
             createdAt: foodNow,
             updatedAt: foodNow
           }
-        ]
+        ],
+        trainingProfile: {
+          ...defaultTrainingProfile(now),
+          weeklySchedule: balancedWeeklySchedule(),
+          notes: "Protect the right knee and avoid jumping."
+        }
       },
       today
     );
@@ -172,7 +199,25 @@ describe("AI context", () => {
     expect(prompt).toContain("Nutrition today:");
     expect(prompt).toContain("1480 remaining"); // 1800 - 320
     expect(prompt).toContain("Training today:");
+    expect(prompt).toContain("1/2 scheduled");
     expect(prompt).toContain("cardio done");
+    expect(prompt).toContain("Protect the right knee and avoid jumping.");
+  });
+
+  it("tells the agent when today is scheduled recovery instead of demanding three sessions", () => {
+    const context = buildAIAppContext(
+      {
+        workouts: [],
+        trainingProfile: {
+          ...defaultTrainingProfile(now),
+          weeklySchedule: balancedWeeklySchedule()
+        }
+      },
+      "2026-05-03"
+    );
+
+    expect(context.todaysTraining).toContain("scheduled recovery day");
+    expect(context.todaysTraining).not.toContain("/3");
   });
 
   it("includes derived behavioral patterns so the coach is history-aware", () => {

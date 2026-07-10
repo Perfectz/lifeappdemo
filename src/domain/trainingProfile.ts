@@ -1,4 +1,4 @@
-import type { IsoDateTime } from "@/domain/types";
+import type { IsoDate, IsoDateTime, WorkoutType } from "@/domain/types";
 
 /**
  * The user's training setup + coaching style. This is what the workout coach
@@ -39,9 +39,47 @@ export type TrainingProfile = {
   gymAccess: boolean;
   coachStyle: CoachStyle;
   strengthDaysPerWeek?: number;
+  /** Optional per-weekday prescription. Missing means the legacy all-three daily target. */
+  weeklySchedule?: WeeklyTrainingSchedule;
   notes?: string;
   updatedAt: IsoDateTime;
 };
+
+export const weekdayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+export type WeekdayKey = (typeof weekdayKeys)[number];
+export type WeeklyTrainingSchedule = Record<WeekdayKey, WorkoutType[]>;
+
+export const weekdayLabel: Record<WeekdayKey, string> = {
+  sun: "Sunday",
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
+  sat: "Saturday"
+};
+
+/** Balanced starting point offered when a user enables weekly scheduling. */
+export function balancedWeeklySchedule(): WeeklyTrainingSchedule {
+  return {
+    sun: [],
+    mon: ["strength", "cardio"],
+    tue: ["cardio", "martial_arts"],
+    wed: ["strength", "cardio"],
+    thu: ["cardio", "martial_arts"],
+    fri: ["strength", "cardio"],
+    sat: ["cardio", "martial_arts"]
+  };
+}
+
+const workoutTypes: WorkoutType[] = ["strength", "cardio", "martial_arts"];
+
+export function workoutTypesForDate(profile: TrainingProfile, date: IsoDate): WorkoutType[] {
+  if (!profile.weeklySchedule) return workoutTypes;
+  const [year, month, day] = date.split("-").map(Number);
+  const weekday = weekdayKeys[new Date(year, (month ?? 1) - 1, day ?? 1).getDay()];
+  return profile.weeklySchedule[weekday] ?? [];
+}
 
 /**
  * Seeded to this user's actual answers: kettlebells + dumbbells + bands at
@@ -81,6 +119,16 @@ function isEquipment(value: unknown): value is TrainingEquipment {
   );
 }
 
+function isWeeklySchedule(value: unknown): value is WeeklyTrainingSchedule {
+  if (!value || typeof value !== "object") return false;
+  const schedule = value as Partial<WeeklyTrainingSchedule>;
+  return weekdayKeys.every(
+    (day) =>
+      Array.isArray(schedule[day]) &&
+      schedule[day]!.every((type) => workoutTypes.includes(type))
+  );
+}
+
 export function isTrainingProfile(value: unknown): value is TrainingProfile {
   if (!value || typeof value !== "object") return false;
   const p = value as Partial<TrainingProfile>;
@@ -90,6 +138,7 @@ export function isTrainingProfile(value: unknown): value is TrainingProfile {
     typeof p.coachStyle === "string" &&
     (coachStyles as readonly string[]).includes(p.coachStyle) &&
     (p.strengthDaysPerWeek === undefined || typeof p.strengthDaysPerWeek === "number") &&
+    (p.weeklySchedule === undefined || isWeeklySchedule(p.weeklySchedule)) &&
     (p.notes === undefined || typeof p.notes === "string") &&
     typeof p.updatedAt === "string"
   );
@@ -113,6 +162,13 @@ export function formatTrainingProfileForPrompt(profile: TrainingProfile): string
   ];
   if (profile.strengthDaysPerWeek) {
     lines.push(`Strength days per week: ${profile.strengthDaysPerWeek}.`);
+  }
+  if (profile.weeklySchedule) {
+    lines.push(
+      `Weekly schedule: ${weekdayKeys
+        .map((day) => `${weekdayLabel[day]} ${profile.weeklySchedule?.[day].join("+") || "recovery"}`)
+        .join("; ")}.`
+    );
   }
   if (profile.notes?.trim()) {
     lines.push(`Notes: ${profile.notes.trim()}`);

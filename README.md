@@ -4,11 +4,17 @@ LifeQuest OS is a **Next.js + React personal operating system** prototype with a
 
 ## Features
 
-- Dashboard command center for today’s quests and momentum tracking.
-- Task (Quest Log) CRUD flow.
+- Adaptive dashboard for today’s health actions, scheduled training, overdue quests, and goals.
+- Goal hierarchy that links long-term direction to concrete quests.
+- Advanced Quest Log with natural-language capture, recurrence, checklists, difficulty, and goal links.
 - Morning standup and evening postmortem workflows.
-- Metrics, journal capture, and daily markdown report export.
-- AI coach and voice session foundations.
+- Adaptive nutrition, scheduled training/recovery, vitals, water, supplements, and weekly review.
+- Metrics, journal capture, trends, character progression, and report export.
+- LifeQuest Agent with dedicated coaching, personal-assistant, planning, and review modes.
+- Context harness grounded in goals, quests, health data, notes, and durable memories, with approval-gated actions.
+- Universal Capture inbox for quickly saving quests, notes, and reflections.
+- Optional Gmail assistant connection for on-demand inbox digests and reviewable drafts; LifeQuest never sends mail automatically.
+- Realtime voice coaching and hands-free capture foundations.
 - PWA install + offline shell support.
 
 ## Tech Stack

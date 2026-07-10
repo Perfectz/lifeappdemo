@@ -49,8 +49,24 @@ export const aiTaskToolNames: AITaskToolName[] = [
   "create_journal_entry",
   "propose_daily_plan",
   "generate_daily_report",
-  "save_memory"
+  "save_memory",
+  "create_email_draft"
 ];
+
+export type CreateEmailDraftPayload = {
+  to: string;
+  subject: string;
+  body: string;
+};
+
+function validateCreateEmailDraftPayload(payload: unknown): CreateEmailDraftPayload | undefined {
+  if (!isRecord(payload)) return undefined;
+  const to = optionalText(payload.to);
+  const subject = optionalText(payload.subject);
+  const body = optionalText(payload.body);
+  if (!to || !/^\S+@\S+\.\S+$/.test(to) || !subject || !body) return undefined;
+  return { to: to.slice(0, 320), subject: subject.slice(0, 240), body: body.slice(0, 20_000) };
+}
 
 export type SaveMemoryPayload = {
   key: string;
@@ -482,6 +498,10 @@ function sanitizePayload(toolName: AITaskToolName, payload: unknown): unknown {
 
   if (toolName === "save_memory") {
     return validateSaveMemoryPayload(payload);
+  }
+
+  if (toolName === "create_email_draft") {
+    return validateCreateEmailDraftPayload(payload);
   }
 
   return undefined;

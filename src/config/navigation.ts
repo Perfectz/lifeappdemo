@@ -31,11 +31,19 @@ export const navigationGroups: NavigationGroup[] = [
         primaryMobile: true
       },
       {
-        label: "AI Coach",
+        label: "LifeQuest Agent",
         href: "/coach",
-        description: "Chat, photo & voice coaching",
+        description: "Life coach, planner & personal assistant",
         icon: "coach",
         shortLabel: "Coach",
+        primaryMobile: true
+      },
+      {
+        label: "Capture",
+        href: "/capture",
+        description: "Save a quest, note, or reflection",
+        icon: "journal",
+        shortLabel: "Capture",
         primaryMobile: true
       },
       {
@@ -50,24 +58,21 @@ export const navigationGroups: NavigationGroup[] = [
         href: "/vitals",
         description: "Glucose, BP & weight",
         icon: "metrics",
-        shortLabel: "Vitals",
-        primaryMobile: true
+        shortLabel: "Vitals"
       },
       {
         label: "Food Diary",
         href: "/nutrition",
         description: "Calories & macros",
         icon: "metrics",
-        shortLabel: "Food",
-        primaryMobile: true
+        shortLabel: "Food"
       },
       {
         label: "Training",
         href: "/fitness",
         description: "Daily training sessions",
         icon: "metrics",
-        shortLabel: "Train",
-        primaryMobile: true
+        shortLabel: "Train"
       }
     ]
   },
@@ -75,6 +80,14 @@ export const navigationGroups: NavigationGroup[] = [
     id: "progress",
     caption: "Progress",
     items: [
+      {
+        label: "Goals",
+        href: "/goals",
+        description: "Connect long-term direction to today's quests",
+        icon: "trends",
+        shortLabel: "Goals",
+        primaryMobile: true
+      },
       {
         label: "Character Sheet",
         href: "/character",
