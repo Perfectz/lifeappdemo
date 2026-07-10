@@ -23,7 +23,8 @@ export const COACH_ACTION_TOOL_NAMES = [
   "add_journal_entry",
   "save_note",
   "set_nutrition_goal",
-  "set_health_goal"
+  "set_health_goal",
+  "create_goal"
 ] as const;
 
 export type CoachActionToolName = (typeof COACH_ACTION_TOOL_NAMES)[number];
@@ -38,7 +39,7 @@ export function isCoachActionTool(name: string): name is CoachActionToolName {
  * payload shapes — it just tells the model to actually CALL the tools.
  */
 export const COACH_ACTIONS_PROMPT = [
-  "You can modify any part of the app by CALLING the provided tools — log/update/remove food, log workouts (cardio/strength/martial arts), log vitals, create/complete quests, add journal entries, save notes, set nutrition/health goals, and save memory.",
+  "You can modify any part of the app by CALLING the provided tools — log/update/remove food, log workouts (cardio/strength/martial arts), log vitals, create/complete quests, create strategic goals, add journal entries, save notes, set nutrition/health targets, and save memory.",
   "When the user asks you to do, add, change, fix, or remove something, CALL the matching tool. Never just say 'I've added it' or 'I can't' without calling the tool. The user confirms each tool call before it applies.",
   "Sodium is always in milligrams (mg), never grams — a label's 0.6 g of sodium is 600 mg."
 ].join(" ");

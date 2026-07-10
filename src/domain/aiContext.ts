@@ -4,9 +4,11 @@ import type {
   DailyPlan,
   DailyReport,
   FoodEntry,
+  Goal,
   IsoDate,
   JournalEntry,
   MetricEntry,
+  Note,
   Task,
   Workout
 } from "@/domain/types";
@@ -15,6 +17,7 @@ import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import { getInsightHighlights } from "@/domain/insights";
 import { isJournalEntry } from "@/domain/journal";
 import { isMetricEntry } from "@/domain/metrics";
+import { isNote } from "@/domain/notes";
 import {
   caloriesRemaining,
   getFoodEntriesForDate,
@@ -36,8 +39,17 @@ import {
 import { isDailyReport } from "@/domain/reports";
 import { isTask } from "@/domain/tasks";
 import { isWorkout } from "@/domain/workouts";
+import { isGoal } from "@/domain/goals";
 
-export const aiChatModes: AIChatMode[] = ["general", "morning", "evening", "report"];
+export const aiChatModes: AIChatMode[] = [
+  "general",
+  "assistant",
+  "planning",
+  "review",
+  "morning",
+  "evening",
+  "report"
+];
 
 export type AIStoredAppData = {
   tasks?: Task[];
@@ -49,6 +61,8 @@ export type AIStoredAppData = {
   foodEntries?: FoodEntry[];
   nutritionGoals?: NutritionGoals;
   healthGoals?: HealthGoals;
+  goals?: Goal[];
+  notes?: Note[];
 };
 
 export type CoachHistoryTurn = { role: "user" | "assistant"; content: string };
@@ -94,7 +108,9 @@ function normalizeStoredAppData(value: unknown): AIStoredAppData | undefined {
     workouts: Array.isArray(value.workouts) ? value.workouts.filter(isWorkout) : undefined,
     foodEntries: Array.isArray(value.foodEntries) ? value.foodEntries.filter(isFoodEntry) : undefined,
     nutritionGoals: isNutritionGoals(value.nutritionGoals) ? value.nutritionGoals : undefined,
-    healthGoals: isHealthGoals(value.healthGoals) ? value.healthGoals : undefined
+    healthGoals: isHealthGoals(value.healthGoals) ? value.healthGoals : undefined,
+    goals: Array.isArray(value.goals) ? value.goals.filter(isGoal) : undefined,
+    notes: Array.isArray(value.notes) ? value.notes.filter(isNote) : undefined
   };
 }
 
@@ -183,6 +199,9 @@ export function buildAIAppContext(
   const latestReport = asArray(data.dailyReports).sort(
     (left, right) => timestamp(right.updatedAt) - timestamp(left.updatedAt)
   )[0];
+  const recentNotes = asArray(data.notes)
+    .sort((left, right) => timestamp(right.updatedAt) - timestamp(left.updatedAt))
+    .slice(0, 8);
 
   const insightHighlights = getInsightHighlights(
     asArray(data.tasks),
@@ -196,6 +215,7 @@ export function buildAIAppContext(
     todaysPlan,
     recentMetrics,
     recentJournalEntries,
+    recentNotes,
     latestReport,
     insightHighlights,
     todaysNutrition: buildNutritionSummary(
@@ -205,7 +225,7 @@ export function buildAIAppContext(
     ),
     todaysTraining: buildTrainingSummary(asArray(data.workouts), today),
     healthStatus: buildHealthStatus(asArray(data.metricEntries), data.healthGoals),
-    goalsSummary: buildGoalsSummary(data.healthGoals)
+    goalsSummary: buildGoalsSummary(data.healthGoals, asArray(data.goals))
   };
 }
 
@@ -231,18 +251,31 @@ function buildHealthStatus(metrics: MetricEntry[], goals: HealthGoals | undefine
   return lines.join("\n");
 }
 
-function buildGoalsSummary(goals: HealthGoals | undefined): string {
-  if (!goals) {
-    return "Targets not set (using standard defaults: BP <130/80, fasting glucose <100, sleep 7.5h).";
+function buildGoalsSummary(healthGoals: HealthGoals | undefined, goals: Goal[]): string {
+  const lines: string[] = [];
+  if (healthGoals) {
+    lines.push(
+      `Blood pressure target: ≤ ${healthGoals.bpSystolicTarget}/${healthGoals.bpDiastolicTarget}.`,
+      `Fasting glucose target: ≤ ${healthGoals.fastingGlucoseTarget} mg/dL.`,
+      healthGoals.weightTargetLbs
+        ? `Weight goal: ${healthGoals.weightTargetLbs} lb${healthGoals.weightStartLbs ? ` (from ${healthGoals.weightStartLbs} lb).` : "."}`
+        : "Weight goal: not set.",
+      `Sleep target: ${healthGoals.sleepHoursTarget}h.`
+    );
   }
-  return [
-    `Blood pressure target: ≤ ${goals.bpSystolicTarget}/${goals.bpDiastolicTarget}.`,
-    `Fasting glucose target: ≤ ${goals.fastingGlucoseTarget} mg/dL.`,
-    goals.weightTargetLbs
-      ? `Weight goal: ${goals.weightTargetLbs} lb${goals.weightStartLbs ? ` (from ${goals.weightStartLbs} lb).` : "."}`
-      : "Weight goal: not set.",
-    `Sleep target: ${goals.sleepHoursTarget}h. Training: ${goals.dailyWorkoutsTarget} sessions/day.`
-  ].join("\n");
+  const active = goals.filter((goal) => goal.status === "active").slice(0, 8);
+  if (active.length > 0) {
+    lines.push(
+      "Strategic goals:",
+      ...active.map(
+        (goal) =>
+          `- [${goal.pillar}/${goal.horizon}] ${goal.title}${goal.targetDate ? ` (target ${goal.targetDate})` : ""}`
+      )
+    );
+  }
+  return lines.length > 0
+    ? lines.join("\n")
+    : "Targets not set (using standard health defaults); no strategic goals yet.";
 }
 
 function round(value: number): number {
@@ -338,6 +371,9 @@ export function formatAIContextForPrompt(context: AIAppContext): string {
   const journalLines = context.recentJournalEntries.map(
     (entry) => `- ${entry.date} ${entry.type}: ${entry.content.slice(0, 500)}`
   );
+  const noteLines = context.recentNotes.map(
+    (note) => `- ${note.title}: ${note.content.slice(0, 400)}`
+  );
 
   return [
     `Today: ${context.today}`,
@@ -359,6 +395,8 @@ export function formatAIContextForPrompt(context: AIAppContext): string {
     context.todaysTraining ?? "- Not available",
     "Recent journal entries:",
     journalLines.length > 0 ? journalLines.join("\n") : "- None",
+    "Recent notes and reference material:",
+    noteLines.length > 0 ? noteLines.join("\n") : "- None",
     "Behavioral patterns (derived):",
     context.insightHighlights.length > 0
       ? context.insightHighlights.map((line) => `- ${line}`).join("\n")

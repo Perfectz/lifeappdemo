@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { TaskForm } from "@/components/TaskForm";
@@ -135,6 +136,12 @@ export function TaskCard({
           </ul>
         ) : null}
         <dl className="quest-meta">
+          {task.linkedGoalId ? (
+            <div>
+              <dt>Direction</dt>
+              <dd><Link href="/goals">Goal-linked quest →</Link></dd>
+            </div>
+          ) : null}
           {task.dueDate ? (
             <div>
               <dt>Due</dt>

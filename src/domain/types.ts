@@ -54,6 +54,8 @@ export type Task = TimestampedEntity & {
   difficulty?: TaskDifficulty;
   /** Optional subtask checklist. Parent completion never requires all items done. */
   checklist?: ChecklistItem[];
+  /** Strategic goal this quest advances. Optional for backward compatibility. */
+  linkedGoalId?: EntityId;
 };
 
 export type DailyPlanStatus = "planned" | "closed";
@@ -120,7 +122,14 @@ export type DailyReport = TimestampedEntity & {
   generatedBy: "deterministic" | "ai";
 };
 
-export type AIChatMode = "general" | "morning" | "evening" | "report";
+export type AIChatMode =
+  | "general"
+  | "assistant"
+  | "planning"
+  | "review"
+  | "morning"
+  | "evening"
+  | "report";
 
 export type AIAppContext = {
   today: IsoDate;
@@ -128,6 +137,7 @@ export type AIAppContext = {
   todaysPlan?: DailyPlan;
   recentMetrics: MetricEntry[];
   recentJournalEntries: JournalEntry[];
+  recentNotes: Note[];
   latestReport?: DailyReport;
   /** Derived behavioral patterns so the coach can reference real history. */
   insightHighlights: string[];

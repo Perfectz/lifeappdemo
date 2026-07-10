@@ -54,6 +54,7 @@ export type TaskInput = {
   recurrence?: TaskRecurrence;
   checklist?: ChecklistItem[];
   difficulty?: TaskDifficulty;
+  linkedGoalId?: string;
 };
 
 export type TaskGroups = {
@@ -111,7 +112,8 @@ export function validateTaskInput(input: TaskInput): TaskValidationResult {
       checklist: normalizeChecklist(input.checklist),
       // "standard" is the implicit default — store it as absence so legacy
       // and new tasks stay byte-compatible.
-      difficulty: input.difficulty === "standard" ? undefined : input.difficulty
+      difficulty: input.difficulty === "standard" ? undefined : input.difficulty,
+      linkedGoalId: normalizeOptionalText(input.linkedGoalId)
     }
   };
 }
@@ -135,6 +137,7 @@ export function createTask(input: TaskInput, now: IsoDateTime = new Date().toISO
     recurrence: validation.value.recurrence,
     checklist: validation.value.checklist,
     difficulty: validation.value.difficulty,
+    linkedGoalId: validation.value.linkedGoalId,
     createdAt: now,
     updatedAt: now
   };
@@ -165,6 +168,7 @@ export function updateTask(
     recurrence: "recurrence" in input ? validation.value.recurrence : task.recurrence,
     checklist: "checklist" in input ? validation.value.checklist : task.checklist,
     difficulty: "difficulty" in input ? validation.value.difficulty : task.difficulty,
+    linkedGoalId: "linkedGoalId" in input ? validation.value.linkedGoalId : task.linkedGoalId,
     updatedAt: now
   };
 }
@@ -371,7 +375,8 @@ export function taskToInput(task: Task): TaskInput {
     plannedForDate: task.plannedForDate,
     recurrence: task.recurrence,
     checklist: task.checklist,
-    difficulty: task.difficulty
+    difficulty: task.difficulty,
+    linkedGoalId: task.linkedGoalId
   };
 }
 
@@ -445,6 +450,7 @@ export function isTask(value: unknown): value is Task {
     typeof task.updatedAt === "string" &&
     isValidRecurrence(task.recurrence) &&
     isValidChecklist(task.checklist) &&
-    isValidDifficulty(task.difficulty)
+    isValidDifficulty(task.difficulty) &&
+    (task.linkedGoalId === undefined || typeof task.linkedGoalId === "string")
   );
 }

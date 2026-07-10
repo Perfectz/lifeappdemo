@@ -1,5 +1,6 @@
 import { createLocalJournalRepository } from "@/data/journalRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
+import { createLocalGoalRepository } from "@/data/goalRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import {
@@ -30,7 +31,8 @@ import { formatWikiForPrompt } from "@/domain/personalWiki";
 import { createLocalMemoryRepository } from "@/data/memoryRepository";
 import { findMemory, isMemoryCategory, removeMemory, upsertMemory } from "@/domain/memory";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
-import type { JournalEntryType, TaskPriority, TaskTag } from "@/domain";
+import { createGoal, goalHorizons, goalPillars } from "@/domain/goals";
+import type { GoalHorizon, GoalPillar, JournalEntryType, TaskPriority, TaskTag } from "@/domain";
 
 /**
  * The action layer for the voice agent. Each tool maps a spoken intent onto a
@@ -61,7 +63,8 @@ const PAGE_PATHS: Record<string, string> = {
   reports: "/reports",
   morning_standup: "/standup/morning",
   nutrition: "/nutrition",
-  settings: "/settings"
+  settings: "/settings",
+  goals: "/goals"
 };
 
 export const VOICE_TOOL_DEFINITIONS = [
@@ -75,6 +78,26 @@ export const VOICE_TOOL_DEFINITIONS = [
         title: { type: "string", description: "Short title of the quest." },
         priority: { type: "string", enum: taskPriorities },
         tags: { type: "array", items: { type: "string", enum: taskTags } }
+      },
+      required: ["title"]
+    }
+  },
+  {
+    type: "function",
+    name: "create_goal",
+    description: "Create a strategic goal that future quests can support.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        pillar: { type: "string", enum: goalPillars },
+        horizon: { type: "string", enum: goalHorizons },
+        description: { type: "string" },
+        targetDate: { type: "string" },
+        metricName: { type: "string" },
+        targetValue: { type: "number" },
+        currentValue: { type: "number" },
+        unit: { type: "string" }
       },
       required: ["title"]
     }
@@ -401,6 +424,31 @@ function createQuest(args: Record<string, unknown>): VoiceToolResult {
   const task = createTask({ title, priority, tags });
   repo.save([task, ...repo.load()]);
   return { ok: true, message: `Added quest "${task.title}".` };
+}
+
+function createStrategicGoal(args: Record<string, unknown>): VoiceToolResult {
+  const title = asText(args.title);
+  if (!title) return { ok: false, message: "I need a title to create a goal." };
+  const pillar = goalPillars.includes(args.pillar as GoalPillar)
+    ? (args.pillar as GoalPillar)
+    : "fitness";
+  const horizon = goalHorizons.includes(args.horizon as GoalHorizon)
+    ? (args.horizon as GoalHorizon)
+    : "quarterly";
+  const repository = createLocalGoalRepository(store());
+  const goal = createGoal({
+    title,
+    pillar,
+    horizon,
+    description: asText(args.description) || undefined,
+    targetDate: asText(args.targetDate) || undefined,
+    metricName: asText(args.metricName) || undefined,
+    targetValue: asNumber(args.targetValue),
+    currentValue: asNumber(args.currentValue),
+    unit: asText(args.unit) || undefined
+  });
+  repository.save([goal, ...repository.load()]);
+  return { ok: true, message: `Created goal "${goal.title}".`, navigateTo: "/goals" };
 }
 
 function completeQuest(args: Record<string, unknown>): VoiceToolResult {
@@ -765,6 +813,7 @@ function readMemory(args: Record<string, unknown>): VoiceToolResult {
 
 const HANDLERS: Record<string, (args: Record<string, unknown>) => VoiceToolResult> = {
   create_quest: createQuest,
+  create_goal: createStrategicGoal,
   complete_quest: completeQuest,
   log_cardio: logCardio,
   log_strength: logStrength,

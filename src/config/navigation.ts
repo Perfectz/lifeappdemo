@@ -31,9 +31,9 @@ export const navigationGroups: NavigationGroup[] = [
         primaryMobile: true
       },
       {
-        label: "AI Coach",
+        label: "LifeQuest Agent",
         href: "/coach",
-        description: "Chat, photo & voice coaching",
+        description: "Life coach, planner & personal assistant",
         icon: "coach",
         shortLabel: "Coach",
         primaryMobile: true
@@ -75,6 +75,13 @@ export const navigationGroups: NavigationGroup[] = [
     id: "progress",
     caption: "Progress",
     items: [
+      {
+        label: "Goals",
+        href: "/goals",
+        description: "Connect long-term direction to today's quests",
+        icon: "trends",
+        shortLabel: "Goals"
+      },
       {
         label: "Character Sheet",
         href: "/character",

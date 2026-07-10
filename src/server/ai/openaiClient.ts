@@ -178,6 +178,24 @@ function coachModelSettings(maxTokens: number): ModelSettings {
     : { temperature: 0.4, maxTokens };
 }
 
+function modeInstructions(mode: string): string {
+  switch (mode) {
+    case "assistant":
+      return "Operate as a decisive personal assistant. Organize commitments, retrieve known context, and propose concrete task/note/plan changes. Prefer action tools over generic advice when the request is actionable.";
+    case "planning":
+      return "Operate as a planning partner. Reconcile active goals, open tasks, health constraints, energy, and deadlines into a realistic plan. Protect recovery and propose a daily plan or task changes for confirmation.";
+    case "review":
+    case "report":
+      return "Operate as an honest review partner. Compare outcomes with goals, identify the smallest useful adjustment, capture lessons, and propose follow-up quests or a report when helpful.";
+    case "morning":
+      return "Run a concise morning stand-up: surface constraints, choose the main quest, right-size the workload, and propose today's plan.";
+    case "evening":
+      return "Run a concise evening postmortem: distinguish results from intentions, capture a useful lesson, and propose tomorrow's follow-up.";
+    default:
+      return "Operate as a life coach. Connect the user's present choices to their active personal goals, challenge avoidance honestly, and end with a concrete next step when appropriate.";
+  }
+}
+
 /** Convert Agents SDK approval interruptions into validated coach proposals. */
 function interruptionsToProposals(interruptions: RunToolApprovalItem[]): AIToolProposal[] {
   const asToolCalls = interruptions.map((item) => {
@@ -209,7 +227,7 @@ export async function completeReadOnlyCoachChat(
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   const systemPrompt = [
-    "You are the LifeQuest OS coach — part personal trainer, part life coach, part assistant.",
+    "You are the LifeQuest Agent — a personal intelligence layer that can work as a life coach, planner, review partner, or personal assistant.",
     "Use the supplied app context to answer concisely and conversationally.",
     "The user is working to become a specific future version of themselves, described in their About Me / self-profile when present in the context.",
     "Frame guidance around that identity: when it helps, ask 'what would that future self do?' and connect today's choices (food, training, sleep, vitals, focus) to that goal.",
@@ -225,7 +243,8 @@ export async function completeReadOnlyCoachChat(
     "Do not invent missing metrics, reflections, lessons, or outcomes; label absent data clearly.",
     "For health metrics, log values without diagnosis or treatment advice.",
     "For concerning health values, use bounded language like consider discussing with a healthcare professional.",
-    "If data is missing, say so directly."
+    "If data is missing, say so directly.",
+    modeInstructions(input.mode)
   ].join(" ");
 
   // The system prompt becomes the agent's instructions; prior turns + the
@@ -245,7 +264,7 @@ export async function completeReadOnlyCoachChat(
   ];
 
   const coachAgent = new Agent({
-    name: "LifeQuest Coach",
+    name: "LifeQuest Agent",
     instructions: systemPrompt,
     model: COACH_MODEL,
     modelSettings: coachModelSettings(maxTokens),
@@ -335,6 +354,20 @@ function summarizeToolCall(name: string, args: Record<string, unknown>): string 
       return "Update nutrition goals";
     case "set_health_goal":
       return "Update health goals";
+    case "create_goal":
+      return "Create a strategic goal";
+    case "update_task":
+      return "Update a quest";
+    case "defer_task":
+      return `Defer a quest to ${text(args.plannedForDate)}`;
+    case "archive_task":
+      return "Archive a quest";
+    case "propose_daily_plan":
+      return "Propose a daily plan";
+    case "create_journal_entry":
+      return "Create a journal entry";
+    case "generate_daily_report":
+      return "Generate a daily report";
     case "save_memory":
       return `Remember: ${text(args.key)}`;
     default:

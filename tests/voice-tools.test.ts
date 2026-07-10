@@ -7,6 +7,7 @@ import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalJournalRepository } from "@/data/journalRepository";
 import { createLocalNoteRepository } from "@/data/noteRepository";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
+import { createLocalGoalRepository } from "@/data/goalRepository";
 
 describe("voice tool dispatcher", () => {
   beforeEach(() => {
@@ -16,6 +17,7 @@ describe("voice tool dispatcher", () => {
   it("exposes the expected toolset", () => {
     expect(voiceToolNames).toEqual([
       "create_quest",
+      "create_goal",
       "complete_quest",
       "log_cardio",
       "log_strength",
@@ -38,6 +40,22 @@ describe("voice tool dispatcher", () => {
       "set_health_goal",
       "navigate"
     ]);
+  });
+
+  it("creates a strategic goal", () => {
+    const result = executeVoiceTool("create_goal", {
+      title: "Build durable fitness",
+      pillar: "fitness",
+      horizon: "quarterly",
+      targetValue: 12,
+      unit: "weeks"
+    });
+    expect(result).toMatchObject({ ok: true, navigateTo: "/goals" });
+    expect(createLocalGoalRepository(window.localStorage).load()[0]).toMatchObject({
+      title: "Build durable fitness",
+      targetValue: 12,
+      unit: "weeks"
+    });
   });
 
   it("sets nutrition and health goals", () => {

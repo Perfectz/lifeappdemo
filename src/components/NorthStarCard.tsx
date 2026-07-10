@@ -12,6 +12,7 @@ import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 import { loadHealthGoals, saveHealthGoals } from "@/data/healthGoalsRepository";
 import { loadNutritionGoals } from "@/data/nutritionGoalsRepository";
+import { loadTrainingProfile } from "@/data/trainingProfileRepository";
 import { goalImageChangedEvent, loadGoalImage, saveGoalImage } from "@/data/goalImageStore";
 import { computeDailyAlignment } from "@/domain/alignment";
 import { getTransformation, type TransformationStage } from "@/domain/transformation";
@@ -20,6 +21,7 @@ import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import { toLocalIsoDate } from "@/domain/dates";
 import { weightGoalProgressPercent, withGoalEdits, type HealthGoals } from "@/domain/healthGoals";
 import { type NutritionGoals } from "@/domain/nutritionGoals";
+import { workoutTypesForDate, type TrainingProfile } from "@/domain/trainingProfile";
 import {
   bloodPressureCategoryLabel,
   glucoseBandLabel,
@@ -48,6 +50,7 @@ export function NorthStarCard() {
   const [foods, setFoods] = useState<FoodEntry[]>([]);
   const [goals, setGoals] = useState<HealthGoals | null>(null);
   const [nutritionGoals, setNutritionGoals] = useState<NutritionGoals | null>(null);
+  const [trainingProfile, setTrainingProfile] = useState<TrainingProfile | null>(null);
   const [editingWeight, setEditingWeight] = useState(false);
   const [weightTargetDraft, setWeightTargetDraft] = useState("");
   const [goalImage, setGoalImage] = useState<string | null>(null);
@@ -62,6 +65,7 @@ export function NorthStarCard() {
     setFoods(createLocalFoodEntryRepository(storage).load());
     setGoals(loadHealthGoals(storage));
     setNutritionGoals(loadNutritionGoals(storage));
+    setTrainingProfile(loadTrainingProfile(storage));
   }, []);
 
   useEffect(() => {
@@ -97,7 +101,15 @@ export function NorthStarCard() {
       .sort((a, b) => Date.parse(b.recordedAt) - Date.parse(a.recordedAt))[0];
     return withSleep?.sleepHours;
   }, [metrics]);
-  const fitness = useMemo(() => getDailyFitnessStatus(workouts, today), [workouts, today]);
+  const fitness = useMemo(
+    () =>
+      getDailyFitnessStatus(
+        workouts,
+        today,
+        trainingProfile ? workoutTypesForDate(trainingProfile, today) : undefined
+      ),
+    [workouts, today, trainingProfile]
+  );
 
   const alignment = useMemo(
     () =>
@@ -108,10 +120,11 @@ export function NorthStarCard() {
             workouts,
             goals,
             foods,
-            nutritionGoals: nutritionGoals ?? undefined
+            nutritionGoals: nutritionGoals ?? undefined,
+            requiredWorkoutTypes: fitness.expectedTypes
           })
         : null,
-    [goals, today, metrics, workouts, foods, nutritionGoals]
+    [goals, today, metrics, workouts, foods, nutritionGoals, fitness.expectedTypes]
   );
 
   if (!goals || !alignment) {
@@ -297,7 +310,9 @@ export function NorthStarCard() {
 
         <li className="north-star-row">
           <span className="north-star-row-label">Training today</span>
-          <span className="north-star-row-value">{fitness.completedCount}/{goals.dailyWorkoutsTarget}</span>
+          <span className="north-star-row-value">
+            {fitness.isRestDay ? "Recovery" : `${fitness.completedCount}/${fitness.expectedCount}`}
+          </span>
           <span className="north-star-row-target">{fitness.isComplete ? "Complete ✓" : "In progress"}</span>
         </li>
       </ul>

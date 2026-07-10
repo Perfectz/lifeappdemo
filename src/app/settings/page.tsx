@@ -23,10 +23,10 @@ export default function SettingsPage() {
     <PlaceholderPage
       title="Settings"
       kicker="Configuration"
-      body="Install LifeQuest OS as a PWA and keep the local shell available when the network drops. AI still requires network access."
+      body="Personalize your hero, reminders, presentation, backup, cloud sync, and installed-app experience."
       icon="settings"
       pose="thinking"
-      statusText="PWA install and stale-safe offline shell. No product sync or offline AI is enabled."
+      statusText="Local-first by default, with optional cloud backup and sync. AI features still require network access."
     >
       <div className="settings-install-grid">
         <MemberApprovalPanel />

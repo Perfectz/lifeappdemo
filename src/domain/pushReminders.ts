@@ -1,4 +1,4 @@
-import type { IsoDate, MetricEntry, Workout } from "@/domain/types";
+import type { IsoDate, MetricEntry, Workout, WorkoutType } from "@/domain/types";
 import { getDailyFitnessStatus } from "@/domain/dailyFitness";
 import { VITALS_DEADLINE_MIN, WORKOUT_DEADLINES_MIN } from "@/domain/dailyBrief";
 
@@ -20,6 +20,7 @@ export type ReminderInput = {
   nowMinutes: number;
   metrics: MetricEntry[];
   workouts: Workout[];
+  requiredWorkoutTypes?: WorkoutType[];
   /** Only fire reminders whose deadline passed within the last N minutes. */
   windowMinutes?: number;
 };
@@ -36,7 +37,8 @@ function vitalsLoggedToday(metrics: MetricEntry[], today: IsoDate): boolean {
 
 export function getDueReminders(input: ReminderInput): DueReminder[] {
   const { today, nowMinutes, metrics, workouts, windowMinutes = 30 } = input;
-  const completed = getDailyFitnessStatus(workouts, today).completedCount;
+  const fitness = getDailyFitnessStatus(workouts, today, input.requiredWorkoutTypes);
+  const completed = fitness.completedCount;
   const due: DueReminder[] = [];
 
   const justPassed = (deadline: number) =>
@@ -57,7 +59,7 @@ export function getDueReminders(input: ReminderInput): DueReminder[] {
     "Last workout of the day — wrap it up before 9pm."
   ];
 
-  WORKOUT_DEADLINES_MIN.forEach((deadline, index) => {
+  WORKOUT_DEADLINES_MIN.slice(0, fitness.expectedCount).forEach((deadline, index) => {
     if (justPassed(deadline) && completed < index + 1) {
       due.push({
         id: `workout-${index + 1}`,

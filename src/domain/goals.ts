@@ -5,7 +5,8 @@ import type {
   GoalPillar,
   GoalStatus,
   IsoDate,
-  IsoDateTime
+  IsoDateTime,
+  Task
 } from "@/domain/types";
 
 export const goalPillars: GoalPillar[] = ["fitness", "personal", "professional"];
@@ -132,6 +133,21 @@ export function goalProgressFraction(goal: Goal): number | undefined {
 
   const fraction = goal.currentValue / goal.targetValue;
   return Math.max(0, Math.min(1, fraction));
+}
+
+/**
+ * Progress from linked quests. Used when a goal does not have a numeric metric,
+ * so every active goal can still show concrete movement.
+ */
+export function goalQuestProgressFraction(goal: Goal, tasks: Task[]): number | undefined {
+  const linked = tasks.filter((task) => task.linkedGoalId === goal.id && task.status !== "archived");
+  if (linked.length === 0) return undefined;
+  const completed = linked.filter((task) => task.status === "done").length;
+  return completed / linked.length;
+}
+
+export function effectiveGoalProgressFraction(goal: Goal, tasks: Task[]): number | undefined {
+  return goalProgressFraction(goal) ?? goalQuestProgressFraction(goal, tasks);
 }
 
 export function isGoal(value: unknown): value is Goal {

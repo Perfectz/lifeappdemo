@@ -9,6 +9,7 @@ import { createLocalDailyPlanRepository } from "@/data/dailyPlanRepository";
 import { createLocalFoodEntryRepository } from "@/data/foodEntryRepository";
 import { createLocalMetricRepository } from "@/data/metricRepository";
 import { createLocalTaskRepository } from "@/data/taskRepository";
+import { loadTrainingProfile } from "@/data/trainingProfileRepository";
 import { createLocalWaterRepository } from "@/data/waterRepository";
 import { createLocalWorkoutRepository } from "@/data/workoutRepository";
 import { toLocalIsoDate } from "@/domain/dates";
@@ -17,6 +18,7 @@ import {
   type HealthQuestSuggestion
 } from "@/domain/healthQuestSuggestions";
 import { createTask } from "@/domain/tasks";
+import { workoutTypesForDate } from "@/domain/trainingProfile";
 import { getWaterForDate } from "@/domain/waterTracking";
 
 /**
@@ -46,7 +48,8 @@ export function CoachQuestSuggestions() {
         openTasks: createLocalTaskRepository(storage)
           .load()
           .filter((task) => task.status === "todo"),
-        dailyPlans: createLocalDailyPlanRepository(storage).load()
+        dailyPlans: createLocalDailyPlanRepository(storage).load(),
+        requiredWorkoutTypes: workoutTypesForDate(loadTrainingProfile(storage), today)
       })
     );
   }, []);

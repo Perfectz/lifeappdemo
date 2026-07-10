@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { SectionHeader } from "@/components/SectionHeader";
+import { createLocalTaskRepository } from "@/data/taskRepository";
 import {
   buildLocalWeeklyReview,
   currentWeekStart,
@@ -10,6 +11,8 @@ import {
   type WeeklyReviewResult
 } from "@/client/weeklyReview";
 import { addDaysIso } from "@/domain/weeklyReview";
+import { createTask } from "@/domain/tasks";
+import { toLocalIsoDate } from "@/domain/dates";
 import type { IsoDate } from "@/domain";
 
 function formatRangeLabel(start: IsoDate, end: IsoDate): string {
@@ -33,6 +36,7 @@ const goldAccent = { color: "var(--warning)" } as const;
 export function WeekInReview() {
   const [weekStart, setWeekStart] = useState<IsoDate>(() => currentWeekStart());
   const [result, setResult] = useState<WeeklyReviewResult | null>(null);
+  const [planStatus, setPlanStatus] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +60,35 @@ export function WeekInReview() {
   const isCurrentWeek = weekStart >= currentWeekStart();
   const review = result?.review;
   const narrative = result?.narrative;
+
+  function createNextWeekQuests() {
+    if (!review || !narrative || narrative.focus.length === 0) return;
+    const repository = createLocalTaskRepository(window.localStorage);
+    const existing = repository.load();
+    const existingTitles = new Set(
+      existing.filter((task) => task.status === "todo").map((task) => task.title.trim().toLowerCase())
+    );
+    const plannedForDate = addDaysIso(review.range.end, 1) < toLocalIsoDate()
+      ? toLocalIsoDate()
+      : addDaysIso(review.range.end, 1);
+    const created = narrative.focus
+      .filter((title) => !existingTitles.has(title.trim().toLowerCase()))
+      .map((title) =>
+        createTask({
+          title,
+          description: `Created from the ${weekTitle(weekStart).toLowerCase()} review.`,
+          priority: "medium",
+          tags: ["health"],
+          plannedForDate
+        })
+      );
+    if (created.length > 0) repository.save([...created, ...existing]);
+    setPlanStatus(
+      created.length > 0
+        ? `${created.length} focus quest${created.length === 1 ? "" : "s"} added for ${plannedForDate}.`
+        : "Those focus quests are already on the board."
+    );
+  }
 
   return (
     <section className="dashboard-section" aria-labelledby="week-in-review-title">
@@ -125,6 +158,10 @@ export function WeekInReview() {
                   <li key={item}>{item}</li>
                 ))}
               </ul>
+              <button type="button" className="command-button" onClick={createNextWeekQuests}>
+                <span>Add focus quests to next week</span>
+              </button>
+              {planStatus ? <p className="reminders-help" role="status">{planStatus}</p> : null}
             </div>
           ) : null}
 

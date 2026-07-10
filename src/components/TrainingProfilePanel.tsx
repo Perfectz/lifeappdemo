@@ -4,12 +4,17 @@ import { useEffect, useState } from "react";
 
 import { loadTrainingProfile, saveTrainingProfile } from "@/data/trainingProfileRepository";
 import {
+  balancedWeeklySchedule,
   coachStyleLabel,
   coachStyles,
+  weekdayKeys,
+  weekdayLabel,
   type CoachStyle,
   type TrainingEquipment,
-  type TrainingProfile
+  type TrainingProfile,
+  type WeekdayKey
 } from "@/domain/trainingProfile";
+import type { WorkoutType } from "@/domain/types";
 
 const EQUIPMENT_LABEL: Record<keyof TrainingEquipment, string> = {
   kettlebells: "Kettlebells",
@@ -21,6 +26,14 @@ const EQUIPMENT_LABEL: Record<keyof TrainingEquipment, string> = {
 };
 
 const EQUIPMENT_KEYS = Object.keys(EQUIPMENT_LABEL) as (keyof TrainingEquipment)[];
+
+const SESSION_LABEL: Record<WorkoutType, string> = {
+  strength: "Strength",
+  cardio: "Cardio",
+  martial_arts: "Martial arts"
+};
+
+const SESSION_TYPES = Object.keys(SESSION_LABEL) as WorkoutType[];
 
 /**
  * Compact editable training profile (equipment / gym access / coach style /
@@ -55,6 +68,28 @@ export function TrainingProfilePanel() {
     const trimmed = notesDraft.trim();
     if ((profile.notes ?? "") === trimmed) return;
     persist({ ...profile, notes: trimmed || undefined });
+  }
+
+  function toggleSchedule(enabled: boolean) {
+    if (!profile) return;
+    persist({
+      ...profile,
+      weeklySchedule: enabled ? balancedWeeklySchedule() : undefined
+    });
+  }
+
+  function toggleScheduledType(day: WeekdayKey, type: WorkoutType) {
+    if (!profile?.weeklySchedule) return;
+    const current = profile.weeklySchedule[day];
+    persist({
+      ...profile,
+      weeklySchedule: {
+        ...profile.weeklySchedule,
+        [day]: current.includes(type)
+          ? current.filter((entry) => entry !== type)
+          : [...current, type]
+      }
+    });
   }
 
   return (
@@ -105,6 +140,41 @@ export function TrainingProfilePanel() {
             ))}
           </select>
         </label>
+        <div className="fitness-label training-schedule-editor">
+          Weekly expectations
+          <label className="metrics-checkbox">
+            <input
+              type="checkbox"
+              checked={profile.weeklySchedule !== undefined}
+              onChange={(event) => toggleSchedule(event.target.checked)}
+            />
+            <span>Use a weekly schedule with recovery days</span>
+          </label>
+          {profile.weeklySchedule ? (
+            <div className="training-schedule-grid">
+              {weekdayKeys.map((day) => (
+                <div className="training-schedule-day" key={day}>
+                  <strong>{weekdayLabel[day]}</strong>
+                  <div>
+                    {SESSION_TYPES.map((type) => (
+                      <label className="metrics-checkbox" key={type}>
+                        <input
+                          type="checkbox"
+                          checked={profile.weeklySchedule?.[day].includes(type) ?? false}
+                          onChange={() => toggleScheduledType(day, type)}
+                        />
+                        <span>{SESSION_LABEL[type]}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {profile.weeklySchedule?.[day].length === 0 ? <small>Recovery day</small> : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <small className="reminders-help">Legacy mode expects all three session types every day.</small>
+          )}
+        </div>
         <label className="fitness-label">
           Strength days per week — optional
           <input

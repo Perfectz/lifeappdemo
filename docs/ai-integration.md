@@ -4,12 +4,13 @@ AI is an **optional enhancement layer** over a fully functional deterministic ap
 
 ## Components
 
-### 1. AI Coach chat (read-only + confirmation-gated tools)
+### 1. LifeQuest Agent (mode-aware + confirmation-gated tools)
 - **Route:** `POST /api/ai/chat` ([`src/app/api/ai/chat/route.ts`](../src/app/api/ai/chat/route.ts)) → server client `completeReadOnlyCoachChat` in [`src/server/ai/openaiClient.ts`](../src/server/ai/openaiClient.ts).
-- **Read-only:** the coach never mutates data directly. For any task/data change it returns **proposals** (JSON `{ message, proposals[] }`); the system prompt explicitly forbids claiming a change is already applied.
+- **Modes:** the same agent can operate as a life coach, personal assistant, planning partner, or review partner. Each mode changes the server instructions and the suggested request while preserving the conversation and safety boundary.
+- **Read-only until approval:** the agent never mutates data directly. For any task/data change it returns **proposals** (JSON `{ message, proposals[] }`); the system prompt explicitly forbids claiming a change is already applied.
 - **Tool proposals** are validated and applied through [`src/domain/aiTaskTools.ts`](../src/domain/aiTaskTools.ts) (`aiTaskToolNames`: `create_task`, `update_task`, `complete_task`, `defer_task`, `archive_task`, `log_metric`, `create_journal_entry`, `propose_daily_plan`, `generate_daily_report`). Each proposal's payload is sanitized/validated against the same domain validators the manual UI uses.
 - **Confirmation gate:** the user confirms a proposal, which is applied via `POST /api/ai/tools/confirm` ([`src/app/api/ai/tools/confirm/route.ts`](../src/app/api/ai/tools/confirm/route.ts)) → `applyAITaskToolProposal`. The route returns the updated collections, which the client persists locally.
-- **Context:** [`src/domain/aiContext.ts`](../src/domain/aiContext.ts) builds an `AIAppContext` (open tasks, today's plan, recent metrics, recent journal entries, latest report, and **derived behavioral insight highlights** from `insights.ts`) and formats it for the prompt. Multi-turn: the last ~10 history turns are included.
+- **Context harness:** [`src/domain/aiContext.ts`](../src/domain/aiContext.ts) builds an `AIAppContext` (active goals, open tasks, today's plan, recent metrics, journal entries, notes, latest report, durable memories, and **derived behavioral insight highlights** from `insights.ts`) and formats it for the prompt. The chat UI displays context counts and links so the user can see what grounds the agent. Multi-turn: the last ~10 history turns are included.
 - **Identity grounding:** the coach is told the user is becoming a specific future self (their About Me profile, when present), and to frame guidance around "what would that future self do?" — encouraging but honest, prioritizing the user's stated health priorities, no diagnosis/treatment, bounded language for concerning values.
 
 ### 2. Vision capture pipeline

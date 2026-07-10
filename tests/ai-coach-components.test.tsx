@@ -71,6 +71,28 @@ describe("AICoachPanel", () => {
     );
   });
 
+  it("switches between coaching and personal-assistant modes", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ message: "I can organize that.", mode: "assistant" })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<AICoachPanel />);
+    expect(screen.getByRole("heading", { name: "LifeQuest Agent" })).toBeVisible();
+    expect(screen.getByText("Context loaded")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: /Assistant/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Suggested request/ }));
+    expect((screen.getByLabelText("Message") as HTMLTextAreaElement).value).toContain(
+      "organize, defer, or archive"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(screen.getByText("I can organize that.")).toBeVisible());
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.mode).toBe("assistant");
+  });
+
   it("sends prior turns as conversation history", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ message: "Reply.", mode: "general" }));
     vi.stubGlobal("fetch", fetchMock);
