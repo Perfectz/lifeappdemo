@@ -16,6 +16,7 @@ type Notice = { tone: "ok" | "error"; text: string } | null;
 
 export function GmailIntegrationPanel() {
   const [status, setStatus] = useState<GmailConnectionStatus | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [messages, setMessages] = useState<GmailMessageSummary[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
@@ -24,10 +25,11 @@ export function GmailIntegrationPanel() {
   const [body, setBody] = useState("");
 
   const refreshStatus = useCallback(async () => {
+    setStatusError(null);
     try {
       setStatus(await getGmailStatus());
     } catch (error) {
-      setNotice({ tone: "error", text: error instanceof Error ? error.message : "Could not check Gmail." });
+      setStatusError(error instanceof Error ? error.message : "Could not check Gmail.");
     }
   }, []);
 
@@ -100,7 +102,19 @@ export function GmailIntegrationPanel() {
     }
   }
 
-  if (!status) return <p className="reminders-help" role="status">Checking Gmail connection…</p>;
+  if (!status) {
+    if (statusError) {
+      return (
+        <div className="gmail-integration">
+          <p className="form-error" role="alert">{statusError}</p>
+          <button type="button" className="command-button" onClick={() => void refreshStatus()}>
+            Retry Gmail status
+          </button>
+        </div>
+      );
+    }
+    return <p className="reminders-help" role="status">Checking Gmail connection…</p>;
+  }
 
   return (
     <div className="gmail-integration">

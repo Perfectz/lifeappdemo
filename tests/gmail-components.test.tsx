@@ -29,6 +29,18 @@ beforeEach(() => {
 });
 
 describe("GmailIntegrationPanel", () => {
+  it("shows a retry action when checking Gmail fails", async () => {
+    gmail.status
+      .mockRejectedValueOnce(new Error("Could not check Gmail right now."))
+      .mockResolvedValueOnce({ configured: true, connected: false });
+
+    render(<GmailIntegrationPanel />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not check Gmail right now.");
+    fireEvent.click(screen.getByRole("button", { name: "Retry Gmail status" }));
+    expect(await screen.findByText("Gmail is not connected")).toBeInTheDocument();
+  });
+
   it("shows missing deployment values without enabling a dead connect button", async () => {
     gmail.status.mockResolvedValue({
       configured: false,
