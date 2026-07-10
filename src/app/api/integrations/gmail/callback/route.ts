@@ -9,7 +9,7 @@ import {
 export const runtime = "nodejs";
 
 function appOrigin(request: Request): string {
-  return process.env.APP_URL?.replace(/\/$/, "") || new URL(request.url).origin;
+  return process.env.APP_URL?.trim().replace(/\/+$/, "") || new URL(request.url).origin;
 }
 
 function cookieValue(request: Request, name: string): string {
