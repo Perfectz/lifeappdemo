@@ -12,7 +12,8 @@ import {
 } from "@openai/agents";
 
 import type { AIToolProposal } from "@/domain";
-import { COACH_MODEL, isReasoningModel } from "@/config/ai";
+import { COACH_MODEL, isReasoningModel, requiresNoReasoningForChatTools } from "@/config/ai";
+import { activeCoachModel, isModelAccessError, markPrimaryCoachModelUnavailable } from "@/server/ai/modelFallback";
 import { validateAIToolProposalInput, validateAIToolProposals } from "@/domain/aiTaskTools";
 import { COACH_ACTIONS_PROMPT } from "@/domain/coachActions";
 import { COACH_TOOL_DEFINITIONS } from "@/domain/coachToolDefinitions";
@@ -84,7 +85,8 @@ export function chatCompletionBody(opts: {
     max_completion_tokens: opts.maxCompletionTokens
   };
   if (isReasoningModel(opts.model)) {
-    body.reasoning_effort = "low";
+    const hasTools = Boolean(opts.tools && opts.tools.length > 0);
+    body.reasoning_effort = hasTools && requiresNoReasoningForChatTools(opts.model) ? "none" : "low";
   } else if (opts.temperature !== undefined) {
     body.temperature = opts.temperature;
   }
@@ -172,8 +174,8 @@ function ensureCoachKeyConfigured(apiKey: string) {
  * reasoning-effort hint; classic chat models want temperature. Mirror the prior
  * request-builder behavior through the SDK's ModelSettings.
  */
-function coachModelSettings(maxTokens: number): ModelSettings {
-  return isReasoningModel(COACH_MODEL)
+function coachModelSettings(maxTokens: number, model: string): ModelSettings {
+  return isReasoningModel(model)
     ? { reasoning: { effort: "low" }, maxTokens }
     : { temperature: 0.4, maxTokens };
 }
@@ -244,20 +246,32 @@ export async function completeReadOnlyCoachChat(
     )
   ];
 
-  const coachAgent = new Agent({
-    name: "LifeQuest Coach",
-    instructions: systemPrompt,
-    model: COACH_MODEL,
-    modelSettings: coachModelSettings(maxTokens),
-    tools: COACH_AGENT_TOOLS
-  });
+  const runWith = (model: string) =>
+    run(
+      new Agent({
+        name: "LifeQuest Coach",
+        instructions: systemPrompt,
+        model,
+        modelSettings: coachModelSettings(maxTokens, model),
+        tools: COACH_AGENT_TOOLS
+      }),
+      inputItems,
+      { signal: controller.signal, maxTurns: 4 }
+    );
 
   let result;
   try {
-    result = await run(coachAgent, inputItems, {
-      signal: controller.signal,
-      maxTurns: 4
-    });
+    const model = activeCoachModel();
+    try {
+      result = await runWith(model);
+    } catch (error) {
+      // Key can't use the preferred model yet → retry once on the fallback model.
+      const raw = error instanceof Error ? error.message : String(error);
+      if (model !== COACH_MODEL || !isModelAccessError(toOpenAIRequestError(error).status, raw)) throw error;
+      markPrimaryCoachModelUnavailable();
+      if (activeCoachModel() === model) throw error;
+      result = await runWith(activeCoachModel());
+    }
   } catch (error) {
     if (error instanceof Error && (error.name === "AbortError" || /abort/i.test(error.message))) {
       throw new Error("OpenAI request timed out.");

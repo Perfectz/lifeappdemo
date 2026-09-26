@@ -1,4 +1,5 @@
 import { COACH_MODEL } from "@/config/ai";
+import { openAIFetch } from "@/server/ai/modelFallback";
 import { parseVisionResult, type VisionResult } from "@/domain/visionUpdates";
 import { AINotConfiguredError, buildOpenAIError, chatCompletionBody } from "@/server/ai/openaiClient";
 
@@ -62,7 +63,7 @@ export async function extractUpdatesFromImage(
 
   let response: Response;
   try {
-    response = await fetch("https://api.openai.com/v1/chat/completions", {
+    response = await openAIFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       signal: controller.signal,
       headers: {

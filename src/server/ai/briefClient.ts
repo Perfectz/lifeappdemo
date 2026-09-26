@@ -1,4 +1,5 @@
 import { COACH_MODEL } from "@/config/ai";
+import { openAIFetch } from "@/server/ai/modelFallback";
 import { AINotConfiguredError, buildOpenAIError, chatCompletionBody } from "@/server/ai/openaiClient";
 
 /**
@@ -65,7 +66,7 @@ export async function generateCoachBrief(facts: BriefFacts): Promise<string> {
 
   let response: Response;
   try {
-    response = await fetch("https://api.openai.com/v1/chat/completions", {
+    response = await openAIFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       signal: controller.signal,
       headers: {

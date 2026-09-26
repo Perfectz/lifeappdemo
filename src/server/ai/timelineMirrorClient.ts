@@ -1,4 +1,5 @@
 import { COACH_MODEL } from "@/config/ai";
+import { openAIFetch } from "@/server/ai/modelFallback";
 import {
   parseTimelineMirrorResult,
   poseTypeLabel,
@@ -148,7 +149,7 @@ export async function assessTimelineMirror(
 
   let response: Response;
   try {
-    response = await fetch("https://api.openai.com/v1/chat/completions", {
+    response = await openAIFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       signal: controller.signal,
       headers: {
