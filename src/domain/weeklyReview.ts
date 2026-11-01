@@ -12,6 +12,7 @@
 
 import { toLocalIsoDate } from "@/domain/dates";
 import { sumMacros } from "@/domain/nutrition";
+import { MachineWeek } from "@/domain/machineWeek";
 import { detectNewRecords, type PersonalRecord } from "@/domain/personalRecords";
 import { epleyE1Rm, normalizeExerciseName } from "@/domain/strengthProgression";
 import type { DailyNutritionTarget } from "@/domain/dailyNutritionTarget";
@@ -173,6 +174,8 @@ function collectBestLifts(weekWorkouts: Workout[]): WeeklyBestLift[] {
       }
       const key = normalizeExerciseName(set.exercise);
       if (!key) continue;
+      // Assisted machines: the stack is help, so more weight is not a bigger lift.
+      if (MachineWeek.isAssisted(set.exercise)) continue;
       const reps = typeof set.reps === "number" && set.reps > 0 ? set.reps : 1;
       const e1Rm = epleyE1Rm(set.weightLbs, reps);
       const current = best.get(key);

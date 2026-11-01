@@ -22,7 +22,8 @@ export const coachStyles = [
   "simple_progressive",
   "circuits",
   "structured_blocks",
-  "varied"
+  "varied",
+  "machine_week"
 ] as const;
 export type CoachStyle = (typeof coachStyles)[number];
 
@@ -31,7 +32,8 @@ export const coachStyleLabel: Record<CoachStyle, string> = {
   simple_progressive: "Simple progressive lifts (5×5-style)",
   circuits: "Circuits",
   structured_blocks: "Structured blocks",
-  varied: "Varied / surprise me"
+  varied: "Varied / surprise me",
+  machine_week: "Planet Fitness machine week (7 days, 45 min)"
 };
 
 export type TrainingProfile = {

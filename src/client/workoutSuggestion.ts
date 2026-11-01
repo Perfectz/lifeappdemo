@@ -25,12 +25,14 @@ import {
   type MemoryCategory
 } from "@/domain/memory";
 import { buildVinnyProgressionContext } from "@/domain/coachProgram";
+import { MachineWeek, plusWeekdays } from "@/domain/machineWeek";
 import { buildProgressionContext } from "@/domain/strengthProgression";
 import { formatTrainingProfileForPrompt, type TrainingProfile } from "@/domain/trainingProfile";
 import {
   buildProgressivePlan,
   buildWorkoutCatalog,
   isDailyWorkoutPlan,
+  machineWeekSuggestion,
   type DailyWorkoutPlan,
   type WorkoutSuggestion
 } from "@/domain/workoutPlan";
@@ -131,9 +133,11 @@ export function buildWorkoutContext(storage: Storage, date: IsoDate = toLocalIso
     profile,
     profileSummary: formatTrainingProfileForPrompt(profile),
     progressionSummary:
-      profile.coachStyle === "vinny_split"
-        ? buildVinnyProgressionContext(profile, progressionWorkouts)
-        : buildProgressionContext(profile, progressionWorkouts),
+      profile.coachStyle === "machine_week"
+        ? MachineWeek.buildProgressionContext(profile, progressionWorkouts, date)
+        : profile.coachStyle === "vinny_split"
+          ? buildVinnyProgressionContext(profile, progressionWorkouts)
+          : buildProgressionContext(profile, progressionWorkouts),
     karateToday: karateClassToday(storage, date),
     progressionWorkouts
   };
@@ -190,7 +194,13 @@ async function computeWorkoutPlan(
     });
     if (response.ok) {
       const data = await response.json();
-      if (isDailyWorkoutPlan(data) && data.items.length > 0) plan = data;
+      if (isDailyWorkoutPlan(data) && data.items.length > 0) {
+        // The machine week is the user's real gym program: the AI may tailor
+        // cardio / martial arts, but never replaces the strength day (same as
+        // Android's TrainPlanService).
+        const programmed = plan.items.find((i) => i.bucket === "strength");
+        plan = programmed && MachineWeek.isMachineWeek(programmed) ? withStrength(data, programmed) : data;
+      }
     }
   } catch {
     // keep deterministic plan
@@ -207,12 +217,37 @@ export async function recomputeWorkoutPlan(
   return getOrComputeWorkoutPlan(storage);
 }
 
-/** Offline "Swap": rotate to the next preset option for one bucket. */
+/** [plan] with its strength item replaced by [item] (prepended when it has none). */
+function withStrength(plan: DailyWorkoutPlan, item: WorkoutSuggestion): DailyWorkoutPlan {
+  const items = plan.items.some((i) => i.bucket === "strength")
+    ? plan.items.map((i) => (i.bucket === "strength" ? item : i))
+    : [item, ...plan.items];
+  return { ...plan, items };
+}
+
+/**
+ * Offline "Swap": rotate to the next preset option for one bucket. A
+ * machine-week strength item cycles to the next weekday's machine session
+ * instead (as on Android).
+ */
 export function swapBucketPreset(
   storage: Storage,
   plan: DailyWorkoutPlan,
   bucket: WorkoutType
 ): DailyWorkoutPlan {
+  const machineDay = MachineWeek.weekdayOf(plan.items.find((i) => i.bucket === bucket)?.presetId);
+  if (bucket === "strength" && machineDay) {
+    const item = machineWeekSuggestion(
+      loadTrainingProfile(storage),
+      recentWorkouts(storage, 120),
+      plan.date,
+      plusWeekdays(machineDay, 1)
+    );
+    const updated = withStrength(plan, item);
+    upsertWorkoutPlan(storage, updated);
+    return updated;
+  }
+
   const catalog = buildWorkoutCatalog();
   const options = catalog[bucket];
   if (options.length === 0) return plan;

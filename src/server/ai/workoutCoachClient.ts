@@ -1,6 +1,7 @@
 import { COACH_MODEL } from "@/config/ai";
 import { openAIFetch } from "@/server/ai/modelFallback";
 import { vinnyFewShotExamples, vinnyStyleGuide } from "@/domain/coachProgram";
+import { machineWeekStyleGuide } from "@/domain/machineWeek";
 import {
   buildWorkoutCatalog,
   formatCatalogForPrompt,
@@ -69,10 +70,14 @@ export async function suggestDailyWorkoutPlan(
 
   const catalog = buildWorkoutCatalog();
   const vinny = input.coachStyle === "vinny_split";
+  // Planet Fitness machine week: the snapshot is today's programmed machine
+  // day, which the client keeps as the strength item regardless of the reply.
+  const machineWeek = input.coachStyle === "machine_week";
   // Prescriptions (per-lift sets×reps×load + notes) make the JSON meaningfully
   // longer than the old pick-a-preset response, so the fallback budget is
-  // higher — and a full Vinny day carries ~10 prescriptions, higher still.
-  const maxTokens = intFromEnv("OPENAI_MAX_TOKENS", vinny ? 1_800 : 1_200);
+  // higher — and a full Vinny day (~10 prescriptions) or machine day (up to 7
+  // machines with long setup notes) higher still.
+  const maxTokens = intFromEnv("OPENAI_MAX_TOKENS", vinny || machineWeek ? 1_800 : 1_200);
   const timeoutMs = intFromEnv("OPENAI_TIMEOUT_MS", 30_000);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -83,8 +88,9 @@ export async function suggestDailyWorkoutPlan(
     input.profileSummary?.trim() ? `TRAINING PROFILE (equipment + coach style — program within this):\n${input.profileSummary.trim()}` : "",
     vinny ? vinnyStyleGuide : "",
     vinny ? vinnyFewShotExamples : "",
+    machineWeek ? machineWeekStyleGuide : "",
     input.progressionSummary?.trim()
-      ? `PROGRESSION SNAPSHOT (per-lift e1RM + last session — prescribe exact loads from this${vinny ? "; these numbers are ground truth computed from the training log — do NOT contradict them" : ""}):\n${input.progressionSummary.trim()}`
+      ? `PROGRESSION SNAPSHOT (per-lift e1RM + last session — prescribe exact loads from this${vinny || machineWeek ? "; these numbers are ground truth computed from the training log — do NOT contradict them" : ""}):\n${input.progressionSummary.trim()}`
       : "",
     `KARATE CLASS TODAY: ${input.karateToday ? "yes — class counts as the martial-arts session" : "no — program solo conditioning"}.`,
     `AVAILABLE PRESETS:\n${formatCatalogForPrompt(catalog)}`,

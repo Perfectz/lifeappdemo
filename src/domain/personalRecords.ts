@@ -1,3 +1,4 @@
+import { MachineWeek } from "@/domain/machineWeek";
 import { epleyE1Rm, normalizeExerciseName } from "@/domain/strengthProgression";
 import type { Workout } from "@/domain/types";
 
@@ -103,6 +104,8 @@ function formatLbs(value: number): string {
  * - Weight PR: heaviest weight moved for any reps.
  * - e1RM PR: best Epley estimated 1RM (can fire without a weight PR).
  * - Reps PR: more reps than ever before at an exact weight already in the log.
+ * - Assisted machines (machine week's dip / chin assist): the stack is help, so
+ *   more weight is never a weight or e1RM record — reps at a pin still are.
  * - At most one record per exercise per kind — the best set wins.
  */
 export function detectNewRecords(previousWorkouts: Workout[], newWorkout: Workout): PersonalRecord[] {
@@ -124,8 +127,10 @@ export function detectNewRecords(previousWorkouts: Workout[], newWorkout: Workou
     if (!history) return;
 
     const name = displayExerciseName(set.exercise);
+    // Assisted machines: the stack is help, so more weight is not a record (reps at a pin still are).
+    const assisted = MachineWeek.isAssisted(set.exercise);
 
-    if (set.weightLbs > history.bestWeightLbs) {
+    if (!assisted && set.weightLbs > history.bestWeightLbs) {
       consider({
         exercise: name,
         kind: "weight",
@@ -137,7 +142,7 @@ export function detectNewRecords(previousWorkouts: Workout[], newWorkout: Workou
     }
 
     const e1Rm = epleyE1Rm(set.weightLbs, set.reps ?? 1);
-    if (e1Rm > history.bestE1Rm + 1e-9) {
+    if (!assisted && e1Rm > history.bestE1Rm + 1e-9) {
       consider({
         exercise: name,
         kind: "e1rm",

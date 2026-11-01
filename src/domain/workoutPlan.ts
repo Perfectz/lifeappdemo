@@ -17,6 +17,7 @@ import {
   type StrengthVariant
 } from "@/config/fitness";
 import { buildVinnySession, formatVinnyPrescriptionLine } from "@/domain/coachProgram";
+import { MachineWeek, type Weekday } from "@/domain/machineWeek";
 import {
   buildProgressiveSession,
   formatPrescriptionLine,
@@ -359,12 +360,45 @@ function soloConditioningSuggestion(date: IsoDate): WorkoutSuggestion {
 
 /* ------------------------------------------------- progressive fallback -- */
 
-/** The strength suggestion in the user's coach style (Vinny split vs. simple progressive). */
+/**
+ * One machine-week day as a plan item (same shape as Android's
+ * `WorkoutPlanner.machineWeekSuggestion`). [weekday] undefined uses the
+ * calendar day of [date]; a different weekday is a user swap ("do Tuesday's
+ * session today").
+ */
+export function machineWeekSuggestion(
+  profile: TrainingProfile,
+  workouts: Workout[],
+  date: IsoDate,
+  weekday?: Weekday
+): WorkoutSuggestion {
+  const session = MachineWeek.buildSession(profile, workouts, date, weekday);
+  return {
+    bucket: "strength",
+    kind: "custom",
+    title: session.title,
+    estMinutes: session.estMinutes,
+    rationale: session.swapped ? `Swapped in for today. ${session.day.focus}` : session.day.focus,
+    presetId: MachineWeek.planId(session.day.weekday),
+    variant: "Machine",
+    exercises: session.prescriptions.map(MachineWeek.formatLine),
+    description: session.tip,
+    prescriptions: session.prescriptions,
+    progressionSummary: session.summary,
+    swaps: []
+  };
+}
+
+/** The strength suggestion in the user's coach style (machine week, Vinny split or simple progressive). */
 function strengthSuggestion(
   profile: TrainingProfile,
   workouts: Workout[],
+  date: IsoDate,
   focus?: StrengthFocus
 ): WorkoutSuggestion {
+  if (profile.coachStyle === "machine_week") {
+    return machineWeekSuggestion(profile, workouts, date);
+  }
   if (profile.coachStyle === "vinny_split") {
     const session = buildVinnySession({ profile, workouts });
     return {
@@ -396,9 +430,9 @@ function strengthSuggestion(
 
 /**
  * Offline/deterministic plan with real programming: a strength session in the
- * user's coach style (Vinny split by default, else simple progressive) with
- * exact sets×reps×loads from the progression engine, easy cardio, and
- * class-aware martial arts.
+ * user's coach style (Vinny split by default, the Planet Fitness machine week
+ * day for [date], else simple progressive) with exact sets×reps×loads from the
+ * progression engine, easy cardio, and class-aware martial arts.
  */
 export function buildProgressivePlan(
   profile: TrainingProfile,
@@ -408,7 +442,7 @@ export function buildProgressivePlan(
   options: { karateToday?: boolean; focus?: StrengthFocus } = {}
 ): DailyWorkoutPlan {
   const items: WorkoutSuggestion[] = [
-    strengthSuggestion(profile, workouts, options.focus),
+    strengthSuggestion(profile, workouts, date, options.focus),
     {
       bucket: "cardio",
       kind: "preset",
